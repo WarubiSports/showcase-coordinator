@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CheckSquare, Megaphone, Calendar, X } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Megaphone, Calendar, Users, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -21,6 +21,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
+  { name: 'Attendees', href: '/attendees', icon: Users },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
 ]
 

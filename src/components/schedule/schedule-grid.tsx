@@ -15,6 +15,10 @@ import { supabase } from '@/lib/supabase'
 import type { ScheduleEvent } from '@/types'
 
 const DAYS = [
+  { date: '2026-02-02', label: 'Feb 2', name: 'Monday' },
+  { date: '2026-02-03', label: 'Feb 3', name: 'Tuesday' },
+  { date: '2026-02-04', label: 'Feb 4', name: 'Wednesday' },
+  { date: '2026-02-05', label: 'Feb 5', name: 'Thursday' },
   { date: '2026-02-06', label: 'Feb 6', name: 'Kick-off Day' },
   { date: '2026-02-07', label: 'Feb 7', name: 'Event Day 1' },
   { date: '2026-02-08', label: 'Feb 8', name: 'Event Day 2' },
@@ -268,20 +272,20 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <div className="min-w-[800px]">
+            <div className="min-w-[1200px]">
               {/* Header */}
-              <div className="grid grid-cols-[60px_1fr_1fr_1fr] border-b bg-muted/50">
+              <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-muted/50">
                 <div className="p-2 text-center text-xs font-medium text-muted-foreground">Time</div>
                 {DAYS.map((day) => (
                   <div key={day.date} className="border-l p-2 text-center">
-                    <div className="font-semibold">{day.label}</div>
-                    <div className="text-xs text-muted-foreground">{day.name}</div>
+                    <div className="font-semibold text-sm">{day.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{day.name}</div>
                   </div>
                 ))}
               </div>
 
               {/* Time grid */}
-              <div className="grid grid-cols-[60px_1fr_1fr_1fr]" ref={gridRef}>
+              <div className="grid grid-cols-[60px_repeat(7,1fr)]" ref={gridRef}>
                 {/* Time labels */}
                 <div className="border-r">
                   {HOURS.map((hour) => (

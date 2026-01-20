@@ -33,7 +33,7 @@ export function useTasks(filters?: TaskFilters) {
         query = query.eq('priority', filters.priority)
       }
       if (filters?.assignee) {
-        query = query.eq('assignee', filters.assignee)
+        query = query.ilike('assignee', `%${filters.assignee}%`)
       }
       if (filters?.search) {
         query = query.ilike('title', `%${filters.search}%`)

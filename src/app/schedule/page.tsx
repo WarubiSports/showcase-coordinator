@@ -12,7 +12,7 @@ export default function SchedulePage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Schedule</h1>
-          <p className="text-muted-foreground">Plan the event schedule for Feb 6-8, 2026</p>
+          <p className="text-muted-foreground">Plan the event schedule for Feb 2-8, 2026</p>
         </div>
 
         <ScheduleGrid userName={userName || 'Unknown'} />

@@ -22,11 +22,16 @@ export default function TasksPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  // Get unique assignees from tasks
+  // Get unique individual assignees from tasks (split comma-separated names)
   const assignees = useMemo(() => {
     const names = new Set<string>()
     tasks.forEach((task) => {
-      if (task.assignee) names.add(task.assignee)
+      if (task.assignee) {
+        task.assignee.split(',').forEach((name) => {
+          const trimmed = name.trim()
+          if (trimmed) names.add(trimmed)
+        })
+      }
     })
     return Array.from(names).sort()
   }, [tasks])

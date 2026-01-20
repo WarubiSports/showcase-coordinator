@@ -84,3 +84,24 @@ export interface ScheduleEvent {
   created_at: string
   updated_at: string
 }
+
+export type AttendeeRole = 'staff' | 'alumni' | 'coach' | 'scout'
+
+export interface AttendeeAvailability {
+  date: string
+  start_time: string
+  end_time: string
+}
+
+export interface Attendee {
+  id: string
+  name: string
+  email: string | null
+  role: AttendeeRole
+  phone: string | null
+  notes: string | null
+  availability: AttendeeAvailability[]
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
