@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CheckSquare, Megaphone, Calendar, Users, X } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Megaphone, Calendar, Users, X, MessageSquarePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -23,6 +23,7 @@ const navigation = [
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Attendees', href: '/attendees', icon: Users },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
+  { name: 'Feedback', href: '/feedback', icon: MessageSquarePlus },
 ]
 
 export function Sidebar({ categories, selectedCategory, onCategorySelect, isOpen, onClose }: SidebarProps) {

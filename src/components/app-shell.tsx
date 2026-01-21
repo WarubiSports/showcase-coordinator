@@ -7,6 +7,7 @@ import { NameEntryDialog } from './name-entry-dialog'
 import { Header } from './layout/header'
 import { Sidebar } from './layout/sidebar'
 import { MobileNav } from './layout/mobile-nav'
+import { FeedbackButton } from './feedback/feedback-button'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -57,6 +58,7 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
         </main>
 
         <MobileNav />
+        <FeedbackButton />
       </div>
     </>
   )

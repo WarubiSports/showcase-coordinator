@@ -19,6 +19,8 @@ export interface Task {
   priority: TaskPriority
   assignee: string | null
   deadline: string | null
+  scheduled_date: string | null
+  scheduled_time: string | null
   progress: number
   dependencies: string[] | null
   created_by: string | null
@@ -83,6 +85,26 @@ export interface ScheduleEvent {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export type FeedbackType = 'bug' | 'feature' | 'idea' | 'other'
+export type FeedbackImportance = 'nice_to_have' | 'helpful' | 'important' | 'critical'
+export type FeedbackStatus = 'new' | 'reviewed' | 'in_progress' | 'done' | 'dismissed'
+
+export interface Feedback {
+  id: string
+  type: FeedbackType
+  description: string
+  details: string | null
+  importance: FeedbackImportance
+  page_url: string | null
+  screenshot_url: string | null
+  ai_prompt: string | null
+  status: FeedbackStatus
+  submitted_by: string | null
+  created_at: string
+  reviewed_at: string | null
+  reviewed_by: string | null
 }
 
 export type AttendeeRole = 'staff' | 'alumni' | 'coach' | 'scout'

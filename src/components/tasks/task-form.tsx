@@ -36,6 +36,8 @@ export interface TaskFormData {
   priority: TaskPriority
   assignee?: string
   deadline?: string
+  scheduled_date?: string
+  scheduled_time?: string
 }
 
 export function TaskForm({ open, onClose, onSubmit, categories, task, userName }: TaskFormProps) {
@@ -54,6 +56,8 @@ export function TaskForm({ open, onClose, onSubmit, categories, task, userName }
         priority: task.priority,
         assignee: task.assignee || undefined,
         deadline: task.deadline || undefined,
+        scheduled_date: task.scheduled_date || undefined,
+        scheduled_time: task.scheduled_time?.slice(0, 5) || undefined,
       })
     } else {
       setFormData({
@@ -175,6 +179,29 @@ export function TaskForm({ open, onClose, onSubmit, categories, task, userName }
                 type="date"
                 value={formData.deadline || ''}
                 onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="scheduled_date">Schedule Date</Label>
+              <Input
+                id="scheduled_date"
+                type="date"
+                value={formData.scheduled_date || ''}
+                onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">Show on calendar</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="scheduled_time">Schedule Time</Label>
+              <Input
+                id="scheduled_time"
+                type="time"
+                value={formData.scheduled_time || ''}
+                onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
               />
             </div>
           </div>

@@ -69,6 +69,8 @@ export function useTasks(filters?: TaskFilters) {
     priority?: TaskPriority
     assignee?: string
     deadline?: string
+    scheduled_date?: string
+    scheduled_time?: string
     created_by: string
   }) => {
     const { data, error } = await supabase

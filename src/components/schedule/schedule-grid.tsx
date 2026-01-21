@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, GripVertical, X, Edit, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
-import type { ScheduleEvent } from '@/types'
+import type { ScheduleEvent, Task } from '@/types'
+import { CheckCircle2 } from 'lucide-react'
 
 const DAYS = [
   { date: '2026-02-02', label: 'Feb 2', name: 'Monday' },
@@ -58,8 +60,21 @@ interface ScheduleGridProps {
   userName: string
 }
 
+// Scheduled task type for calendar display
+interface ScheduledTask {
+  id: string
+  title: string
+  scheduled_date: string
+  scheduled_time: string
+  status: string
+  assignee: string | null
+  category_color: string | null
+}
+
 export function ScheduleGrid({ userName }: ScheduleGridProps) {
+  const router = useRouter()
   const [events, setEvents] = useState<ScheduleEvent[]>([])
+  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null)
@@ -77,6 +92,7 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
 
   useEffect(() => {
     fetchEvents()
+    fetchScheduledTasks()
   }, [])
 
   const fetchEvents = async () => {
@@ -93,6 +109,33 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
 
     setEvents(data || [])
     setIsLoading(false)
+  }
+
+  const fetchScheduledTasks = async () => {
+    const { data, error } = await supabase
+      .from('showcase_tasks')
+      .select('id, title, scheduled_date, scheduled_time, status, assignee, showcase_categories(color)')
+      .not('scheduled_date', 'is', null)
+      .not('scheduled_time', 'is', null)
+      .order('scheduled_date')
+      .order('scheduled_time')
+
+    if (error) {
+      console.error('Failed to load scheduled tasks:', error)
+      return
+    }
+
+    const tasks: ScheduledTask[] = (data || []).map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      scheduled_date: t.scheduled_date,
+      scheduled_time: t.scheduled_time,
+      status: t.status,
+      assignee: t.assignee,
+      category_color: t.showcase_categories?.color || null,
+    }))
+
+    setScheduledTasks(tasks)
   }
 
   const handleCreate = async () => {
@@ -248,6 +291,20 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
     return events.filter((e) => e.event_date === date)
   }
 
+  const getTasksForDay = (date: string) => {
+    return scheduledTasks.filter((t) => t.scheduled_date === date)
+  }
+
+  const getTaskStyle = (task: ScheduledTask) => {
+    const startHour = parseInt(task.scheduled_time.slice(0, 2))
+    const startMin = parseInt(task.scheduled_time.slice(3, 5))
+
+    const top = ((startHour - 7) * 60 + startMin) * (48 / 60) // 48px per hour
+    const height = 30 // Tasks show as 30px tall (quick items)
+
+    return { top: `${top}px`, height: `${height}px` }
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -340,6 +397,47 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
                               </div>
                             )}
                           </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Scheduled Tasks */}
+                    {getTasksForDay(day.date).map((task) => (
+                      <div
+                        key={`task-${task.id}`}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/tasks/${task.id}`); }}
+                        className={cn(
+                          'absolute left-1 right-1 rounded-md px-2 py-1 text-xs overflow-hidden',
+                          'border-2 border-dashed bg-white/90 dark:bg-gray-800/90',
+                          'hover:ring-2 hover:ring-primary/50 transition-shadow cursor-pointer',
+                          task.status === 'complete' && 'opacity-60'
+                        )}
+                        style={{
+                          ...getTaskStyle(task),
+                          borderColor: task.category_color || '#6b7280',
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          <CheckCircle2
+                            className={cn(
+                              'h-3 w-3 shrink-0',
+                              task.status === 'complete' ? 'text-green-500' : 'text-muted-foreground'
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'font-medium truncate',
+                              task.status === 'complete' && 'line-through'
+                            )}
+                            style={{ color: task.category_color || '#374151' }}
+                          >
+                            {task.title}
+                          </span>
+                          {task.assignee && (
+                            <span className="text-muted-foreground truncate ml-auto">
+                              {task.assignee}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
