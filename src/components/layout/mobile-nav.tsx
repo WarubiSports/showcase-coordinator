@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CheckSquare, Megaphone } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Megaphone, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { name: 'Announcements', href: '/announcements', icon: Megaphone },
+  { name: 'Event Days', href: '/day-view', icon: CalendarDays },
+  { name: 'News', href: '/announcements', icon: Megaphone },
 ]
 
 export function MobileNav() {

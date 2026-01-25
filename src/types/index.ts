@@ -21,6 +21,7 @@ export interface Task {
   deadline: string | null
   scheduled_date: string | null
   scheduled_time: string | null
+  show_on_schedule: boolean
   progress: number
   dependencies: string[] | null
   created_by: string | null
@@ -105,6 +106,62 @@ export interface Feedback {
   created_at: string
   reviewed_at: string | null
   reviewed_by: string | null
+}
+
+// Day Schedule Types
+export interface DayGroup {
+  id: string
+  name: string
+  color: string
+  sort_order: number
+  created_at: string
+}
+
+export interface DayActivity {
+  id: string
+  event_date: string
+  group_id: string | null
+  group?: DayGroup
+  start_time: string
+  end_time: string | null
+  activity: string
+  responsible: string | null
+  todos: string | null
+  notes: string | null
+  sort_order: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Match {
+  id: string
+  event_date: string
+  match_number: number
+  start_time: string
+  team_a: string
+  team_b: string
+  field: string | null
+  referee: string | null
+  score_a: number | null
+  score_b: number | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Material {
+  id: string
+  item: string
+  category: string | null
+  is_ready: boolean
+  responsible: string | null
+  notes: string | null
+  sort_order: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type AttendeeRole = 'staff' | 'alumni' | 'coach' | 'scout'
