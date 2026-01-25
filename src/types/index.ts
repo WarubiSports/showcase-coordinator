@@ -10,6 +10,7 @@ export interface VenueZone {
   y: number
   width: number
   height: number
+  rotation: number
   zone_type: VenueZoneType | null
   sort_order: number
   created_by: string | null

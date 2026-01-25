@@ -55,6 +55,7 @@ export function VenueMap({ userName }: VenueMapProps) {
     description: '',
     color: ZONE_COLORS[0],
     zone_type: 'other' as VenueZoneType,
+    rotation: 0,
   })
 
   useEffect(() => {
@@ -121,6 +122,7 @@ export function VenueMap({ userName }: VenueMapProps) {
       description: '',
       color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
       zone_type: 'other',
+      rotation: 0,
     })
     setSelectedZone({
       id: '',
@@ -131,6 +133,7 @@ export function VenueMap({ userName }: VenueMapProps) {
       y,
       width,
       height,
+      rotation: 0,
       zone_type: null,
       sort_order: zones.length,
       created_by: null,
@@ -156,6 +159,7 @@ export function VenueMap({ userName }: VenueMapProps) {
         y: selectedZone.y,
         width: selectedZone.width,
         height: selectedZone.height,
+        rotation: formData.rotation,
         zone_type: formData.zone_type,
         sort_order: zones.length,
         created_by: userName,
@@ -183,6 +187,7 @@ export function VenueMap({ userName }: VenueMapProps) {
         name: formData.name,
         description: formData.description || null,
         color: formData.color,
+        rotation: formData.rotation,
         zone_type: formData.zone_type,
         updated_at: new Date().toISOString(),
       })
@@ -224,6 +229,7 @@ export function VenueMap({ userName }: VenueMapProps) {
       description: zone.description || '',
       color: zone.color,
       zone_type: zone.zone_type || 'other',
+      rotation: zone.rotation || 0,
     })
     setSelectedZone(zone)
     setIsFormOpen(true)
@@ -325,6 +331,8 @@ export function VenueMap({ userName }: VenueMapProps) {
                 height: `${zone.height}%`,
                 borderColor: zone.color,
                 backgroundColor: `${zone.color}33`,
+                transform: `rotate(${zone.rotation || 0}deg)`,
+                transformOrigin: 'center center',
               }}
               onClick={(e) => {
                 e.stopPropagation()
@@ -336,7 +344,10 @@ export function VenueMap({ userName }: VenueMapProps) {
               {/* Zone Label */}
               <div
                 className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
-                style={{ backgroundColor: zone.color }}
+                style={{
+                  backgroundColor: zone.color,
+                  transform: `rotate(${-(zone.rotation || 0)}deg)`,
+                }}
               >
                 {zone.name}
               </div>
@@ -444,6 +455,29 @@ export function VenueMap({ userName }: VenueMapProps) {
                     onClick={() => setFormData({ ...formData, color })}
                   />
                 ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Rotation: {formData.rotation}°</Label>
+              <div className="flex items-center gap-3 mt-1">
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  step="5"
+                  value={formData.rotation}
+                  onChange={(e) => setFormData({ ...formData, rotation: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <Input
+                  type="number"
+                  value={formData.rotation}
+                  onChange={(e) => setFormData({ ...formData, rotation: parseInt(e.target.value) || 0 })}
+                  className="w-20"
+                  min="-180"
+                  max="180"
+                />
               </div>
             </div>
 
