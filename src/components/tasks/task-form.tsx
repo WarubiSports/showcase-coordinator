@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { Task, TaskPriority, Category } from '@/types'
 
 interface TaskFormProps {
@@ -38,6 +39,7 @@ export interface TaskFormData {
   deadline?: string
   scheduled_date?: string
   scheduled_time?: string
+  show_on_schedule?: boolean
 }
 
 export function TaskForm({ open, onClose, onSubmit, categories, task, userName }: TaskFormProps) {
@@ -58,12 +60,14 @@ export function TaskForm({ open, onClose, onSubmit, categories, task, userName }
         deadline: task.deadline || undefined,
         scheduled_date: task.scheduled_date || undefined,
         scheduled_time: task.scheduled_time?.slice(0, 5) || undefined,
+        show_on_schedule: task.show_on_schedule ?? true,
       })
     } else {
       setFormData({
         title: '',
         priority: 'medium',
         assignee: userName,
+        show_on_schedule: true,
       })
     }
   }, [task, userName])
@@ -76,7 +80,7 @@ export function TaskForm({ open, onClose, onSubmit, categories, task, userName }
     try {
       await onSubmit(formData)
       onClose()
-      setFormData({ title: '', priority: 'medium', assignee: userName })
+      setFormData({ title: '', priority: 'medium', assignee: userName, show_on_schedule: true })
     } finally {
       setIsSubmitting(false)
     }
@@ -192,7 +196,6 @@ export function TaskForm({ open, onClose, onSubmit, categories, task, userName }
                 value={formData.scheduled_date || ''}
                 onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground">Show on calendar</p>
             </div>
 
             <div className="space-y-2">
@@ -205,6 +208,21 @@ export function TaskForm({ open, onClose, onSubmit, categories, task, userName }
               />
             </div>
           </div>
+
+          {(formData.scheduled_date || formData.scheduled_time) && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show_on_schedule"
+                checked={formData.show_on_schedule ?? true}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, show_on_schedule: checked === true })
+                }
+              />
+              <Label htmlFor="show_on_schedule" className="text-sm font-normal cursor-pointer">
+                Show on calendar
+              </Label>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

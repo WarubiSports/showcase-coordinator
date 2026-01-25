@@ -706,14 +706,14 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
             <div>
               <Label>Group</Label>
               <Select
-                value={activityForm.group_id}
-                onValueChange={(v) => setActivityForm({ ...activityForm, group_id: v })}
+                value={activityForm.group_id || 'none'}
+                onValueChange={(v) => setActivityForm({ ...activityForm, group_id: v === 'none' ? '' : v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a group (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Group (General)</SelectItem>
+                  <SelectItem value="none">No Group (General)</SelectItem>
                   {groups.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       <div className="flex items-center gap-2">

@@ -114,9 +114,10 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
   const fetchScheduledTasks = async () => {
     const { data, error } = await supabase
       .from('showcase_tasks')
-      .select('id, title, scheduled_date, scheduled_time, status, assignee, showcase_categories(color)')
+      .select('id, title, scheduled_date, scheduled_time, status, assignee, show_on_schedule, showcase_categories(color)')
       .not('scheduled_date', 'is', null)
       .not('scheduled_time', 'is', null)
+      .neq('show_on_schedule', false)
       .order('scheduled_date')
       .order('scheduled_time')
 
