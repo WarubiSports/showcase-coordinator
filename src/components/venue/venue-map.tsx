@@ -395,8 +395,8 @@ export function VenueMap({ userName }: VenueMapProps) {
               <div
                 key={zone.id}
                 className={cn(
-                  "absolute border-2 rounded transition-all",
-                  isEditMode ? "cursor-grab hover:border-white" : "pointer-events-none",
+                  "absolute border-2 rounded transition-all cursor-pointer hover:border-white",
+                  isEditMode && "cursor-grab",
                   hoveredZone === zone.id && "ring-2 ring-white",
                   draggingZone === zone.id && "cursor-grabbing opacity-80 ring-2 ring-white"
                 )}
@@ -413,7 +413,7 @@ export function VenueMap({ userName }: VenueMapProps) {
                 onMouseDown={(e) => handleZoneDragStart(e, zone)}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (isEditMode && !draggingZone) openEditZone(zone)
+                  if (!draggingZone) openEditZone(zone)
                 }}
                 onMouseEnter={() => setHoveredZone(zone.id)}
                 onMouseLeave={() => setHoveredZone(null)}
