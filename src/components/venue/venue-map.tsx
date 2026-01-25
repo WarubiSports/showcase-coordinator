@@ -457,15 +457,17 @@ export function VenueMap({ userName }: VenueMapProps) {
                 onMouseEnter={() => setHoveredZone(zone.id)}
                 onMouseLeave={() => setHoveredZone(null)}
               >
-                {/* Zone Label */}
+                {/* Zone Label - inside zone */}
                 <div
-                  className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap pointer-events-none"
-                  style={{
-                    backgroundColor: zone.color,
-                    transform: `rotate(${-(zone.rotation || 0)}deg)`,
-                  }}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{ transform: `rotate(${-(zone.rotation || 0)}deg)` }}
                 >
-                  {zone.name}
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-bold text-white whitespace-nowrap shadow-lg"
+                    style={{ backgroundColor: zone.color }}
+                  >
+                    {zone.name}
+                  </span>
                 </div>
                 {/* Drag handle indicator when in edit mode */}
                 {isEditMode && (
@@ -503,13 +505,15 @@ export function VenueMap({ userName }: VenueMapProps) {
               }}
             >
               <div
-                className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
-                style={{
-                  backgroundColor: previewZone.color,
-                  transform: `rotate(${-(previewZone.rotation || 0)}deg)`,
-                }}
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ transform: `rotate(${-(previewZone.rotation || 0)}deg)` }}
               >
-                {previewZone.name}
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-bold text-white whitespace-nowrap shadow-lg"
+                  style={{ backgroundColor: previewZone.color }}
+                >
+                  {previewZone.name}
+                </span>
               </div>
             </div>
           )}
