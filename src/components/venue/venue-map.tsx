@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload, GripVertical } from 'lucide-react'
+import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload, GripVertical, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,9 @@ export function VenueMap({ userName }: VenueMapProps) {
   // Dragging state for moving zones
   const [draggingZone, setDraggingZone] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
+
+  // Rotating state
+  const [rotatingZone, setRotatingZone] = useState<string | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -112,6 +115,18 @@ export function VenueMap({ userName }: VenueMapProps) {
         const newY = Math.max(0, Math.min(100 - zone.height, coords.y - dragOffset.y))
         setZones(zones.map(z => z.id === draggingZone ? { ...z, x: newX, y: newY } : z))
       }
+    } else if (rotatingZone) {
+      const coords = getRelativeCoords(e)
+      const zone = zones.find(z => z.id === rotatingZone)
+      if (zone) {
+        // Calculate angle from zone center to mouse position
+        const centerX = zone.x + zone.width / 2
+        const centerY = zone.y + zone.height / 2
+        const angle = Math.atan2(coords.y - centerY, coords.x - centerX) * (180 / Math.PI)
+        // Offset by 90 degrees so "up" is 0
+        const rotation = Math.round(angle + 90)
+        setZones(zones.map(z => z.id === rotatingZone ? { ...z, rotation } : z))
+      }
     }
   }
 
@@ -175,6 +190,23 @@ export function VenueMap({ userName }: VenueMapProps) {
       setDraggingZone(null)
       setDragOffset(null)
     }
+
+    // Save zone rotation after rotate
+    if (rotatingZone) {
+      const zone = zones.find(z => z.id === rotatingZone)
+      if (zone) {
+        const { error } = await supabase
+          .from('showcase_venue_zones')
+          .update({ rotation: zone.rotation, updated_at: new Date().toISOString() })
+          .eq('id', zone.id)
+
+        if (error) {
+          toast.error('Failed to save rotation')
+          fetchZones()
+        }
+      }
+      setRotatingZone(null)
+    }
   }
 
   const handleZoneDragStart = (e: React.MouseEvent, zone: VenueZone) => {
@@ -184,6 +216,12 @@ export function VenueMap({ userName }: VenueMapProps) {
     const coords = getRelativeCoords(e)
     setDraggingZone(zone.id)
     setDragOffset({ x: coords.x - zone.x, y: coords.y - zone.y })
+  }
+
+  const handleRotateStart = (e: React.MouseEvent, zone: VenueZone) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setRotatingZone(zone.id)
   }
 
   const handleCreateZone = async () => {
@@ -345,7 +383,7 @@ export function VenueMap({ userName }: VenueMapProps) {
         )}
         {isEditMode && (
           <p className="text-sm text-muted-foreground mt-2">
-            Drag zones to move them. Click to edit details.
+            Drag zones to move them. Use the corner handle to rotate. Click to edit details.
           </p>
         )}
       </CardHeader>
@@ -355,14 +393,15 @@ export function VenueMap({ userName }: VenueMapProps) {
           className={cn(
             "relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden select-none",
             isDrawing && "cursor-crosshair",
-            draggingZone && "cursor-grabbing"
+            draggingZone && "cursor-grabbing",
+            rotatingZone && "cursor-grabbing"
           )}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={() => {
             if (isDrawing) { setDrawStart(null); setDrawCurrent(null); }
-            if (draggingZone) { handleMouseUp(); }
+            if (draggingZone || rotatingZone) { handleMouseUp(); }
           }}
         >
           {/* Venue Image */}
@@ -430,8 +469,18 @@ export function VenueMap({ userName }: VenueMapProps) {
                 </div>
                 {/* Drag handle indicator when in edit mode */}
                 {isEditMode && (
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
                     <GripVertical className="h-6 w-6 text-white drop-shadow-lg" />
+                  </div>
+                )}
+                {/* Rotation handle when in edit mode */}
+                {isEditMode && (
+                  <div
+                    className="absolute -top-3 -right-3 w-6 h-6 bg-white rounded-full border-2 border-gray-400 cursor-grab hover:border-primary hover:scale-110 transition-all flex items-center justify-center shadow-lg"
+                    style={{ transform: `rotate(${-(zone.rotation || 0)}deg)` }}
+                    onMouseDown={(e) => handleRotateStart(e, zone)}
+                  >
+                    <RotateCw className="h-3 w-3 text-gray-600" />
                   </div>
                 )}
               </div>
