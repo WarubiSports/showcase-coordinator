@@ -570,54 +570,6 @@ export function VenueMap({ userName }: VenueMapProps) {
             </div>
 
             <div>
-              <Label>Rotation: {formData.rotation}°</Label>
-              <div className="flex items-center gap-3 mt-1">
-                <input
-                  type="range"
-                  min="-180"
-                  max="180"
-                  step="1"
-                  value={formData.rotation}
-                  onChange={(e) => setFormData({ ...formData, rotation: parseInt(e.target.value) })}
-                  className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                />
-                <Input
-                  type="number"
-                  value={formData.rotation}
-                  onChange={(e) => setFormData({ ...formData, rotation: parseInt(e.target.value) || 0 })}
-                  className="w-20"
-                  min="-180"
-                  max="180"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Width %</Label>
-                <Input
-                  type="number"
-                  value={Math.round(formData.width * 10) / 10}
-                  onChange={(e) => setFormData({ ...formData, width: parseFloat(e.target.value) || 5 })}
-                  min="1"
-                  max="100"
-                  step="0.5"
-                />
-              </div>
-              <div>
-                <Label>Height %</Label>
-                <Input
-                  type="number"
-                  value={Math.round(formData.height * 10) / 10}
-                  onChange={(e) => setFormData({ ...formData, height: parseFloat(e.target.value) || 5 })}
-                  min="1"
-                  max="100"
-                  step="0.5"
-                />
-              </div>
-            </div>
-
-            <div>
               <Label>Description</Label>
               <Textarea
                 value={formData.description}
