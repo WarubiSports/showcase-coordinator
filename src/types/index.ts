@@ -1,3 +1,22 @@
+// Venue Map Types
+export type VenueZoneType = 'field' | 'registration' | 'catering' | 'medical' | 'parking' | 'other'
+
+export interface VenueZone {
+  id: string
+  name: string
+  description: string | null
+  color: string
+  x: number
+  y: number
+  width: number
+  height: number
+  zone_type: VenueZoneType | null
+  sort_order: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type TaskStatus = 'not_started' | 'in_progress' | 'blocked' | 'complete'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
