@@ -78,9 +78,13 @@ export function AttendeeList({ attendees, isLoading, onEdit, onDelete }: Attende
                 </div>
                 <div>
                   <h3 className="font-semibold">{attendee.name}</h3>
-                  <Badge variant="outline" className={ROLE_COLORS[attendee.role]}>
-                    {ROLE_LABELS[attendee.role]}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(attendee.roles || []).map((role) => (
+                      <Badge key={role} variant="outline" className={ROLE_COLORS[role]}>
+                        {ROLE_LABELS[role]}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

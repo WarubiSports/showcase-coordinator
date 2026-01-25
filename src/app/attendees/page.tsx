@@ -30,7 +30,7 @@ export default function AttendeesPage() {
   const handleCreate = async (data: {
     name: string
     email: string
-    role: AttendeeRole
+    roles: AttendeeRole[]
     phone: string
     notes: string
     availability: AttendeeAvailability[]
@@ -50,7 +50,7 @@ export default function AttendeesPage() {
   const handleUpdate = async (data: {
     name: string
     email: string
-    role: AttendeeRole
+    roles: AttendeeRole[]
     phone: string
     notes: string
     availability: AttendeeAvailability[]
@@ -86,11 +86,11 @@ export default function AttendeesPage() {
     setEditingAttendee(null)
   }
 
-  // Count by role
-  const staffCount = attendees.filter((a) => a.role === 'staff').length
-  const alumniCount = attendees.filter((a) => a.role === 'alumni').length
-  const coachCount = attendees.filter((a) => a.role === 'coach').length
-  const scoutCount = attendees.filter((a) => a.role === 'scout').length
+  // Count by role (attendees can have multiple roles)
+  const staffCount = attendees.filter((a) => a.roles?.includes('staff')).length
+  const alumniCount = attendees.filter((a) => a.roles?.includes('alumni')).length
+  const coachCount = attendees.filter((a) => a.roles?.includes('coach')).length
+  const scoutCount = attendees.filter((a) => a.roles?.includes('scout')).length
 
   return (
     <AppShell>

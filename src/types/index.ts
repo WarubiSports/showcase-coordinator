@@ -196,7 +196,7 @@ export interface Attendee {
   id: string
   name: string
   email: string | null
-  role: AttendeeRole
+  roles: AttendeeRole[]
   phone: string | null
   notes: string | null
   availability: AttendeeAvailability[]

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Attendee, AttendeeRole, AttendeeAvailability } from '@/types'
 
@@ -32,7 +31,7 @@ const ROLES: { value: AttendeeRole; label: string }[] = [
 interface AttendeeFormData {
   name: string
   email: string
-  role: AttendeeRole
+  roles: AttendeeRole[]
   phone: string
   notes: string
   availability: AttendeeAvailability[]
@@ -50,7 +49,7 @@ export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeForm
   const [formData, setFormData] = useState<AttendeeFormData>({
     name: '',
     email: '',
-    role: 'staff',
+    roles: [],
     phone: '',
     notes: '',
     availability: [],
@@ -61,7 +60,7 @@ export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeForm
       setFormData({
         name: attendee.name,
         email: attendee.email || '',
-        role: attendee.role,
+        roles: attendee.roles || [],
         phone: attendee.phone || '',
         notes: attendee.notes || '',
         availability: attendee.availability || [],
@@ -70,7 +69,7 @@ export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeForm
       setFormData({
         name: '',
         email: '',
-        role: 'staff',
+        roles: [],
         phone: '',
         notes: '',
         availability: [],
@@ -150,22 +149,27 @@ export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeForm
             </div>
 
             <div className="col-span-2 sm:col-span-1">
-              <Label htmlFor="role">Role *</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(v: AttendeeRole) => setFormData({ ...formData, role: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
+              <Label>Roles *</Label>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {ROLES.map((role) => (
+                  <div key={role.value} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`role-${role.value}`}
+                      checked={formData.roles.includes(role.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData({ ...formData, roles: [...formData.roles, role.value] })
+                        } else {
+                          setFormData({ ...formData, roles: formData.roles.filter(r => r !== role.value) })
+                        }
+                      }}
+                    />
+                    <label htmlFor={`role-${role.value}`} className="text-sm cursor-pointer">
                       {role.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -251,7 +255,7 @@ export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeForm
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !formData.name.trim()}>
+            <Button type="submit" disabled={isSubmitting || !formData.name.trim() || formData.roles.length === 0}>
               {isSubmitting ? 'Saving...' : attendee ? 'Update' : 'Add Attendee'}
             </Button>
           </div>

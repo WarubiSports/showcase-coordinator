@@ -26,7 +26,7 @@ export function useAttendees(filters?: AttendeeFilters) {
         .order('name')
 
       if (filters?.role) {
-        query = query.eq('role', filters.role)
+        query = query.contains('roles', [filters.role])
       }
       if (filters?.search) {
         query = query.ilike('name', `%${filters.search}%`)
@@ -36,9 +36,12 @@ export function useAttendees(filters?: AttendeeFilters) {
 
       if (fetchError) throw fetchError
 
-      // Parse availability JSON if stored as string
+      // Parse JSON fields if stored as string
       const parsedData: Attendee[] = (data || []).map((a) => ({
         ...a,
+        roles: typeof a.roles === 'string'
+          ? JSON.parse(a.roles)
+          : a.roles || [],
         availability: typeof a.availability === 'string'
           ? JSON.parse(a.availability)
           : a.availability || [],
@@ -67,7 +70,7 @@ export function useAttendees(filters?: AttendeeFilters) {
   const createAttendee = async (attendee: {
     name: string
     email?: string
-    role: AttendeeRole
+    roles: AttendeeRole[]
     phone?: string
     notes?: string
     availability: AttendeeAvailability[]
@@ -117,6 +120,7 @@ export function useAttendees(filters?: AttendeeFilters) {
 
     const updatedAttendee: Attendee = {
       ...data,
+      roles: typeof data.roles === 'string' ? JSON.parse(data.roles) : data.roles || [],
       availability: updates.availability ||
         (typeof data.availability === 'string' ? JSON.parse(data.availability) : data.availability),
     }
