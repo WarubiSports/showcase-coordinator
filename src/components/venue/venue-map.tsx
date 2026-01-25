@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload } from 'lucide-react'
+import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload, GripVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,9 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { VenueZone, VenueZoneType } from '@/types'
-
-// Default venue image - SV Lövenich/Widdersdorf
-const DEFAULT_VENUE_IMAGE = 'https://maps.googleapis.com/maps/api/staticmap?center=50.9647,6.8647&zoom=17&size=800x600&maptype=satellite&key=AIzaSyBIWKz2s9E_P-P1C_S-5jXxP_LPV5gPHtA'
 
 const ZONE_TYPES: { value: VenueZoneType; label: string; color: string }[] = [
   { value: 'field', label: 'Playing Field', color: '#22C55E' },
@@ -48,6 +45,10 @@ export function VenueMap({ userName }: VenueMapProps) {
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null)
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null)
 
+  // Dragging state for moving zones
+  const [draggingZone, setDraggingZone] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
+
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [formData, setFormData] = useState({
@@ -56,6 +57,10 @@ export function VenueMap({ userName }: VenueMapProps) {
     color: ZONE_COLORS[0],
     zone_type: 'other' as VenueZoneType,
     rotation: 0,
+    x: 0,
+    y: 0,
+    width: 10,
+    height: 10,
   })
 
   useEffect(() => {
@@ -87,78 +92,111 @@ export function VenueMap({ userName }: VenueMapProps) {
   }, [])
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isDrawing) return
-    e.preventDefault()
-    const coords = getRelativeCoords(e)
-    setDrawStart(coords)
-    setDrawCurrent(coords)
+    if (isDrawing) {
+      e.preventDefault()
+      const coords = getRelativeCoords(e)
+      setDrawStart(coords)
+      setDrawCurrent(coords)
+    }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !drawStart) return
-    const coords = getRelativeCoords(e)
-    setDrawCurrent(coords)
+    if (isDrawing && drawStart) {
+      const coords = getRelativeCoords(e)
+      setDrawCurrent(coords)
+    } else if (draggingZone && dragOffset) {
+      const coords = getRelativeCoords(e)
+      const zone = zones.find(z => z.id === draggingZone)
+      if (zone) {
+        const newX = Math.max(0, Math.min(100 - zone.width, coords.x - dragOffset.x))
+        const newY = Math.max(0, Math.min(100 - zone.height, coords.y - dragOffset.y))
+        setZones(zones.map(z => z.id === draggingZone ? { ...z, x: newX, y: newY } : z))
+      }
+    }
   }
 
-  const handleMouseUp = () => {
-    if (!isDrawing || !drawStart || !drawCurrent) return
+  const handleMouseUp = async () => {
+    if (isDrawing && drawStart && drawCurrent) {
+      const width = Math.abs(drawCurrent.x - drawStart.x)
+      const height = Math.abs(drawCurrent.y - drawStart.y)
 
-    const width = Math.abs(drawCurrent.x - drawStart.x)
-    const height = Math.abs(drawCurrent.y - drawStart.y)
+      if (width >= 3 && height >= 3) {
+        const x = Math.min(drawStart.x, drawCurrent.x)
+        const y = Math.min(drawStart.y, drawCurrent.y)
 
-    // Minimum zone size
-    if (width < 3 || height < 3) {
+        setFormData({
+          name: '',
+          description: '',
+          color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
+          zone_type: 'other',
+          rotation: 0,
+          x,
+          y,
+          width,
+          height,
+        })
+        setSelectedZone({
+          id: '',
+          name: '',
+          description: null,
+          color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
+          x,
+          y,
+          width,
+          height,
+          rotation: 0,
+          zone_type: null,
+          sort_order: zones.length,
+          created_by: null,
+          created_at: '',
+          updated_at: '',
+        })
+        setIsFormOpen(true)
+        setIsDrawing(false)
+      }
       setDrawStart(null)
       setDrawCurrent(null)
-      return
     }
 
-    const x = Math.min(drawStart.x, drawCurrent.x)
-    const y = Math.min(drawStart.y, drawCurrent.y)
+    // Save zone position after drag
+    if (draggingZone) {
+      const zone = zones.find(z => z.id === draggingZone)
+      if (zone) {
+        const { error } = await supabase
+          .from('showcase_venue_zones')
+          .update({ x: zone.x, y: zone.y, updated_at: new Date().toISOString() })
+          .eq('id', zone.id)
 
-    // Open form with the drawn coordinates
-    setFormData({
-      name: '',
-      description: '',
-      color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
-      zone_type: 'other',
-      rotation: 0,
-    })
-    setSelectedZone({
-      id: '',
-      name: '',
-      description: null,
-      color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
-      x,
-      y,
-      width,
-      height,
-      rotation: 0,
-      zone_type: null,
-      sort_order: zones.length,
-      created_by: null,
-      created_at: '',
-      updated_at: '',
-    })
-    setIsFormOpen(true)
-    setIsDrawing(false)
-    setDrawStart(null)
-    setDrawCurrent(null)
+        if (error) {
+          toast.error('Failed to save position')
+          fetchZones() // Reload to get original positions
+        }
+      }
+      setDraggingZone(null)
+      setDragOffset(null)
+    }
+  }
+
+  const handleZoneDragStart = (e: React.MouseEvent, zone: VenueZone) => {
+    if (!isEditMode) return
+    e.stopPropagation()
+    e.preventDefault()
+    const coords = getRelativeCoords(e)
+    setDraggingZone(zone.id)
+    setDragOffset({ x: coords.x - zone.x, y: coords.y - zone.y })
   }
 
   const handleCreateZone = async () => {
-    if (!selectedZone) return
-
     const { data, error } = await supabase
       .from('showcase_venue_zones')
       .insert([{
         name: formData.name,
         description: formData.description || null,
         color: formData.color,
-        x: selectedZone.x,
-        y: selectedZone.y,
-        width: selectedZone.width,
-        height: selectedZone.height,
+        x: formData.x,
+        y: formData.y,
+        width: formData.width,
+        height: formData.height,
         rotation: formData.rotation,
         zone_type: formData.zone_type,
         sort_order: zones.length,
@@ -187,6 +225,10 @@ export function VenueMap({ userName }: VenueMapProps) {
         name: formData.name,
         description: formData.description || null,
         color: formData.color,
+        x: formData.x,
+        y: formData.y,
+        width: formData.width,
+        height: formData.height,
         rotation: formData.rotation,
         zone_type: formData.zone_type,
         updated_at: new Date().toISOString(),
@@ -230,6 +272,10 @@ export function VenueMap({ userName }: VenueMapProps) {
       color: zone.color,
       zone_type: zone.zone_type || 'other',
       rotation: zone.rotation || 0,
+      x: zone.x,
+      y: zone.y,
+      width: zone.width,
+      height: zone.height,
     })
     setSelectedZone(zone)
     setIsFormOpen(true)
@@ -246,6 +292,23 @@ export function VenueMap({ userName }: VenueMapProps) {
   }
 
   const drawingRect = getDrawingRect()
+
+  // Get the zone to preview (either selected zone with form data applied, or null)
+  const getPreviewZone = (): VenueZone | null => {
+    if (!isFormOpen || !selectedZone) return null
+    return {
+      ...selectedZone,
+      name: formData.name || 'New Zone',
+      color: formData.color,
+      rotation: formData.rotation,
+      x: formData.x,
+      y: formData.y,
+      width: formData.width,
+      height: formData.height,
+    }
+  }
+
+  const previewZone = getPreviewZone()
 
   return (
     <Card>
@@ -264,8 +327,8 @@ export function VenueMap({ userName }: VenueMapProps) {
             ) : (
               <>
                 <Button size="sm" variant={isEditMode ? 'default' : 'outline'} onClick={() => setIsEditMode(!isEditMode)}>
-                  <Edit2 className="mr-2 h-4 w-4" />
-                  {isEditMode ? 'Done' : 'Edit'}
+                  <Move className="mr-2 h-4 w-4" />
+                  {isEditMode ? 'Done' : 'Move'}
                 </Button>
                 <Button size="sm" onClick={() => setIsDrawing(true)}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -280,26 +343,34 @@ export function VenueMap({ userName }: VenueMapProps) {
             Click and drag on the map to draw a zone
           </p>
         )}
+        {isEditMode && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Drag zones to move them. Click to edit details.
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <div
           ref={containerRef}
           className={cn(
-            "relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden",
-            isDrawing && "cursor-crosshair"
+            "relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden select-none",
+            isDrawing && "cursor-crosshair",
+            draggingZone && "cursor-grabbing"
           )}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onMouseLeave={() => { if (isDrawing) { setDrawStart(null); setDrawCurrent(null); } }}
+          onMouseLeave={() => {
+            if (isDrawing) { setDrawStart(null); setDrawCurrent(null); }
+            if (draggingZone) { handleMouseUp(); }
+          }}
         >
           {/* Venue Image */}
           <img
             src="/venue-map.jpg"
             alt="Venue Map"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover pointer-events-none"
             onError={(e) => {
-              // Fallback to placeholder if image doesn't exist
               (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
                   <rect fill="#1a1a2e" width="800" height="600"/>
@@ -316,43 +387,83 @@ export function VenueMap({ userName }: VenueMapProps) {
           />
 
           {/* Existing Zones */}
-          {zones.map((zone) => (
+          {zones.map((zone) => {
+            // Hide the zone being edited (we show preview instead)
+            if (isFormOpen && selectedZone?.id === zone.id) return null
+
+            return (
+              <div
+                key={zone.id}
+                className={cn(
+                  "absolute border-2 rounded transition-all",
+                  isEditMode ? "cursor-grab hover:border-white" : "pointer-events-none",
+                  hoveredZone === zone.id && "ring-2 ring-white",
+                  draggingZone === zone.id && "cursor-grabbing opacity-80 ring-2 ring-white"
+                )}
+                style={{
+                  left: `${zone.x}%`,
+                  top: `${zone.y}%`,
+                  width: `${zone.width}%`,
+                  height: `${zone.height}%`,
+                  borderColor: zone.color,
+                  backgroundColor: `${zone.color}33`,
+                  transform: `rotate(${zone.rotation || 0}deg)`,
+                  transformOrigin: 'center center',
+                }}
+                onMouseDown={(e) => handleZoneDragStart(e, zone)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (isEditMode && !draggingZone) openEditZone(zone)
+                }}
+                onMouseEnter={() => setHoveredZone(zone.id)}
+                onMouseLeave={() => setHoveredZone(null)}
+              >
+                {/* Zone Label */}
+                <div
+                  className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap pointer-events-none"
+                  style={{
+                    backgroundColor: zone.color,
+                    transform: `rotate(${-(zone.rotation || 0)}deg)`,
+                  }}
+                >
+                  {zone.name}
+                </div>
+                {/* Drag handle indicator when in edit mode */}
+                {isEditMode && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <GripVertical className="h-6 w-6 text-white drop-shadow-lg" />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Preview Zone (shows live changes while editing) */}
+          {previewZone && (
             <div
-              key={zone.id}
-              className={cn(
-                "absolute border-2 rounded transition-all",
-                isEditMode ? "cursor-pointer hover:border-white" : "pointer-events-none",
-                hoveredZone === zone.id && "ring-2 ring-white"
-              )}
+              className="absolute border-2 border-dashed rounded pointer-events-none ring-2 ring-white"
               style={{
-                left: `${zone.x}%`,
-                top: `${zone.y}%`,
-                width: `${zone.width}%`,
-                height: `${zone.height}%`,
-                borderColor: zone.color,
-                backgroundColor: `${zone.color}33`,
-                transform: `rotate(${zone.rotation || 0}deg)`,
+                left: `${previewZone.x}%`,
+                top: `${previewZone.y}%`,
+                width: `${previewZone.width}%`,
+                height: `${previewZone.height}%`,
+                borderColor: previewZone.color,
+                backgroundColor: `${previewZone.color}44`,
+                transform: `rotate(${previewZone.rotation || 0}deg)`,
                 transformOrigin: 'center center',
               }}
-              onClick={(e) => {
-                e.stopPropagation()
-                if (isEditMode) openEditZone(zone)
-              }}
-              onMouseEnter={() => setHoveredZone(zone.id)}
-              onMouseLeave={() => setHoveredZone(null)}
             >
-              {/* Zone Label */}
               <div
                 className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
                 style={{
-                  backgroundColor: zone.color,
-                  transform: `rotate(${-(zone.rotation || 0)}deg)`,
+                  backgroundColor: previewZone.color,
+                  transform: `rotate(${-(previewZone.rotation || 0)}deg)`,
                 }}
               >
-                {zone.name}
+                {previewZone.name}
               </div>
             </div>
-          ))}
+          )}
 
           {/* Drawing Preview */}
           {isDrawing && drawingRect && (
@@ -377,7 +488,7 @@ export function VenueMap({ userName }: VenueMapProps) {
                 variant="outline"
                 className="cursor-pointer hover:opacity-80"
                 style={{ borderColor: zone.color, color: zone.color }}
-                onClick={() => isEditMode && openEditZone(zone)}
+                onClick={() => openEditZone(zone)}
                 onMouseEnter={() => setHoveredZone(zone.id)}
                 onMouseLeave={() => setHoveredZone(null)}
               >
@@ -396,8 +507,8 @@ export function VenueMap({ userName }: VenueMapProps) {
       </CardContent>
 
       {/* Zone Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
+      <Dialog open={isFormOpen} onOpenChange={(open) => { if (!open) { setIsFormOpen(false); setSelectedZone(null); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{selectedZone?.id ? 'Edit Zone' : 'New Zone'}</DialogTitle>
           </DialogHeader>
@@ -465,7 +576,7 @@ export function VenueMap({ userName }: VenueMapProps) {
                   type="range"
                   min="-180"
                   max="180"
-                  step="5"
+                  step="1"
                   value={formData.rotation}
                   onChange={(e) => setFormData({ ...formData, rotation: parseInt(e.target.value) })}
                   className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
@@ -477,6 +588,31 @@ export function VenueMap({ userName }: VenueMapProps) {
                   className="w-20"
                   min="-180"
                   max="180"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Width %</Label>
+                <Input
+                  type="number"
+                  value={Math.round(formData.width * 10) / 10}
+                  onChange={(e) => setFormData({ ...formData, width: parseFloat(e.target.value) || 5 })}
+                  min="1"
+                  max="100"
+                  step="0.5"
+                />
+              </div>
+              <div>
+                <Label>Height %</Label>
+                <Input
+                  type="number"
+                  value={Math.round(formData.height * 10) / 10}
+                  onChange={(e) => setFormData({ ...formData, height: parseFloat(e.target.value) || 5 })}
+                  min="1"
+                  max="100"
+                  step="0.5"
                 />
               </div>
             </div>
