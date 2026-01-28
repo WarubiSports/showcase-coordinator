@@ -188,7 +188,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   const handleUpdateActivity = async () => {
     if (!editingActivity) return
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('showcase_day_activities')
       .update({
         group_id: activityForm.group_id || null,
@@ -201,18 +201,14 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', editingActivity.id)
-      .select('*, showcase_day_groups(*)')
-      .single()
 
     if (error) {
       toast.error('Failed to update activity')
       return
     }
 
-    setActivities((prev) =>
-      prev.map((a) => (a.id === editingActivity.id ? { ...data, group: data.showcase_day_groups } : a))
-        .sort((a, b) => a.start_time.localeCompare(b.start_time))
-    )
+    // Refetch to ensure UI is in sync
+    await fetchActivities()
     setEditingActivity(null)
     setIsActivityFormOpen(false)
     resetActivityForm()
@@ -286,7 +282,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   const handleUpdateMatch = async () => {
     if (!editingMatch) return
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('showcase_matches')
       .update({
         match_number: matchForm.match_number,
@@ -298,18 +294,13 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', editingMatch.id)
-      .select()
-      .single()
 
     if (error) {
       toast.error('Failed to update match')
       return
     }
 
-    setMatches((prev) =>
-      prev.map((m) => (m.id === editingMatch.id ? data : m))
-        .sort((a, b) => a.match_number - b.match_number)
-    )
+    await fetchMatches()
     setEditingMatch(null)
     setIsMatchFormOpen(false)
     resetMatchForm()
@@ -380,7 +371,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   const handleUpdateMaterial = async () => {
     if (!editingMaterial) return
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('showcase_materials')
       .update({
         item: materialForm.item,
@@ -390,15 +381,13 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', editingMaterial.id)
-      .select()
-      .single()
 
     if (error) {
       toast.error('Failed to update material')
       return
     }
 
-    setMaterials((prev) => prev.map((m) => (m.id === editingMaterial.id ? data : m)))
+    await fetchMaterials()
     setEditingMaterial(null)
     setIsMaterialFormOpen(false)
     resetMaterialForm()
