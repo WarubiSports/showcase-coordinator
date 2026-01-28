@@ -223,12 +223,18 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       updated_at: new Date().toISOString(),
     }
 
+    console.log('Updating activity ID:', editingActivity.id)
+    console.log('Update data:', updateData)
+
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .update(updateData)
       .eq('id', editingActivity.id)
       .select('*, showcase_day_groups(*)')
       .single()
+
+    console.log('Supabase response - data:', data)
+    console.log('Supabase response - error:', error)
 
     if (error) {
       console.error('Update error:', error)
@@ -247,10 +253,14 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       group: data.showcase_day_groups,
     }
 
-    setActivities(prev =>
-      prev.map(a => a.id === editingActivity.id ? updatedActivity : a)
+    console.log('Updated activity object:', updatedActivity)
+
+    setActivities(prev => {
+      const newActivities = prev.map(a => a.id === editingActivity.id ? updatedActivity : a)
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
-    )
+      console.log('New activities state:', newActivities.map(a => ({ id: a.id, activity: a.activity, start_time: a.start_time, end_time: a.end_time })))
+      return newActivities
+    })
 
     setEditingActivity(null)
     setIsActivityFormOpen(false)
