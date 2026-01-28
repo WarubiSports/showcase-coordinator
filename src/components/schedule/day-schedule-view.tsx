@@ -105,6 +105,8 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
 
   const fetchActivities = async () => {
     setIsLoading(true)
+    console.log('Fetching activities for date:', selectedDate)
+
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .select('*, showcase_day_groups(*)')
@@ -117,6 +119,8 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       setIsLoading(false)
       return
     }
+
+    console.log('Fetched activities:', data?.map(a => ({ id: a.id, activity: a.activity, start_time: a.start_time, end_time: a.end_time })))
 
     const mapped = (data || []).map((a: any) => ({
       ...a,
@@ -188,7 +192,13 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   const handleUpdateActivity = async () => {
     if (!editingActivity) return
 
-    const { error } = await supabase
+    console.log('Updating activity:', editingActivity.id)
+    console.log('Form values:', {
+      start_time: formatTimeForDB(activityForm.start_time),
+      end_time: formatTimeForDB(activityForm.end_time),
+    })
+
+    const { data, error } = await supabase
       .from('showcase_day_activities')
       .update({
         group_id: activityForm.group_id || null,
@@ -201,17 +211,28 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', editingActivity.id)
+      .select()
+
+    console.log('Update result:', data, error)
 
     if (error) {
       toast.error('Failed to update activity')
       return
     }
 
-    // Refetch to ensure UI is in sync
-    await fetchActivities()
+    if (!data || data.length === 0) {
+      console.error('Update returned no rows - activity may not exist or RLS issue')
+      toast.error('Activity not found')
+      return
+    }
+
+    // Close dialog first, then refetch
     setEditingActivity(null)
     setIsActivityFormOpen(false)
     resetActivityForm()
+
+    // Refetch to ensure UI is in sync
+    await fetchActivities()
     toast.success('Activity updated')
   }
 
