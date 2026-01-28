@@ -5,7 +5,8 @@ import Link from 'next/link'
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
+  pointerWithin,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -14,6 +15,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -180,6 +182,26 @@ function KanbanColumn({ status, tasks, onEdit, isOver }: KanbanColumnProps) {
   )
 }
 
+// Custom collision detection that prioritizes columns over tasks
+const customCollisionDetection: CollisionDetection = (args) => {
+  // First check if pointer is within any droppable column
+  const pointerCollisions = pointerWithin(args)
+
+  // Find column collisions (status IDs)
+  const columnCollision = pointerCollisions.find(
+    collision => TASK_STATUSES.includes(collision.id as TaskStatus)
+  )
+
+  // If we're over a column, return that
+  if (columnCollision) {
+    return [columnCollision]
+  }
+
+  // Otherwise fall back to rect intersection for tasks
+  const rectCollisions = rectIntersection(args)
+  return rectCollisions.length > 0 ? rectCollisions : pointerCollisions
+}
+
 export function TaskKanban({ tasks, isLoading, onEdit, onStatusChange }: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [overColumn, setOverColumn] = useState<TaskStatus | null>(null)
@@ -289,7 +311,7 @@ export function TaskKanban({ tasks, isLoading, onEdit, onStatusChange }: TaskKan
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={customCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
