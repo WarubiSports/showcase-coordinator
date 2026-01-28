@@ -105,8 +105,6 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
 
   const fetchActivities = async () => {
     setIsLoading(true)
-    console.log('Fetching activities for date:', selectedDate)
-
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .select('*, showcase_day_groups(*)')
@@ -119,8 +117,6 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       setIsLoading(false)
       return
     }
-
-    console.log('Fetched activities:', data?.map(a => ({ id: a.id, activity: a.activity, start_time: a.start_time, end_time: a.end_time })))
 
     const mapped = (data || []).map((a: any) => ({
       ...a,
@@ -192,47 +188,49 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   const handleUpdateActivity = async () => {
     if (!editingActivity) return
 
-    console.log('Updating activity:', editingActivity.id)
-    console.log('Form values:', {
+    const updateData = {
+      group_id: activityForm.group_id || null,
       start_time: formatTimeForDB(activityForm.start_time),
       end_time: formatTimeForDB(activityForm.end_time),
-    })
+      activity: activityForm.activity,
+      responsible: activityForm.responsible || null,
+      todos: activityForm.todos || null,
+      notes: activityForm.notes || null,
+      updated_at: new Date().toISOString(),
+    }
 
     const { data, error } = await supabase
       .from('showcase_day_activities')
-      .update({
-        group_id: activityForm.group_id || null,
-        start_time: formatTimeForDB(activityForm.start_time),
-        end_time: formatTimeForDB(activityForm.end_time),
-        activity: activityForm.activity,
-        responsible: activityForm.responsible || null,
-        todos: activityForm.todos || null,
-        notes: activityForm.notes || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', editingActivity.id)
-      .select()
-
-    console.log('Update result:', data, error)
+      .select('*, showcase_day_groups(*)')
+      .single()
 
     if (error) {
+      console.error('Update error:', error)
       toast.error('Failed to update activity')
       return
     }
 
-    if (!data || data.length === 0) {
-      console.error('Update returned no rows - activity may not exist or RLS issue')
+    if (!data) {
       toast.error('Activity not found')
       return
     }
 
-    // Close dialog first, then refetch
+    // Directly update state with returned data
+    const updatedActivity = {
+      ...data,
+      group: data.showcase_day_groups,
+    }
+
+    setActivities(prev =>
+      prev.map(a => a.id === editingActivity.id ? updatedActivity : a)
+        .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    )
+
     setEditingActivity(null)
     setIsActivityFormOpen(false)
     resetActivityForm()
-
-    // Refetch to ensure UI is in sync
-    await fetchActivities()
     toast.success('Activity updated')
   }
 
