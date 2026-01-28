@@ -487,14 +487,10 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     return `${time}:00`
   }
 
-  // Group activities by group
-  const groupedActivities = groups.reduce((acc, group) => {
-    acc[group.id] = activities.filter(a => a.group_id === group.id)
-    return acc
-  }, {} as Record<string, DayActivity[]>)
-
-  // Activities without a group
-  const ungroupedActivities = activities.filter(a => !a.group_id)
+  // Sort all activities chronologically
+  const sortedActivities = [...activities].sort((a, b) =>
+    a.start_time.localeCompare(b.start_time)
+  )
 
   const readyCount = materials.filter(m => m.is_ready).length
   const totalMaterials = materials.length
@@ -531,56 +527,20 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
           <CardContent>
             {isLoading ? (
               <div className="h-48 animate-pulse rounded bg-muted" />
-            ) : (
-              <div className="space-y-6">
-                {/* Ungrouped activities (General) */}
-                {ungroupedActivities.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 flex items-center gap-2 font-semibold text-muted-foreground">
-                      <span className="h-3 w-3 rounded-full bg-gray-500" />
-                      General Schedule
-                    </h4>
-                    <ActivityTable
-                      activities={ungroupedActivities}
-                      onEdit={openEditActivity}
-                      onDelete={handleDeleteActivity}
-                      formatTime={formatTime}
-                    />
-                  </div>
-                )}
-
-                {/* Grouped activities */}
-                {groups.map((group) => {
-                  const groupActs = groupedActivities[group.id] || []
-                  if (groupActs.length === 0) return null
-
-                  return (
-                    <div key={group.id}>
-                      <h4 className="mb-2 flex items-center gap-2 font-semibold">
-                        <span
-                          className="h-3 w-3 rounded-full"
-                          style={{ backgroundColor: group.color }}
-                        />
-                        {group.name}
-                      </h4>
-                      <ActivityTable
-                        activities={groupActs}
-                        onEdit={openEditActivity}
-                        onDelete={handleDeleteActivity}
-                        formatTime={formatTime}
-                      />
-                    </div>
-                  )
-                })}
-
-                {activities.length === 0 && (
-                  <div className="py-8 text-center text-muted-foreground">
-                    <Clock className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                    <p>No activities scheduled for this day</p>
-                    <p className="text-sm">Click "Add Activity" to get started</p>
-                  </div>
-                )}
+            ) : activities.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <Clock className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <p>No activities scheduled for this day</p>
+                <p className="text-sm">Click "Add Activity" to get started</p>
               </div>
+            ) : (
+              <ActivityTable
+                activities={sortedActivities}
+                groups={groups}
+                onEdit={openEditActivity}
+                onDelete={handleDeleteActivity}
+                formatTime={formatTime}
+              />
             )}
           </CardContent>
         </Card>
@@ -1013,21 +973,29 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
 // Activity Table Component
 function ActivityTable({
   activities,
+  groups,
   onEdit,
   onDelete,
   formatTime
 }: {
   activities: DayActivity[]
+  groups: DayGroup[]
   onEdit: (activity: DayActivity) => void
   onDelete: (id: string) => void
   formatTime: (time: string) => string
 }) {
+  const getGroup = (groupId: string | null) => {
+    if (!groupId) return null
+    return groups.find(g => g.id === groupId)
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
             <th className="px-3 py-2 text-left font-medium">Time</th>
+            <th className="px-3 py-2 text-left font-medium">Group</th>
             <th className="px-3 py-2 text-left font-medium">Activity</th>
             <th className="px-3 py-2 text-left font-medium">Responsible</th>
             <th className="px-3 py-2 text-left font-medium">Todos</th>
@@ -1035,42 +1003,65 @@ function ActivityTable({
           </tr>
         </thead>
         <tbody>
-          {activities.map((activity) => (
-            <tr key={activity.id} className="border-b hover:bg-muted/30">
-              <td className="px-3 py-2 whitespace-nowrap">
-                <span className="font-medium">{formatTime(activity.start_time)}</span>
-                {activity.end_time && (
-                  <span className="text-muted-foreground"> - {formatTime(activity.end_time)}</span>
-                )}
-              </td>
-              <td className="px-3 py-2">
-                <div>{activity.activity}</div>
-                {activity.notes && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{activity.notes}</p>
-                )}
-              </td>
-              <td className="px-3 py-2 text-muted-foreground">
-                {activity.responsible || '-'}
-              </td>
-              <td className="px-3 py-2">
-                {activity.todos ? (
-                  <div className="text-xs text-muted-foreground whitespace-pre-wrap">{activity.todos}</div>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-right">
-                <div className="flex justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(activity)}>
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(activity.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {activities.map((activity) => {
+            const group = getGroup(activity.group_id)
+            return (
+              <tr key={activity.id} className="border-b hover:bg-muted/30">
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="font-medium">{formatTime(activity.start_time)}</span>
+                  {activity.end_time && (
+                    <span className="text-muted-foreground"> - {formatTime(activity.end_time)}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {group ? (
+                    <Badge
+                      variant="outline"
+                      className="whitespace-nowrap"
+                      style={{
+                        borderColor: group.color,
+                        backgroundColor: `${group.color}20`,
+                      }}
+                    >
+                      <span
+                        className="mr-1.5 h-2 w-2 rounded-full"
+                        style={{ backgroundColor: group.color }}
+                      />
+                      {group.name}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">General</span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  <div>{activity.activity}</div>
+                  {activity.notes && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{activity.notes}</p>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {activity.responsible || '-'}
+                </td>
+                <td className="px-3 py-2">
+                  {activity.todos ? (
+                    <div className="text-xs text-muted-foreground whitespace-pre-wrap">{activity.todos}</div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(activity)}>
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(activity.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
