@@ -161,8 +161,8 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       .insert([{
         event_date: selectedDate,
         group_id: activityForm.group_id || null,
-        start_time: activityForm.start_time,
-        end_time: activityForm.end_time || null,
+        start_time: formatTimeForDB(activityForm.start_time),
+        end_time: formatTimeForDB(activityForm.end_time),
         activity: activityForm.activity,
         responsible: activityForm.responsible || null,
         todos: activityForm.todos || null,
@@ -192,8 +192,8 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       .from('showcase_day_activities')
       .update({
         group_id: activityForm.group_id || null,
-        start_time: activityForm.start_time,
-        end_time: activityForm.end_time || null,
+        start_time: formatTimeForDB(activityForm.start_time),
+        end_time: formatTimeForDB(activityForm.end_time),
         activity: activityForm.activity,
         responsible: activityForm.responsible || null,
         todos: activityForm.todos || null,
@@ -258,7 +258,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       .insert([{
         event_date: selectedDate,
         match_number: matchForm.match_number,
-        start_time: matchForm.start_time,
+        start_time: formatTimeForDB(matchForm.start_time),
         team_a: matchForm.team_a,
         team_b: matchForm.team_b,
         field: matchForm.field || null,
@@ -286,7 +286,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       .from('showcase_matches')
       .update({
         match_number: matchForm.match_number,
-        start_time: matchForm.start_time,
+        start_time: formatTimeForDB(matchForm.start_time),
         team_a: matchForm.team_a,
         team_b: matchForm.team_b,
         field: matchForm.field || null,
@@ -457,6 +457,15 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     const hours = match[1].padStart(2, '0')
     const minutes = match[2]
     return `${hours}:${minutes}`
+  }
+
+  // Format time for database (HH:MM:SS)
+  const formatTimeForDB = (time: string | null | undefined): string | null => {
+    if (!time) return null
+    // If already has seconds, return as-is
+    if (/^\d{2}:\d{2}:\d{2}/.test(time)) return time
+    // Add seconds
+    return `${time}:00`
   }
 
   // Group activities by group
