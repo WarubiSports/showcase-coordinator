@@ -224,6 +224,9 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     }
 
     console.log('Updating activity ID:', editingActivity.id)
+    console.log('Form state:', activityForm)
+    console.log('end_time from form:', activityForm.end_time, 'type:', typeof activityForm.end_time)
+    console.log('formatTimeForDB result:', formatTimeForDB(activityForm.end_time))
     console.log('Update data:', updateData)
 
     const { data, error } = await supabase
@@ -854,7 +857,10 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Input
                   type="time"
                   value={activityForm.end_time}
-                  onChange={(e) => setActivityForm(prev => ({ ...prev, end_time: e.target.value }))}
+                  onChange={(e) => {
+                    console.log('End time onChange:', e.target.value)
+                    setActivityForm(prev => ({ ...prev, end_time: e.target.value }))
+                  }}
                 />
               </div>
             </div>
