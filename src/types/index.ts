@@ -184,6 +184,17 @@ export interface Material {
   updated_at: string
 }
 
+export interface Team {
+  id: string
+  name: string
+  color: string | null
+  notes: string | null
+  sort_order: number
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type AttendeeRole = 'staff' | 'alumni' | 'coach' | 'scout'
 
 export interface AttendeeAvailability {

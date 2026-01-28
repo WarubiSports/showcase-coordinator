@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Check, X, Clock, Users, Package, Trophy } from 'lucide-react'
+import { Plus, Edit2, Trash2, Clock, Users, Package, Trophy, Shield } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
-import type { DayGroup, DayActivity, Match, Material } from '@/types'
+import type { DayGroup, DayActivity, Match, Material, Team } from '@/types'
 
 const EVENT_DAYS = [
   { date: '2026-02-06', label: 'Friday', name: 'Kick-off Day' },
@@ -43,15 +43,18 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Form states
   const [isActivityFormOpen, setIsActivityFormOpen] = useState(false)
   const [isMatchFormOpen, setIsMatchFormOpen] = useState(false)
   const [isMaterialFormOpen, setIsMaterialFormOpen] = useState(false)
+  const [isTeamFormOpen, setIsTeamFormOpen] = useState(false)
   const [editingActivity, setEditingActivity] = useState<DayActivity | null>(null)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null)
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null)
 
   // Form data
   const [activityForm, setActivityForm] = useState({
@@ -80,9 +83,16 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     notes: '',
   })
 
+  const [teamForm, setTeamForm] = useState({
+    name: '',
+    color: '#3b82f6',
+    notes: '',
+  })
+
   useEffect(() => {
     fetchGroups()
     fetchMaterials()
+    fetchTeams()
   }, [])
 
   useEffect(() => {
@@ -152,6 +162,20 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       return
     }
     setMaterials(data || [])
+  }
+
+  const fetchTeams = async () => {
+    const { data, error } = await supabase
+      .from('showcase_teams')
+      .select('*')
+      .order('sort_order')
+      .order('name')
+
+    if (error) {
+      console.error('Failed to load teams:', error)
+      return
+    }
+    setTeams(data || [])
   }
 
   // Activity CRUD
@@ -459,6 +483,87 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     setIsMaterialFormOpen(true)
   }
 
+  // Team CRUD
+  const handleCreateTeam = async () => {
+    const { data, error } = await supabase
+      .from('showcase_teams')
+      .insert([{
+        name: teamForm.name,
+        color: teamForm.color || null,
+        notes: teamForm.notes || null,
+        created_by: userName,
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      toast.error('Failed to create team')
+      return
+    }
+
+    setTeams((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    setIsTeamFormOpen(false)
+    resetTeamForm()
+    toast.success('Team added')
+  }
+
+  const handleUpdateTeam = async () => {
+    if (!editingTeam) return
+
+    const { data, error } = await supabase
+      .from('showcase_teams')
+      .update({
+        name: teamForm.name,
+        color: teamForm.color || null,
+        notes: teamForm.notes || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', editingTeam.id)
+      .select()
+      .single()
+
+    if (error) {
+      toast.error('Failed to update team')
+      return
+    }
+
+    setTeams((prev) =>
+      prev.map((t) => (t.id === editingTeam.id ? data : t)).sort((a, b) => a.name.localeCompare(b.name))
+    )
+    setEditingTeam(null)
+    setIsTeamFormOpen(false)
+    resetTeamForm()
+    toast.success('Team updated')
+  }
+
+  const handleDeleteTeam = async (id: string) => {
+    const { error } = await supabase.from('showcase_teams').delete().eq('id', id)
+    if (error) {
+      toast.error('Failed to delete team')
+      return
+    }
+    setTeams((prev) => prev.filter((t) => t.id !== id))
+    toast.success('Team deleted')
+  }
+
+  const resetTeamForm = () => {
+    setTeamForm({
+      name: '',
+      color: '#3b82f6',
+      notes: '',
+    })
+  }
+
+  const openEditTeam = (team: Team) => {
+    setTeamForm({
+      name: team.name,
+      color: team.color || '#3b82f6',
+      notes: team.notes || '',
+    })
+    setEditingTeam(team)
+    setIsTeamFormOpen(true)
+  }
+
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':')
     const h = parseInt(hours)
@@ -663,6 +768,59 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Teams */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Teams
+                <Badge variant="secondary">{teams.length}</Badge>
+              </CardTitle>
+              <Button size="sm" onClick={() => { resetTeamForm(); setEditingTeam(null); setIsTeamFormOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Team
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {teams.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <Shield className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <p>No teams added yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {teams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50"
+                  >
+                    <div
+                      className="h-4 w-4 rounded-full shrink-0"
+                      style={{ backgroundColor: team.color || '#6b7280' }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium">{team.name}</div>
+                      {team.notes && (
+                        <p className="text-xs text-muted-foreground">{team.notes}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditTeam(team)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteTeam(team.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Activity Form Dialog */}
@@ -814,19 +972,61 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Team A *</Label>
-                <Input
-                  value={matchForm.team_a}
-                  onChange={(e) => setMatchForm(prev => ({ ...prev, team_a: e.target.value }))}
-                  placeholder="Team name"
-                />
+                {teams.length > 0 ? (
+                  <Select
+                    value={matchForm.team_a}
+                    onValueChange={(v) => setMatchForm(prev => ({ ...prev, team_a: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.name}>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: team.color || '#6b7280' }} />
+                            {team.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={matchForm.team_a}
+                    onChange={(e) => setMatchForm(prev => ({ ...prev, team_a: e.target.value }))}
+                    placeholder="Team name"
+                  />
+                )}
               </div>
               <div>
                 <Label>Team B *</Label>
-                <Input
-                  value={matchForm.team_b}
-                  onChange={(e) => setMatchForm(prev => ({ ...prev, team_b: e.target.value }))}
-                  placeholder="Team name"
-                />
+                {teams.length > 0 ? (
+                  <Select
+                    value={matchForm.team_b}
+                    onValueChange={(v) => setMatchForm(prev => ({ ...prev, team_b: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.name}>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: team.color || '#6b7280' }} />
+                            {team.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={matchForm.team_b}
+                    onChange={(e) => setMatchForm(prev => ({ ...prev, team_b: e.target.value }))}
+                    placeholder="Team name"
+                  />
+                )}
               </div>
             </div>
 
@@ -960,6 +1160,82 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                   disabled={!materialForm.item}
                 >
                   {editingMaterial ? 'Update' : 'Create'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Form Dialog */}
+      <Dialog key={editingTeam?.id || 'new-team'} open={isTeamFormOpen} onOpenChange={setIsTeamFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingTeam ? 'Edit Team' : 'Add Team'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Team Name *</Label>
+              <Input
+                value={teamForm.name}
+                onChange={(e) => setTeamForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Team name"
+              />
+            </div>
+
+            <div>
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={teamForm.color}
+                  onChange={(e) => setTeamForm(prev => ({ ...prev, color: e.target.value }))}
+                  className="w-16 h-10 p-1"
+                />
+                <Input
+                  value={teamForm.color}
+                  onChange={(e) => setTeamForm(prev => ({ ...prev, color: e.target.value }))}
+                  placeholder="#3b82f6"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={teamForm.notes}
+                onChange={(e) => setTeamForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Additional notes..."
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-between pt-2">
+              {editingTeam ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    handleDeleteTeam(editingTeam.id)
+                    setIsTeamFormOpen(false)
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              ) : (
+                <div />
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsTeamFormOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={editingTeam ? handleUpdateTeam : handleCreateTeam}
+                  disabled={!teamForm.name}
+                >
+                  {editingTeam ? 'Update' : 'Create'}
                 </Button>
               </div>
             </div>
