@@ -1,16 +1,20 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import { TaskList } from '@/components/tasks/task-list'
+import { TaskKanban } from '@/components/tasks/task-kanban'
+import { TaskTable } from '@/components/tasks/task-table'
+import { TaskViewToggle, type TaskViewType } from '@/components/tasks/task-view-toggle'
 import { TaskFiltersBar } from '@/components/tasks/task-filters'
 import { TaskForm, type TaskFormData } from '@/components/tasks/task-form'
 import { useTasks } from '@/hooks/use-tasks'
 import { useCategories } from '@/hooks/use-categories'
 import { useUser } from '@/hooks/use-user'
+import { STORAGE_KEYS } from '@/lib/constants'
 import type { Task, TaskFilters, TaskStatus } from '@/types'
 
 export default function TasksPage() {
@@ -21,6 +25,21 @@ export default function TasksPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [view, setView] = useState<TaskViewType>('cards')
+
+  // Load saved view preference
+  useEffect(() => {
+    const savedView = localStorage.getItem(STORAGE_KEYS.TASK_VIEW) as TaskViewType | null
+    if (savedView && ['cards', 'kanban', 'list'].includes(savedView)) {
+      setView(savedView)
+    }
+  }, [])
+
+  // Save view preference
+  const handleViewChange = (newView: TaskViewType) => {
+    setView(newView)
+    localStorage.setItem(STORAGE_KEYS.TASK_VIEW, newView)
+  }
 
   // Get unique individual assignees from tasks (split comma-separated names)
   const assignees = useMemo(() => {
@@ -90,6 +109,25 @@ export default function TasksPage() {
     setEditingTask(null)
   }
 
+  const renderTaskView = () => {
+    const commonProps = {
+      tasks,
+      isLoading,
+      onEdit: handleEdit,
+      onDelete: handleDeleteTask,
+      onStatusChange: handleStatusChange,
+    }
+
+    switch (view) {
+      case 'kanban':
+        return <TaskKanban {...commonProps} />
+      case 'list':
+        return <TaskTable {...commonProps} />
+      default:
+        return <TaskList {...commonProps} />
+    }
+  }
+
   return (
     <AppShell selectedCategory={filters.category || null} onCategorySelect={(cat) => setFilters({ ...filters, category: cat || undefined })}>
       <div className="space-y-6">
@@ -98,10 +136,13 @@ export default function TasksPage() {
             <h1 className="text-2xl font-bold">Tasks</h1>
             <p className="text-muted-foreground">Manage and track all showcase tasks</p>
           </div>
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
+          <div className="flex items-center gap-2">
+            <TaskViewToggle view={view} onViewChange={handleViewChange} />
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Task
+            </Button>
+          </div>
         </div>
 
         <TaskFiltersBar
@@ -111,13 +152,7 @@ export default function TasksPage() {
           assignees={assignees}
         />
 
-        <TaskList
-          tasks={tasks}
-          isLoading={isLoading}
-          onEdit={handleEdit}
-          onDelete={handleDeleteTask}
-          onStatusChange={handleStatusChange}
-        />
+        {renderTaskView()}
 
         <TaskForm
           open={isFormOpen}
