@@ -257,7 +257,7 @@ export default function TaskDetailPage() {
             <div>
               <h3 className="font-semibold mb-3">Update Status</h3>
               <div className="flex flex-wrap gap-2">
-                {(['not_started', 'in_progress', 'blocked', 'complete'] as const).map((status) => (
+                {(['not_started', 'in_progress', 'complete'] as const).map((status) => (
                   <Button
                     key={status}
                     variant={task.status === status ? 'default' : 'outline'}

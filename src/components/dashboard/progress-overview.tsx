@@ -14,7 +14,7 @@ export function ProgressOverview({ tasks, categories }: ProgressOverviewProps) {
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((t) => t.status === 'complete').length
   const inProgressTasks = tasks.filter((t) => t.status === 'in_progress').length
-  const blockedTasks = tasks.filter((t) => t.status === 'blocked').length
+  const notStartedTasks = tasks.filter((t) => t.status === 'not_started').length
   const overallProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
   // Progress by category
@@ -51,12 +51,12 @@ export function ProgressOverview({ tasks, categories }: ProgressOverviewProps) {
 
           <div className="grid grid-cols-3 gap-4 pt-2">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{inProgressTasks}</div>
-              <div className="text-xs text-muted-foreground">In Progress</div>
+              <div className="text-2xl font-bold text-gray-600">{notStartedTasks}</div>
+              <div className="text-xs text-muted-foreground">Not Started</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{blockedTasks}</div>
-              <div className="text-xs text-muted-foreground">Blocked</div>
+              <div className="text-2xl font-bold text-blue-600">{inProgressTasks}</div>
+              <div className="text-xs text-muted-foreground">In Progress</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{completedTasks}</div>

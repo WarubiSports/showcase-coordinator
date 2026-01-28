@@ -76,7 +76,6 @@ export function TaskFiltersBar({ filters, onFiltersChange, categories, assignees
           <SelectItem value="all">All Status</SelectItem>
           <SelectItem value="not_started">Not Started</SelectItem>
           <SelectItem value="in_progress">In Progress</SelectItem>
-          <SelectItem value="blocked">Blocked</SelectItem>
           <SelectItem value="complete">Complete</SelectItem>
         </SelectContent>
       </Select>

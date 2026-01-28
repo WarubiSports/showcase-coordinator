@@ -15,11 +15,6 @@ export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; b
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
   },
-  blocked: {
-    label: 'Blocked',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
-  },
   complete: {
     label: 'Complete',
     color: 'text-green-600',
@@ -56,4 +51,4 @@ export const STORAGE_KEYS = {
   TASK_VIEW: 'showcase_task_view',
 }
 
-export const TASK_STATUSES: TaskStatus[] = ['not_started', 'in_progress', 'blocked', 'complete']
+export const TASK_STATUSES: TaskStatus[] = ['not_started', 'in_progress', 'complete']

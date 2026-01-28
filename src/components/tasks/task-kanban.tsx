@@ -219,7 +219,6 @@ export function TaskKanban({ tasks, isLoading, onEdit, onStatusChange }: TaskKan
     const grouped: Record<TaskStatus, Task[]> = {
       not_started: [],
       in_progress: [],
-      blocked: [],
       complete: [],
     }
     tasks.forEach((task) => {

@@ -41,7 +41,6 @@ export function AssigneeView({ tasks }: AssigneeViewProps) {
       total: tasks.length,
       completed: tasks.filter((t) => t.status === 'complete').length,
       inProgress: tasks.filter((t) => t.status === 'in_progress').length,
-      blocked: tasks.filter((t) => t.status === 'blocked').length,
     }))
     .sort((a, b) => b.total - a.total)
 
@@ -82,11 +81,6 @@ export function AssigneeView({ tasks }: AssigneeViewProps) {
                   {assignee.inProgress > 0 && (
                     <Badge variant="outline" className={STATUS_CONFIG.in_progress.bgColor}>
                       {assignee.inProgress}
-                    </Badge>
-                  )}
-                  {assignee.blocked > 0 && (
-                    <Badge variant="outline" className={STATUS_CONFIG.blocked.bgColor}>
-                      {assignee.blocked}
                     </Badge>
                   )}
                   {assignee.completed > 0 && (

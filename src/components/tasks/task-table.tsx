@@ -48,7 +48,7 @@ export function TaskTable({ tasks, isLoading, onEdit, onDelete }: TaskTableProps
           comparison = a.title.localeCompare(b.title)
           break
         case 'status': {
-          const statusOrder = { not_started: 0, in_progress: 1, blocked: 2, complete: 3 }
+          const statusOrder = { not_started: 0, in_progress: 1, complete: 2 }
           comparison = statusOrder[a.status] - statusOrder[b.status]
           break
         }

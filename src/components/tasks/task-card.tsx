@@ -120,7 +120,7 @@ export function TaskCard({ task, onEdit, onDelete, onStatusChange }: TaskCardPro
 
         {/* Quick status change buttons */}
         <div className="flex gap-1 pt-2 border-t">
-          {(['not_started', 'in_progress', 'blocked', 'complete'] as const).map((status) => (
+          {(['not_started', 'in_progress', 'complete'] as const).map((status) => (
             <Button
               key={status}
               variant={task.status === status ? 'default' : 'ghost'}

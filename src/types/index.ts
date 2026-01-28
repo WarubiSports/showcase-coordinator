@@ -18,7 +18,7 @@ export interface VenueZone {
   updated_at: string
 }
 
-export type TaskStatus = 'not_started' | 'in_progress' | 'blocked' | 'complete'
+export type TaskStatus = 'not_started' | 'in_progress' | 'complete'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface Category {
