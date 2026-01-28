@@ -242,16 +242,16 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   }
 
   const openEditActivity = (activity: DayActivity) => {
+    setEditingActivity(activity)
     setActivityForm({
       group_id: activity.group_id || '',
-      start_time: activity.start_time.slice(0, 5),
-      end_time: activity.end_time?.slice(0, 5) || '',
+      start_time: formatTimeForInput(activity.start_time),
+      end_time: formatTimeForInput(activity.end_time),
       activity: activity.activity,
       responsible: activity.responsible || '',
       todos: activity.todos || '',
       notes: activity.notes || '',
     })
-    setEditingActivity(activity)
     setIsActivityFormOpen(true)
   }
 
@@ -339,15 +339,15 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   }
 
   const openEditMatch = (match: Match) => {
+    setEditingMatch(match)
     setMatchForm({
       match_number: match.match_number,
-      start_time: match.start_time.slice(0, 5),
+      start_time: formatTimeForInput(match.start_time),
       team_a: match.team_a,
       team_b: match.team_b,
       field: match.field || '',
       referee: match.referee || '',
     })
-    setEditingMatch(match)
     setIsMatchFormOpen(true)
   }
 
@@ -457,6 +457,17 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     const ampm = h >= 12 ? 'PM' : 'AM'
     const hour12 = h % 12 || 12
     return `${hour12}:${minutes} ${ampm}`
+  }
+
+  // Format time for HTML time input (HH:MM)
+  const formatTimeForInput = (time: string | null | undefined): string => {
+    if (!time) return ''
+    // Handle formats: "HH:MM", "HH:MM:SS", "HH:MM:SS.mmm", "HH:MM:SS+TZ"
+    const match = time.match(/^(\d{1,2}):(\d{2})/)
+    if (!match) return ''
+    const hours = match[1].padStart(2, '0')
+    const minutes = match[2]
+    return `${hours}:${minutes}`
   }
 
   // Group activities by group
@@ -678,7 +689,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       </div>
 
       {/* Activity Form Dialog */}
-      <Dialog open={isActivityFormOpen} onOpenChange={setIsActivityFormOpen}>
+      <Dialog key={editingActivity?.id || 'new'} open={isActivityFormOpen} onOpenChange={setIsActivityFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingActivity ? 'Edit Activity' : 'Add Activity'}</DialogTitle>
@@ -797,7 +808,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       </Dialog>
 
       {/* Match Form Dialog */}
-      <Dialog open={isMatchFormOpen} onOpenChange={setIsMatchFormOpen}>
+      <Dialog key={editingMatch?.id || 'new-match'} open={isMatchFormOpen} onOpenChange={setIsMatchFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingMatch ? 'Edit Match' : 'Add Match'}</DialogTitle>
@@ -894,7 +905,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       </Dialog>
 
       {/* Material Form Dialog */}
-      <Dialog open={isMaterialFormOpen} onOpenChange={setIsMaterialFormOpen}>
+      <Dialog key={editingMaterial?.id || 'new-material'} open={isMaterialFormOpen} onOpenChange={setIsMaterialFormOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingMaterial ? 'Edit Material' : 'Add Material'}</DialogTitle>
