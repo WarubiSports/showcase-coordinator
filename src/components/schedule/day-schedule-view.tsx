@@ -690,7 +690,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Input
                   type="time"
                   value={activityForm.start_time}
-                  onChange={(e) => setActivityForm({ ...activityForm, start_time: e.target.value })}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, start_time: e.target.value }))}
                 />
               </div>
               <div>
@@ -698,7 +698,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Input
                   type="time"
                   value={activityForm.end_time}
-                  onChange={(e) => setActivityForm({ ...activityForm, end_time: e.target.value })}
+                  onChange={(e) => setActivityForm(prev => ({ ...prev, end_time: e.target.value }))}
                 />
               </div>
             </div>
@@ -707,7 +707,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Group</Label>
               <Select
                 value={activityForm.group_id || 'none'}
-                onValueChange={(v) => setActivityForm({ ...activityForm, group_id: v === 'none' ? '' : v })}
+                onValueChange={(v) => setActivityForm(prev => ({ ...prev, group_id: v === 'none' ? '' : v }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a group (optional)" />
@@ -730,7 +730,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Activity *</Label>
               <Input
                 value={activityForm.activity}
-                onChange={(e) => setActivityForm({ ...activityForm, activity: e.target.value })}
+                onChange={(e) => setActivityForm(prev => ({ ...prev, activity: e.target.value }))}
                 placeholder="What's happening?"
               />
             </div>
@@ -739,7 +739,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Responsible</Label>
               <Input
                 value={activityForm.responsible}
-                onChange={(e) => setActivityForm({ ...activityForm, responsible: e.target.value })}
+                onChange={(e) => setActivityForm(prev => ({ ...prev, responsible: e.target.value }))}
                 placeholder="Who's in charge?"
               />
             </div>
@@ -748,7 +748,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Todos</Label>
               <Textarea
                 value={activityForm.todos}
-                onChange={(e) => setActivityForm({ ...activityForm, todos: e.target.value })}
+                onChange={(e) => setActivityForm(prev => ({ ...prev, todos: e.target.value }))}
                 placeholder="Tasks to complete for this activity..."
                 rows={2}
               />
@@ -758,7 +758,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Notes</Label>
               <Textarea
                 value={activityForm.notes}
-                onChange={(e) => setActivityForm({ ...activityForm, notes: e.target.value })}
+                onChange={(e) => setActivityForm(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Additional notes..."
                 rows={2}
               />
@@ -810,7 +810,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                   type="number"
                   min={1}
                   value={matchForm.match_number}
-                  onChange={(e) => setMatchForm({ ...matchForm, match_number: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setMatchForm(prev => ({ ...prev, match_number: parseInt(e.target.value) || 1 }))}
                 />
               </div>
               <div>
@@ -818,7 +818,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Input
                   type="time"
                   value={matchForm.start_time}
-                  onChange={(e) => setMatchForm({ ...matchForm, start_time: e.target.value })}
+                  onChange={(e) => setMatchForm(prev => ({ ...prev, start_time: e.target.value }))}
                 />
               </div>
             </div>
@@ -828,7 +828,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Label>Team A *</Label>
                 <Input
                   value={matchForm.team_a}
-                  onChange={(e) => setMatchForm({ ...matchForm, team_a: e.target.value })}
+                  onChange={(e) => setMatchForm(prev => ({ ...prev, team_a: e.target.value }))}
                   placeholder="Team name"
                 />
               </div>
@@ -836,7 +836,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Label>Team B *</Label>
                 <Input
                   value={matchForm.team_b}
-                  onChange={(e) => setMatchForm({ ...matchForm, team_b: e.target.value })}
+                  onChange={(e) => setMatchForm(prev => ({ ...prev, team_b: e.target.value }))}
                   placeholder="Team name"
                 />
               </div>
@@ -847,7 +847,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Label>Field</Label>
                 <Input
                   value={matchForm.field}
-                  onChange={(e) => setMatchForm({ ...matchForm, field: e.target.value })}
+                  onChange={(e) => setMatchForm(prev => ({ ...prev, field: e.target.value }))}
                   placeholder="Field 1, Main Pitch, etc."
                 />
               </div>
@@ -855,7 +855,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <Label>Referee</Label>
                 <Input
                   value={matchForm.referee}
-                  onChange={(e) => setMatchForm({ ...matchForm, referee: e.target.value })}
+                  onChange={(e) => setMatchForm(prev => ({ ...prev, referee: e.target.value }))}
                   placeholder="Referee name"
                 />
               </div>
@@ -904,7 +904,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Item *</Label>
               <Input
                 value={materialForm.item}
-                onChange={(e) => setMaterialForm({ ...materialForm, item: e.target.value })}
+                onChange={(e) => setMaterialForm(prev => ({ ...prev, item: e.target.value }))}
                 placeholder="What do you need?"
               />
             </div>
@@ -913,7 +913,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Category</Label>
               <Select
                 value={materialForm.category}
-                onValueChange={(v) => setMaterialForm({ ...materialForm, category: v })}
+                onValueChange={(v) => setMaterialForm(prev => ({ ...prev, category: v }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
@@ -932,7 +932,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Responsible</Label>
               <Input
                 value={materialForm.responsible}
-                onChange={(e) => setMaterialForm({ ...materialForm, responsible: e.target.value })}
+                onChange={(e) => setMaterialForm(prev => ({ ...prev, responsible: e.target.value }))}
                 placeholder="Who's responsible?"
               />
             </div>
@@ -941,7 +941,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
               <Label>Notes</Label>
               <Textarea
                 value={materialForm.notes}
-                onChange={(e) => setMaterialForm({ ...materialForm, notes: e.target.value })}
+                onChange={(e) => setMaterialForm(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Additional notes..."
                 rows={2}
               />
