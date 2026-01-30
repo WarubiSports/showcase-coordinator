@@ -197,6 +197,40 @@ export interface Team {
 
 export type AttendeeRole = 'staff' | 'alumni' | 'coach' | 'scout'
 
+// Player Types
+export type PlayerPosition = 'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'LW' | 'RW' | 'ST'
+
+export interface PlayerTestScores {
+  broad_jump_1: number | null
+  broad_jump_2: number | null
+  sprint_1: number | null
+  sprint_2: number | null
+  high_jump_1: number | null
+  high_jump_2: number | null
+}
+
+export interface Player {
+  id: string
+  name: string
+  position: PlayerPosition | null
+  birth_year: number | null
+  club: string | null
+  country: string | null
+  email: string | null
+  phone: string | null
+  // Test scores - 2 tries each
+  broad_jump_1: number | null
+  broad_jump_2: number | null
+  sprint_1: number | null
+  sprint_2: number | null
+  high_jump_1: number | null
+  high_jump_2: number | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AttendeeAvailability {
   date: string
   start_time: string
