@@ -684,35 +684,47 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                 <p>No matches scheduled</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {matches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                      {match.match_number}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium">
-                        {match.team_a} <span className="text-muted-foreground">vs</span> {match.team_b}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{formatTime(match.start_time)}</span>
-                        {match.field && <span>• {match.field}</span>}
-                        {match.referee && <span>• Ref: {match.referee}</span>}
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEditMatch(match)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteMatch(match.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Field 1 */}
+                <div>
+                  <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Field 1</h4>
+                  <div className="space-y-2">
+                    {matches
+                      .filter((m) => m.field?.toLowerCase().includes('1') || m.field?.toLowerCase() === 'field 1')
+                      .map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          formatTime={formatTime}
+                          onEdit={openEditMatch}
+                          onDelete={handleDeleteMatch}
+                        />
+                      ))}
+                    {matches.filter((m) => m.field?.toLowerCase().includes('1') || m.field?.toLowerCase() === 'field 1').length === 0 && (
+                      <p className="text-sm text-muted-foreground py-4 text-center">No matches on Field 1</p>
+                    )}
                   </div>
-                ))}
+                </div>
+                {/* Field 2 */}
+                <div>
+                  <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Field 2</h4>
+                  <div className="space-y-2">
+                    {matches
+                      .filter((m) => m.field?.toLowerCase().includes('2') || m.field?.toLowerCase() === 'field 2')
+                      .map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          formatTime={formatTime}
+                          onEdit={openEditMatch}
+                          onDelete={handleDeleteMatch}
+                        />
+                      ))}
+                    {matches.filter((m) => m.field?.toLowerCase().includes('2') || m.field?.toLowerCase() === 'field 2').length === 0 && (
+                      <p className="text-sm text-muted-foreground py-4 text-center">No matches on Field 2</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
@@ -1359,4 +1371,40 @@ function ActivityTable({
     </div>
   )
 }
-// Forced rebuild Wed Jan 28 22:18:54 CET 2026
+// Match Card Component
+function MatchCard({
+  match,
+  formatTime,
+  onEdit,
+  onDelete,
+}: {
+  match: Match
+  formatTime: (time: string) => string
+  onEdit: (match: Match) => void
+  onDelete: (id: string) => void
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+        {match.match_number}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium">
+          {match.team_a} <span className="text-muted-foreground">vs</span> {match.team_b}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{formatTime(match.start_time)}</span>
+          {match.referee && <span>• Ref: {match.referee}</span>}
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(match)}>
+          <Edit2 className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(match.id)}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+    </div>
+  )
+}
