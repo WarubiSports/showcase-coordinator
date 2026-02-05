@@ -227,55 +227,91 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
         {activeGroups.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group Activities</h3>
-            <div className={cn(
-              'grid gap-3',
-              activeGroups.length === 4 && 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
-              activeGroups.length === 3 && 'grid-cols-1 sm:grid-cols-3',
-              activeGroups.length === 2 && 'grid-cols-1 sm:grid-cols-2',
-              activeGroups.length === 1 && 'grid-cols-1 max-w-md',
-            )}>
-              {activeGroups.map(group => {
-                const groupActs = groupActivities
-                  .filter(a => a.group_id === group.id)
-                  .sort((a, b) => a.start_time.localeCompare(b.start_time) || a.sort_order - b.sort_order)
 
-                return (
-                  <div key={group.id} className="space-y-2">
-                    {/* Group header */}
-                    <div
-                      className="rounded-lg px-3 py-2 text-sm font-semibold border"
-                      style={{
-                        backgroundColor: `${group.color}15`,
-                        borderColor: `${group.color}40`,
-                        color: group.color,
-                      }}
-                    >
-                      <div>{group.name}</div>
-                      {GROUP_SUBTITLES[group.name] && (
-                        <div className="text-xs font-normal opacity-70 mt-0.5">
-                          {GROUP_SUBTITLES[group.name]}
+            {(() => {
+              // Collect all unique start times and build lookup
+              const allStartTimes = [...new Set(groupActivities.map(a => a.start_time))].sort()
+
+              const activityLookup = new Map<string, DayActivity[]>()
+              for (const a of groupActivities) {
+                const key = `${a.group_id}-${a.start_time}`
+                const existing = activityLookup.get(key) || []
+                existing.push(a)
+                activityLookup.set(key, existing)
+              }
+
+              const renderGroupHeader = (group: DayGroup) => (
+                <div
+                  className="rounded-lg px-3 py-2 text-sm font-semibold border"
+                  style={{ backgroundColor: `${group.color}15`, borderColor: `${group.color}40`, color: group.color }}
+                >
+                  <div>{group.name}</div>
+                  {GROUP_SUBTITLES[group.name] && (
+                    <div className="text-xs font-normal opacity-70 mt-0.5">{GROUP_SUBTITLES[group.name]}</div>
+                  )}
+                </div>
+              )
+
+              const renderActivityCard = (a: DayActivity, groupColor: string) => (
+                <ActivityCard
+                  key={a.id}
+                  activity={a}
+                  groupColor={groupColor}
+                  attendees={attendees}
+                  highlighted={isHighlighted(a.responsible)}
+                  dimmed={filterPerson !== 'all' && !isHighlighted(a.responsible)}
+                  onAssign={(val) => updateActivityResponsible(a.id, val)}
+                />
+              )
+
+              return (
+                <>
+                  {/* Mobile/Tablet: stacked per group */}
+                  <div className={cn(
+                    'grid gap-3 lg:hidden',
+                    activeGroups.length >= 3 && 'sm:grid-cols-3',
+                    activeGroups.length === 2 && 'sm:grid-cols-2',
+                    activeGroups.length === 1 && 'max-w-md',
+                  )}>
+                    {activeGroups.map(group => {
+                      const groupActs = groupActivities
+                        .filter(a => a.group_id === group.id)
+                        .sort((a, b) => a.start_time.localeCompare(b.start_time) || a.sort_order - b.sort_order)
+                      return (
+                        <div key={group.id} className="space-y-2">
+                          {renderGroupHeader(group)}
+                          <div className="space-y-1.5">
+                            {groupActs.map(a => renderActivityCard(a, group.color))}
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Activities in this group */}
-                    <div className="space-y-1.5">
-                      {groupActs.map(a => (
-                        <ActivityCard
-                          key={a.id}
-                          activity={a}
-                          groupColor={group.color}
-                          attendees={attendees}
-                          highlighted={isHighlighted(a.responsible)}
-                          dimmed={filterPerson !== 'all' && !isHighlighted(a.responsible)}
-                          onAssign={(val) => updateActivityResponsible(a.id, val)}
-                        />
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </div>
+
+                  {/* Desktop: time-aligned grid */}
+                  <div
+                    className="hidden lg:grid gap-x-3 gap-y-1.5 items-start"
+                    style={{ gridTemplateColumns: `repeat(${activeGroups.length}, minmax(0, 1fr))` }}
+                  >
+                    {activeGroups.map(group => (
+                      <div key={group.id}>{renderGroupHeader(group)}</div>
+                    ))}
+
+                    {allStartTimes.flatMap(time =>
+                      activeGroups.map(group => {
+                        const acts = (activityLookup.get(`${group.id}-${time}`) || [])
+                          .sort((a, b) => a.sort_order - b.sort_order)
+                        return (
+                          <div key={`${group.id}-${time}`}>
+                            {acts.map(a => renderActivityCard(a, group.color))}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         )}
 
