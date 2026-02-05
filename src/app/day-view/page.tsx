@@ -2,7 +2,7 @@
 
 import { AppShell } from '@/components/app-shell'
 import { StaffTimeline } from '@/components/schedule/staff-timeline'
-import { DayScheduleView } from '@/components/schedule/day-schedule-view'
+
 import { VenueMap } from '@/components/venue/venue-map'
 import { useUser } from '@/hooks/use-user'
 
@@ -20,8 +20,6 @@ export default function DayViewPage() {
         <StaffTimeline userName={userName || 'Unknown'} />
 
         <VenueMap userName={userName || 'Unknown'} />
-
-        <DayScheduleView userName={userName || 'Unknown'} />
       </div>
     </AppShell>
   )
