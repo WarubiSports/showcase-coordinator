@@ -370,7 +370,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
               <SelectTrigger className="w-[160px] h-8 text-sm">
                 <SelectValue placeholder="All Staff" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-60">
                 <SelectItem value="all">All Staff</SelectItem>
                 {uniqueNames.map(name => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
@@ -842,7 +842,7 @@ function AssignSelect({ value, attendees, onAssign, size = 'sm' }: AssignSelectP
           <span className="truncate">{value || 'Assign...'}</span>
         </div>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent position="popper" className="max-h-60">
         <SelectItem value="_none">Unassigned</SelectItem>
         {attendees.map(a => (
           <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
