@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Clock, User, Filter, Trophy, Plus, Edit2, Trash2 } from 'lucide-react'
+import { Clock, Filter, Trophy, Plus, Edit2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { DayGroup, DayActivity, Match, Attendee } from '@/types'
+import { MultiAssignSelect } from './multi-assign-select'
 
 const EVENT_DAYS = [
   { date: '2026-02-07', label: 'Saturday', name: 'Event Day 1' },
@@ -107,7 +108,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
 
   // ─── Activity CRUD ────────────────────────────────────────
 
-  const updateActivityResponsible = async (id: string, responsible: string | null) => {
+  const updateActivityResponsible = async (id: string, responsible: string[] | null) => {
     const { error } = await supabase
       .from('showcase_day_activities')
       .update({ responsible, updated_at: new Date().toISOString() })
@@ -200,7 +201,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
 
   // ─── Match CRUD ───────────────────────────────────────────
 
-  const updateMatchReferee = async (id: string, referee: string | null) => {
+  const updateMatchReferee = async (id: string, referee: string[] | null) => {
     const { error } = await supabase
       .from('showcase_matches')
       .update({ referee, updated_at: new Date().toISOString() })
@@ -230,7 +231,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
       team_a: match.team_a,
       team_b: match.team_b,
       field: match.field || '',
-      referee: match.referee || '',
+      referee: match.referee?.join(', ') || '',
       notes: match.notes || '',
     })
     setIsMatchFormOpen(true)
@@ -246,7 +247,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
         team_a: matchForm.team_a,
         team_b: matchForm.team_b,
         field: matchForm.field || null,
-        referee: matchForm.referee || null,
+        referee: matchForm.referee ? [matchForm.referee] : null,
         notes: matchForm.notes || null,
         created_by: userName,
       }])
@@ -270,7 +271,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
         team_a: matchForm.team_a,
         team_b: matchForm.team_b,
         field: matchForm.field || null,
-        referee: matchForm.referee || null,
+        referee: matchForm.referee ? [matchForm.referee] : null,
         notes: matchForm.notes || null,
         updated_at: new Date().toISOString(),
       })
@@ -324,23 +325,23 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
   const matchTimeSlots = [...new Set(matches.map(m => m.start_time))].sort()
 
   // Filter check
-  const isHighlighted = (responsible: string | null) => {
+  const isHighlighted = (responsible: string[] | null) => {
     if (filterPerson === 'all') return true
-    if (!responsible) return false
-    return responsible.toLowerCase().includes(filterPerson.toLowerCase())
+    if (!responsible || responsible.length === 0) return false
+    return responsible.some(r => r.toLowerCase().includes(filterPerson.toLowerCase()))
   }
 
-  const isMatchHighlighted = (referee: string | null) => {
+  const isMatchHighlighted = (referee: string[] | null) => {
     if (filterPerson === 'all') return true
-    if (!referee) return false
-    return referee.toLowerCase().includes(filterPerson.toLowerCase())
+    if (!referee || referee.length === 0) return false
+    return referee.some(r => r.toLowerCase().includes(filterPerson.toLowerCase()))
   }
 
   // Unique responsible names from current data (for filter)
   const allResponsible = [
-    ...activities.map(a => a.responsible).filter(Boolean),
-    ...matches.map(m => m.referee).filter(Boolean),
-  ] as string[]
+    ...activities.flatMap(a => a.responsible ?? []),
+    ...matches.flatMap(m => m.referee ?? []),
+  ]
   const uniqueNames = [...new Set(allResponsible)].sort()
 
   if (isLoading) {
@@ -488,27 +489,101 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
                     })}
                   </div>
 
-                  {/* Desktop: time-aligned grid */}
-                  <div
-                    className="hidden lg:grid gap-x-3 gap-y-1.5 items-start"
-                    style={{ gridTemplateColumns: `repeat(${activeGroups.length}, minmax(0, 1fr))` }}
-                  >
-                    {activeGroups.map(group => (
-                      <div key={group.id}>{renderGroupHeader(group)}</div>
-                    ))}
+                  {/* Desktop: proportional timeline */}
+                  {(() => {
+                    const toMin = (t: string) => {
+                      const [h, m] = t.split(':').map(Number)
+                      return h * 60 + m
+                    }
 
-                    {allStartTimes.flatMap(time =>
-                      activeGroups.map(group => {
-                        const acts = (activityLookup.get(`${group.id}-${time}`) || [])
-                          .sort((a, b) => a.sort_order - b.sort_order)
-                        return (
-                          <div key={`${group.id}-${time}`}>
-                            {acts.map(a => renderActivityCard(a, group.color))}
+                    const allTimes = groupActivities.flatMap(a =>
+                      [a.start_time, a.end_time].filter(Boolean) as string[]
+                    )
+                    if (allTimes.length === 0) return null
+
+                    const startMin = allTimes.reduce((mn, t) => Math.min(mn, toMin(t)), Infinity)
+                    const endMin = allTimes.reduce((mx, t) => Math.max(mx, toMin(t)), 0)
+                    const rangeMin = endMin - startMin || 60
+                    const PX = 4 // pixels per minute
+                    const totalHeight = rangeMin * PX
+
+                    // Time markers every 30 min
+                    const markers: number[] = []
+                    for (let m = Math.ceil(startMin / 30) * 30; m <= endMin; m += 30) {
+                      markers.push(m)
+                    }
+
+                    return (
+                      <div className="hidden lg:block">
+                        {/* Headers row */}
+                        <div className="flex gap-3 mb-2">
+                          <div className="shrink-0 w-14" />
+                          {activeGroups.map(group => (
+                            <div key={group.id} className="flex-1 min-w-0">
+                              {renderGroupHeader(group)}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Timeline */}
+                        <div className="flex gap-3">
+                          {/* Time axis */}
+                          <div className="relative shrink-0 w-14" style={{ height: totalHeight }}>
+                            {markers.map(m => {
+                              const t = `${Math.floor(m / 60)}:${(m % 60).toString().padStart(2, '0')}:00`
+                              return (
+                                <div
+                                  key={m}
+                                  className="absolute right-0 pr-2 text-xs text-muted-foreground tabular-nums -translate-y-1/2"
+                                  style={{ top: (m - startMin) * PX }}
+                                >
+                                  {formatTime(t)}
+                                </div>
+                              )
+                            })}
                           </div>
-                        )
-                      })
-                    )}
-                  </div>
+
+                          {/* Group columns */}
+                          {activeGroups.map(group => {
+                            const groupActs = groupActivities
+                              .filter(a => a.group_id === group.id)
+                              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+
+                            return (
+                              <div key={group.id} className="flex-1 min-w-0 relative" style={{ height: totalHeight }}>
+                                {/* Grid lines */}
+                                {markers.map(m => (
+                                  <div
+                                    key={m}
+                                    className="absolute left-0 right-0 border-t border-dashed border-border/40"
+                                    style={{ top: (m - startMin) * PX }}
+                                  />
+                                ))}
+
+                                {/* Activity cards */}
+                                {groupActs.map((a, i) => {
+                                  const aStart = toMin(a.start_time) - startMin
+                                  const aEnd = a.end_time ? toMin(a.end_time) - startMin : aStart + 15
+                                  const top = aStart * PX
+                                  const height = Math.max((aEnd - aStart) * PX, 48)
+
+                                  return (
+                                    <div
+                                      key={a.id}
+                                      className="absolute left-0 right-1"
+                                      style={{ top, height, zIndex: i + 1 }}
+                                    >
+                                      {renderActivityCard(a, group.color)}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </>
               )
             })()}
@@ -819,45 +894,12 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
 
 // ─── Sub-components ─────────────────────────────────────────
 
-interface AssignSelectProps {
-  value: string | null
-  attendees: Attendee[]
-  onAssign: (value: string | null) => void
-  size?: 'sm' | 'xs'
-}
-
-function AssignSelect({ value, attendees, onAssign, size = 'sm' }: AssignSelectProps) {
-  return (
-    <Select
-      value={value || '_none'}
-      onValueChange={(v) => onAssign(v === '_none' ? null : v)}
-    >
-      <SelectTrigger className={cn(
-        'border-dashed',
-        size === 'xs' ? 'h-6 text-[11px] w-[120px]' : 'h-7 text-xs w-[140px]',
-        !value && 'text-muted-foreground',
-      )}>
-        <div className="flex items-center gap-1 truncate">
-          <User className="h-3 w-3 shrink-0" />
-          <span className="truncate">{value || 'Assign...'}</span>
-        </div>
-      </SelectTrigger>
-      <SelectContent position="popper" className="max-h-60">
-        <SelectItem value="_none">Unassigned</SelectItem>
-        {attendees.map(a => (
-          <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
 interface SharedActivityRowProps {
   activity: DayActivity
   attendees: Attendee[]
   highlighted: boolean
   dimmed: boolean
-  onAssign: (value: string | null) => void
+  onAssign: (value: string[] | null) => void
   onEdit: () => void
   onDelete: () => void
 }
@@ -880,7 +922,7 @@ function SharedActivityRow({ activity, attendees, highlighted, dimmed, onAssign,
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <AssignSelect value={activity.responsible} attendees={attendees} onAssign={onAssign} />
+        <MultiAssignSelect value={activity.responsible} attendees={attendees} onAssign={onAssign} />
         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
             <Edit2 className="h-3.5 w-3.5" />
@@ -900,7 +942,7 @@ interface ActivityCardProps {
   attendees: Attendee[]
   highlighted: boolean
   dimmed: boolean
-  onAssign: (value: string | null) => void
+  onAssign: (value: string[] | null) => void
   onEdit: () => void
   onDelete: () => void
 }
@@ -909,7 +951,7 @@ function ActivityCard({ activity, groupColor, attendees, highlighted, dimmed, on
   return (
     <div
       className={cn(
-        'group rounded-md border px-2.5 py-2 text-sm transition-opacity',
+        'group rounded-md border px-2.5 py-2 text-sm transition-opacity h-full overflow-hidden bg-background',
         dimmed && 'opacity-25',
       )}
       style={{
@@ -937,7 +979,7 @@ function ActivityCard({ activity, groupColor, attendees, highlighted, dimmed, on
         </div>
       </div>
       <div className="mt-1.5">
-        <AssignSelect value={activity.responsible} attendees={attendees} onAssign={onAssign} size="xs" />
+        <MultiAssignSelect value={activity.responsible} attendees={attendees} onAssign={onAssign} size="xs" />
       </div>
     </div>
   )
@@ -946,7 +988,7 @@ function ActivityCard({ activity, groupColor, attendees, highlighted, dimmed, on
 interface MatchCellProps {
   match: Match
   attendees: Attendee[]
-  onAssign: (value: string | null) => void
+  onAssign: (value: string[] | null) => void
   onEdit: () => void
   onDelete: () => void
 }
@@ -976,7 +1018,7 @@ function MatchCell({ match, attendees, onAssign, onEdit, onDelete }: MatchCellPr
       {match.notes && (
         <div className="text-[11px] text-muted-foreground">{match.notes}</div>
       )}
-      <AssignSelect value={match.referee} attendees={attendees} onAssign={onAssign} size="xs" />
+      <MultiAssignSelect value={match.referee} attendees={attendees} onAssign={onAssign} size="xs" />
     </div>
   )
 }

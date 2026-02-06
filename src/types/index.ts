@@ -145,7 +145,7 @@ export interface DayActivity {
   start_time: string
   end_time: string | null
   activity: string
-  responsible: string | null
+  responsible: string[] | null
   todos: string | null
   notes: string | null
   sort_order: number
@@ -162,7 +162,7 @@ export interface Match {
   team_a: string
   team_b: string
   field: string | null
-  referee: string | null
+  referee: string[] | null
   score_a: number | null
   score_b: number | null
   notes: string | null
@@ -176,7 +176,7 @@ export interface Material {
   item: string
   category: string | null
   is_ready: boolean
-  responsible: string | null
+  responsible: string[] | null
   notes: string | null
   sort_order: number
   created_by: string | null

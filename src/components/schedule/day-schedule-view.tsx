@@ -188,7 +188,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         start_time: formatTimeForDB(activityForm.start_time),
         end_time: formatTimeForDB(activityForm.end_time),
         activity: activityForm.activity,
-        responsible: activityForm.responsible || null,
+        responsible: activityForm.responsible ? activityForm.responsible.split(',').map(s => s.trim()).filter(Boolean) : null,
         todos: activityForm.todos || null,
         notes: activityForm.notes || null,
         created_by: userName,
@@ -217,7 +217,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       start_time: formatTimeForDB(activityForm.start_time),
       end_time: formatTimeForDB(activityForm.end_time),
       activity: activityForm.activity,
-      responsible: activityForm.responsible || null,
+      responsible: activityForm.responsible ? activityForm.responsible.split(',').map(s => s.trim()).filter(Boolean) : null,
       todos: activityForm.todos || null,
       notes: activityForm.notes || null,
       updated_at: new Date().toISOString(),
@@ -300,7 +300,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       start_time: formatTimeForInput(activity.start_time),
       end_time: formatTimeForInput(activity.end_time),
       activity: activity.activity,
-      responsible: activity.responsible || '',
+      responsible: activity.responsible?.join(', ') || '',
       todos: activity.todos || '',
       notes: activity.notes || '',
     })
@@ -318,7 +318,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         team_a: matchForm.team_a,
         team_b: matchForm.team_b,
         field: matchForm.field || null,
-        referee: matchForm.referee || null,
+        referee: matchForm.referee ? matchForm.referee.split(',').map(s => s.trim()).filter(Boolean) : null,
         created_by: userName,
       }])
       .select()
@@ -346,7 +346,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
         team_a: matchForm.team_a,
         team_b: matchForm.team_b,
         field: matchForm.field || null,
-        referee: matchForm.referee || null,
+        referee: matchForm.referee ? matchForm.referee.split(',').map(s => s.trim()).filter(Boolean) : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', editingMatch.id)
@@ -393,7 +393,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       team_a: match.team_a,
       team_b: match.team_b,
       field: match.field || '',
-      referee: match.referee || '',
+      referee: match.referee?.join(', ') || '',
     })
     setIsMatchFormOpen(true)
   }
@@ -405,7 +405,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       .insert([{
         item: materialForm.item,
         category: materialForm.category || null,
-        responsible: materialForm.responsible || null,
+        responsible: materialForm.responsible ? materialForm.responsible.split(',').map(s => s.trim()).filter(Boolean) : null,
         notes: materialForm.notes || null,
         is_ready: false,
         created_by: userName,
@@ -432,7 +432,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       .update({
         item: materialForm.item,
         category: materialForm.category || null,
-        responsible: materialForm.responsible || null,
+        responsible: materialForm.responsible ? materialForm.responsible.split(',').map(s => s.trim()).filter(Boolean) : null,
         notes: materialForm.notes || null,
         updated_at: new Date().toISOString(),
       })
@@ -489,7 +489,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     setMaterialForm({
       item: material.item,
       category: material.category || '',
-      responsible: material.responsible || '',
+      responsible: material.responsible?.join(', ') || '',
       notes: material.notes || '',
     })
     setEditingMaterial(material)
@@ -773,7 +773,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         {material.category && <Badge variant="outline" className="text-xs">{material.category}</Badge>}
-                        {material.responsible && <span>• {material.responsible}</span>}
+                        {material.responsible && material.responsible.length > 0 && <span>• {material.responsible.join(', ')}</span>}
                       </div>
                       {material.notes && (
                         <p className="mt-1 text-xs text-muted-foreground">{material.notes}</p>
@@ -1344,7 +1344,7 @@ function ActivityTable({
                   )}
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">
-                  {activity.responsible || '-'}
+                  {activity.responsible?.join(', ') || '-'}
                 </td>
                 <td className="px-3 py-2">
                   {activity.todos ? (
@@ -1394,7 +1394,7 @@ function MatchCard({
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{formatTime(match.start_time)}</span>
-          {match.referee && <span>• Ref: {match.referee}</span>}
+          {match.referee && match.referee.length > 0 && <span>• Ref: {match.referee.join(', ')}</span>}
         </div>
       </div>
       <div className="flex gap-1">
