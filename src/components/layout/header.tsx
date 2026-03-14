@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Menu, Bell, User, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, Bell, User, LogOut, ChevronDown, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -11,6 +11,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useEvent } from '@/contexts/event-context'
 import { getEventStartDate } from '@/lib/constants'
 
@@ -45,8 +51,13 @@ function getCountdown(target: Date | null) {
   return { days, hours, minutes, isLive: false }
 }
 
+function formatShortDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
 export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
-  const { events, currentEvent, setCurrentEvent } = useEvent()
+  const { events, currentEvent, pastEvents, setCurrentEvent, isSlugLocked, unlockEvents } = useEvent()
   const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
   const [countdown, setCountdown] = useState(getCountdown(eventStart))
 
@@ -58,6 +69,8 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
     return () => clearInterval(interval)
   }, [eventStart])
 
+  const showSwitcher = !isSlugLocked && events.length > 1
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
@@ -66,8 +79,8 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex flex-col">
-            {/* Event switcher */}
-            {events.length > 1 ? (
+            {/* Event name — switcher or static */}
+            {showSwitcher ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-1 text-lg font-bold leading-tight hover:text-primary transition-colors">
@@ -93,7 +106,35 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
             ) : (
               <h1 className="text-lg font-bold leading-tight">{currentEvent?.name || 'Showcase Coordinator'}</h1>
             )}
-            <p className="text-xs text-muted-foreground">{currentEvent?.location || ''}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">{currentEvent?.location || ''}</p>
+              {/* Past events badge */}
+              {pastEvents.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-[10px] text-muted-foreground/60 border border-border/50 rounded px-1.5 py-0.5 cursor-default">
+                        +{pastEvents.length} past event{pastEvents.length > 1 ? 's' : ''}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start" className="max-w-xs">
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium">Previous Events</p>
+                        {pastEvents.map(e => (
+                          <div key={e.id} className="flex items-center gap-2 text-xs">
+                            <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span>{e.name}</span>
+                            <span className="text-muted-foreground">
+                              {formatShortDate(e.start_date)} &bull; {e.location}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </div>
 
@@ -146,6 +187,15 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Change Name</span>
                 </DropdownMenuItem>
+                {isSlugLocked && events.length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={unlockEvents}>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>View All Events</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

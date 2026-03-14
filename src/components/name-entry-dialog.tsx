@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useEvent } from '@/contexts/event-context'
 
 interface NameEntryDialogProps {
   open: boolean
@@ -19,6 +20,7 @@ interface NameEntryDialogProps {
 
 export function NameEntryDialog({ open, onSubmit }: NameEntryDialogProps) {
   const [name, setName] = useState('')
+  const { currentEvent } = useEvent()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,11 +30,15 @@ export function NameEntryDialog({ open, onSubmit }: NameEntryDialogProps) {
     }
   }
 
+  const eventName = currentEvent?.name
+
   return (
     <Dialog open={open}>
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Welcome to Showcase Coordinator</DialogTitle>
+          <DialogTitle>
+            {eventName ? `Welcome to ${eventName}` : 'Welcome to Showcase Coordinator'}
+          </DialogTitle>
           <DialogDescription>
             Enter your name to get started. This will be used to track your tasks and comments.
           </DialogDescription>
