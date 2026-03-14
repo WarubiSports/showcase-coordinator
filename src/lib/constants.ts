@@ -1,8 +1,30 @@
-import type { TaskStatus, TaskPriority } from '@/types'
+import type { TaskStatus, TaskPriority, ShowcaseEvent } from '@/types'
 
-export const EVENT_DATE = new Date('2026-02-07T09:00:00+01:00')
-export const EVENT_END_DATE = new Date('2026-02-08T18:00:00+01:00')
-export const EVENT_LOCATION = 'Cologne, Germany'
+/** Generate event days array from a ShowcaseEvent's start_date and end_date */
+export function getEventDays(event: ShowcaseEvent | null): { date: string; label: string; name: string }[] {
+  if (!event) return []
+  const days: { date: string; label: string; name: string }[] = []
+  const start = new Date(event.start_date + 'T00:00:00')
+  const end = new Date(event.end_date + 'T00:00:00')
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  let dayNum = 1
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push({
+      date: d.toISOString().split('T')[0],
+      label: dayNames[d.getDay()],
+      name: `Day ${dayNum}`,
+    })
+    dayNum++
+  }
+  return days
+}
+
+/** Build a countdown Date from a ShowcaseEvent */
+export function getEventStartDate(event: ShowcaseEvent | null): Date | null {
+  if (!event) return null
+  const time = event.start_time || '09:00:00'
+  return new Date(`${event.start_date}T${time}+01:00`)
+}
 
 export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bgColor: string }> = {
   not_started: {

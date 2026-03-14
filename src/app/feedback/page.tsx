@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
 import type { Feedback, FeedbackStatus } from '@/types'
 import { useUser } from '@/hooks/use-user'
 
@@ -49,6 +50,7 @@ const STATUS_CONFIG = {
 
 export default function FeedbackPage() {
   const { userName } = useUser()
+  const { currentEvent } = useEvent()
   const [feedback, setFeedback] = useState<Feedback[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -58,12 +60,14 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     fetchFeedback()
-  }, [])
+  }, [currentEvent?.id])
 
   const fetchFeedback = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_feedback')
       .select('*')
+      .eq('event_id', currentEvent.id)
       .order('created_at', { ascending: false })
 
     if (error) {

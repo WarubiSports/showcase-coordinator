@@ -9,7 +9,7 @@ interface PlayerFilters {
   search?: string
 }
 
-export function usePlayers(filters?: PlayerFilters) {
+export function usePlayers(eventId: string | undefined, filters?: PlayerFilters) {
   const [players, setPlayers] = useState<Player[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,9 +19,12 @@ export function usePlayers(filters?: PlayerFilters) {
     setError(null)
 
     try {
+      if (!eventId) { setPlayers([]); setIsLoading(false); return }
+
       let query = supabase
         .from('showcase_players')
         .select('*')
+        .eq('event_id', eventId)
         .order('name')
 
       if (filters?.position) {
@@ -41,7 +44,7 @@ export function usePlayers(filters?: PlayerFilters) {
     } finally {
       setIsLoading(false)
     }
-  }, [filters?.position, filters?.search])
+  }, [eventId, filters?.position, filters?.search])
 
   useEffect(() => {
     fetchPlayers()
@@ -58,9 +61,10 @@ export function usePlayers(filters?: PlayerFilters) {
     notes?: string
     created_by: string
   }) => {
+    if (!eventId) throw new Error('No event selected')
     const { data, error } = await supabase
       .from('showcase_players')
-      .insert([player])
+      .insert([{ ...player, event_id: eventId }])
       .select()
       .single()
 

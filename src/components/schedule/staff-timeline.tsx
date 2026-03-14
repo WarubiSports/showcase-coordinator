@@ -14,13 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
+import { getEventDays } from '@/lib/constants'
 import type { DayGroup, DayActivity, Match, Attendee } from '@/types'
 import { MultiAssignSelect } from './multi-assign-select'
-
-const EVENT_DAYS = [
-  { date: '2026-02-07', label: 'Saturday', name: 'Event Day 1' },
-  { date: '2026-02-08', label: 'Sunday', name: 'Event Day 2' },
-]
 
 // Subtitle info for groups (not stored in DB)
 const GROUP_SUBTITLES: Record<string, string> = {
@@ -62,7 +59,9 @@ interface StaffTimelineProps {
 }
 
 export function StaffTimeline({ userName }: StaffTimelineProps) {
-  const [selectedDate, setSelectedDate] = useState(EVENT_DAYS[0].date)
+  const { currentEvent } = useEvent()
+  const eventDays = getEventDays(currentEvent)
+  const [selectedDate, setSelectedDate] = useState(eventDays[0]?.date || '')
   const [groups, setGroups] = useState<DayGroup[]>([])
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [matches, setMatches] = useState<Match[]>([])
@@ -84,17 +83,26 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
     match_number: 1, start_time: '09:00', team_a: '', team_b: '', field: '', referee: '', notes: '',
   })
 
+  // Reset selectedDate when event changes
+  useEffect(() => {
+    if (eventDays.length > 0 && !eventDays.some(d => d.date === selectedDate)) {
+      setSelectedDate(eventDays[0].date)
+    }
+  }, [currentEvent?.id])
+
   useEffect(() => {
     fetchAll()
-  }, [selectedDate])
+  }, [selectedDate, currentEvent?.id])
 
   const fetchAll = async () => {
+    if (!currentEvent) return
     setIsLoading(true)
+    const eventId = currentEvent.id
     const [groupsRes, activitiesRes, matchesRes, attendeesRes] = await Promise.all([
-      supabase.from('showcase_day_groups').select('*').order('sort_order'),
-      supabase.from('showcase_day_activities').select('*, showcase_day_groups(*)').eq('event_date', selectedDate).order('start_time').order('sort_order'),
-      supabase.from('showcase_matches').select('*').eq('event_date', selectedDate).order('match_number'),
-      supabase.from('showcase_attendees').select('*').order('name'),
+      supabase.from('showcase_day_groups').select('*').eq('event_id', eventId).order('sort_order'),
+      supabase.from('showcase_day_activities').select('*, showcase_day_groups(*)').eq('event_id', eventId).eq('event_date', selectedDate).order('start_time').order('sort_order'),
+      supabase.from('showcase_matches').select('*').eq('event_id', eventId).eq('event_date', selectedDate).order('match_number'),
+      supabase.from('showcase_attendees').select('*').eq('event_id', eventId).order('name'),
     ])
 
     if (groupsRes.data) setGroups(groupsRes.data)
@@ -145,6 +153,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .insert([{
+        event_id: currentEvent!.id,
         event_date: selectedDate,
         group_id: activityForm.group_id || null,
         start_time: formatTimeForDB(activityForm.start_time),
@@ -241,6 +250,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
     const { data, error } = await supabase
       .from('showcase_matches')
       .insert([{
+        event_id: currentEvent!.id,
         event_date: selectedDate,
         match_number: matchForm.match_number,
         start_time: formatTimeForDB(matchForm.start_time),
@@ -385,7 +395,7 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
         </div>
         <Tabs value={selectedDate} onValueChange={setSelectedDate} className="mt-2">
           <TabsList>
-            {EVENT_DAYS.map(day => (
+            {eventDays.map(day => (
               <TabsTrigger key={day.date} value={day.date} className="text-sm">
                 {day.label} — {day.name}
               </TabsTrigger>

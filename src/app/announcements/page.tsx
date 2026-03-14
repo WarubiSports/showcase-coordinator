@@ -9,22 +9,26 @@ import { AnnouncementCard } from '@/components/announcements/announcement-card'
 import { AnnouncementForm } from '@/components/announcements/announcement-form'
 import { supabase } from '@/lib/supabase'
 import { useUser } from '@/hooks/use-user'
+import { useEvent } from '@/contexts/event-context'
 import type { Announcement } from '@/types'
 
 export default function AnnouncementsPage() {
   const { userName } = useUser()
+  const { currentEvent } = useEvent()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
   useEffect(() => {
     fetchAnnouncements()
-  }, [])
+  }, [currentEvent?.id])
 
   const fetchAnnouncements = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_announcements')
       .select('*')
+      .eq('event_id', currentEvent.id)
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -43,6 +47,7 @@ export default function AnnouncementsPage() {
       .insert([
         {
           ...data,
+          event_id: currentEvent?.id,
           author: userName || 'Unknown',
         },
       ])
@@ -65,6 +70,7 @@ export default function AnnouncementsPage() {
     // Log activity
     await supabase.from('showcase_activity').insert([
       {
+        event_id: currentEvent?.id,
         entity_type: 'announcement',
         entity_id: newAnnouncement.id,
         action: 'created',

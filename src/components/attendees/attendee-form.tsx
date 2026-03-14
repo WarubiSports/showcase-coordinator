@@ -8,18 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useEvent } from '@/contexts/event-context'
+import { getEventDays } from '@/lib/constants'
 import type { Attendee, AttendeeRole, AttendeeAvailability } from '@/types'
-
-// Full week of the showcase: Feb 2-8, 2026
-const SHOWCASE_DAYS = [
-  { date: '2026-02-02', label: 'Mon, Feb 2' },
-  { date: '2026-02-03', label: 'Tue, Feb 3' },
-  { date: '2026-02-04', label: 'Wed, Feb 4' },
-  { date: '2026-02-05', label: 'Thu, Feb 5' },
-  { date: '2026-02-06', label: 'Fri, Feb 6' },
-  { date: '2026-02-07', label: 'Sat, Feb 7' },
-  { date: '2026-02-08', label: 'Sun, Feb 8' },
-]
 
 const ROLES: { value: AttendeeRole; label: string }[] = [
   { value: 'staff', label: 'Staff' },
@@ -45,6 +36,11 @@ interface AttendeeFormProps {
 }
 
 export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeFormProps) {
+  const { currentEvent } = useEvent()
+  const SHOWCASE_DAYS = getEventDays(currentEvent).map(d => ({
+    date: d.date,
+    label: `${d.label.slice(0, 3)}, ${new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+  }))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState<AttendeeFormData>({
     name: '',

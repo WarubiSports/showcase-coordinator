@@ -14,14 +14,16 @@ import { TaskForm, type TaskFormData } from '@/components/tasks/task-form'
 import { useTasks } from '@/hooks/use-tasks'
 import { useCategories } from '@/hooks/use-categories'
 import { useUser } from '@/hooks/use-user'
+import { useEvent } from '@/contexts/event-context'
 import { STORAGE_KEYS } from '@/lib/constants'
 import type { Task, TaskFilters, TaskStatus } from '@/types'
 
 export default function TasksPage() {
   const { userName } = useUser()
+  const { currentEvent } = useEvent()
   const { categories } = useCategories()
   const [filters, setFilters] = useState<TaskFilters>({})
-  const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks(filters)
+  const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks(currentEvent?.id, filters)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)

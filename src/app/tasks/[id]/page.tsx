@@ -15,6 +15,7 @@ import { TaskForm, type TaskFormData } from '@/components/tasks/task-form'
 import { supabase } from '@/lib/supabase'
 import { useCategories } from '@/hooks/use-categories'
 import { useUser } from '@/hooks/use-user'
+import { useEvent } from '@/contexts/event-context'
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Task, TaskStatus, TaskPriority, Category } from '@/types'
@@ -27,6 +28,7 @@ export default function TaskDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userName } = useUser()
+  const { currentEvent } = useEvent()
   const { categories } = useCategories()
 
   const [task, setTask] = useState<Task | null>(null)
@@ -132,6 +134,7 @@ export default function TaskDetailPage() {
     // Log activity
     await supabase.from('showcase_activity').insert([
       {
+        event_id: currentEvent?.id,
         entity_type: 'task',
         entity_id: taskId,
         action: 'status_changed',

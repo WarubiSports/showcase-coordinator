@@ -1,8 +1,26 @@
+// Event Types
+export type ShowcaseEventType = 'showcase' | 'id_camp' | 'futures'
+
+export interface ShowcaseEvent {
+  id: string
+  name: string
+  slug: string
+  location: string
+  start_date: string
+  end_date: string
+  start_time: string | null
+  description: string | null
+  type: ShowcaseEventType
+  created_at: string
+  updated_at: string
+}
+
 // Venue Map Types
 export type VenueZoneType = 'field' | 'registration' | 'catering' | 'medical' | 'parking' | 'other'
 
 export interface VenueZone {
   id: string
+  event_id: string
   name: string
   description: string | null
   color: string
@@ -31,6 +49,7 @@ export interface Category {
 
 export interface Task {
   id: string
+  event_id: string
   title: string
   description: string | null
   category_id: string | null
@@ -52,6 +71,7 @@ export interface Task {
 
 export interface Comment {
   id: string
+  event_id: string
   task_id: string
   author: string
   content: string
@@ -60,6 +80,7 @@ export interface Comment {
 
 export interface Announcement {
   id: string
+  event_id: string
   title: string
   content: string
   author: string
@@ -69,6 +90,7 @@ export interface Announcement {
 
 export interface Milestone {
   id: string
+  event_id: string
   title: string
   description: string | null
   target_date: string
@@ -78,6 +100,7 @@ export interface Milestone {
 
 export interface Activity {
   id: string
+  event_id: string
   entity_type: 'task' | 'announcement' | 'milestone'
   entity_id: string
   action: 'created' | 'updated' | 'commented' | 'status_changed'
@@ -114,6 +137,7 @@ export type FeedbackStatus = 'new' | 'reviewed' | 'in_progress' | 'done' | 'dism
 
 export interface Feedback {
   id: string
+  event_id: string
   type: FeedbackType
   description: string
   details: string | null
@@ -131,6 +155,7 @@ export interface Feedback {
 // Day Schedule Types
 export interface DayGroup {
   id: string
+  event_id: string
   name: string
   color: string
   sort_order: number
@@ -139,6 +164,7 @@ export interface DayGroup {
 
 export interface DayActivity {
   id: string
+  event_id: string
   event_date: string
   group_id: string | null
   group?: DayGroup
@@ -156,6 +182,7 @@ export interface DayActivity {
 
 export interface Match {
   id: string
+  event_id: string
   event_date: string
   match_number: number
   start_time: string
@@ -173,6 +200,7 @@ export interface Match {
 
 export interface Material {
   id: string
+  event_id: string
   item: string
   category: string | null
   is_ready: boolean
@@ -186,6 +214,7 @@ export interface Material {
 
 export interface Team {
   id: string
+  event_id: string
   name: string
   color: string | null
   notes: string | null
@@ -211,6 +240,7 @@ export interface PlayerTestScores {
 
 export interface Player {
   id: string
+  event_id: string
   name: string
   position: PlayerPosition | null
   birth_year: number | null
@@ -239,6 +269,7 @@ export interface AttendeeAvailability {
 
 export interface Attendee {
   id: string
+  event_id: string
   name: string
   email: string | null
   roles: AttendeeRole[]

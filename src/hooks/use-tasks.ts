@@ -8,7 +8,7 @@ interface TaskWithCategory extends Omit<Task, 'category'> {
   showcase_categories: Category | null
 }
 
-export function useTasks(filters?: TaskFilters) {
+export function useTasks(eventId: string | undefined, filters?: TaskFilters) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -18,9 +18,12 @@ export function useTasks(filters?: TaskFilters) {
     setError(null)
 
     try {
+      if (!eventId) { setTasks([]); setIsLoading(false); return }
+
       let query = supabase
         .from('showcase_tasks')
         .select('*, showcase_categories(*)')
+        .eq('event_id', eventId)
         .order('created_at', { ascending: false })
 
       if (filters?.category) {
@@ -56,7 +59,7 @@ export function useTasks(filters?: TaskFilters) {
     } finally {
       setIsLoading(false)
     }
-  }, [filters?.category, filters?.status, filters?.priority, filters?.assignee, filters?.search])
+  }, [eventId, filters?.category, filters?.status, filters?.priority, filters?.assignee, filters?.search])
 
   useEffect(() => {
     fetchTasks()
@@ -73,9 +76,10 @@ export function useTasks(filters?: TaskFilters) {
     scheduled_time?: string
     created_by: string
   }) => {
+    if (!eventId) throw new Error('No event selected')
     const { data, error } = await supabase
       .from('showcase_tasks')
-      .insert([task])
+      .insert([{ ...task, event_id: eventId }])
       .select('*, showcase_categories(*)')
       .single()
 
@@ -94,6 +98,7 @@ export function useTasks(filters?: TaskFilters) {
     // Log activity
     await supabase.from('showcase_activity').insert([
       {
+        event_id: eventId,
         entity_type: 'task',
         entity_id: newTask.id,
         action: 'created',
@@ -132,6 +137,7 @@ export function useTasks(filters?: TaskFilters) {
     // Log activity
     await supabase.from('showcase_activity').insert([
       {
+        event_id: eventId,
         entity_type: 'task',
         entity_id: id,
         action: updates.status ? 'status_changed' : 'updated',

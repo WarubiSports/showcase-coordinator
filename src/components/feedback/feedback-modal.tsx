@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
 
 type FeedbackType = 'bug' | 'feature' | 'idea' | 'other'
 type Importance = 'nice_to_have' | 'helpful' | 'important' | 'critical'
@@ -69,6 +70,7 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ open, onClose, userName }: FeedbackModalProps) {
+  const { currentEvent } = useEvent()
   const [type, setType] = useState<FeedbackType>('bug')
   const [description, setDescription] = useState('')
   const [details, setDetails] = useState('')
@@ -140,6 +142,7 @@ export function FeedbackModal({ open, onClose, userName }: FeedbackModalProps) {
 
       const { error } = await supabase.from('showcase_feedback').insert([
         {
+          event_id: currentEvent?.id,
           type,
           description: description.trim(),
           details: details.trim() || null,

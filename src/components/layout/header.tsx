@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Menu, Bell, User, LogOut } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Menu, Bell, User, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -9,8 +9,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { EVENT_DATE, EVENT_LOCATION } from '@/lib/constants'
+import { useEvent } from '@/contexts/event-context'
+import { getEventStartDate } from '@/lib/constants'
 
 interface HeaderProps {
   userName: string | null
@@ -27,9 +29,10 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-function getCountdown() {
+function getCountdown(target: Date | null) {
+  if (!target) return { days: 0, hours: 0, minutes: 0, isLive: false }
   const now = new Date()
-  const diff = EVENT_DATE.getTime() - now.getTime()
+  const diff = target.getTime() - now.getTime()
 
   if (diff <= 0) {
     return { days: 0, hours: 0, minutes: 0, isLive: true }
@@ -43,15 +46,17 @@ function getCountdown() {
 }
 
 export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
-  const [countdown, setCountdown] = useState(getCountdown())
+  const { events, currentEvent, setCurrentEvent } = useEvent()
+  const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
+  const [countdown, setCountdown] = useState(getCountdown(eventStart))
 
   useEffect(() => {
+    setCountdown(getCountdown(eventStart))
     const interval = setInterval(() => {
-      setCountdown(getCountdown())
-    }, 60000) // Update every minute
-
+      setCountdown(getCountdown(eventStart))
+    }, 60000)
     return () => clearInterval(interval)
-  }, [])
+  }, [eventStart])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -61,8 +66,34 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex flex-col">
-            <h1 className="text-lg font-bold leading-tight">College Pro Showcase</h1>
-            <p className="text-xs text-muted-foreground">{EVENT_LOCATION}</p>
+            {/* Event switcher */}
+            {events.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 text-lg font-bold leading-tight hover:text-primary transition-colors">
+                    {currentEvent?.name || 'Select Event'}
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {events.map(event => (
+                    <DropdownMenuItem
+                      key={event.id}
+                      onClick={() => setCurrentEvent(event)}
+                      className={event.id === currentEvent?.id ? 'bg-accent' : ''}
+                    >
+                      <div>
+                        <div className="font-medium">{event.name}</div>
+                        <div className="text-xs text-muted-foreground">{event.location}</div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <h1 className="text-lg font-bold leading-tight">{currentEvent?.name || 'Showcase Coordinator'}</h1>
+            )}
+            <p className="text-xs text-muted-foreground">{currentEvent?.location || ''}</p>
           </div>
         </div>
 

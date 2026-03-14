@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
 import type { VenueZone, VenueZoneType } from '@/types'
 
 const ZONE_TYPES: { value: VenueZoneType; label: string; color: string }[] = [
@@ -33,6 +34,7 @@ interface VenueMapProps {
 }
 
 export function VenueMap({ userName }: VenueMapProps) {
+  const { currentEvent } = useEvent()
   const [zones, setZones] = useState<VenueZone[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -68,12 +70,14 @@ export function VenueMap({ userName }: VenueMapProps) {
 
   useEffect(() => {
     fetchZones()
-  }, [])
+  }, [currentEvent?.id])
 
   const fetchZones = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_venue_zones')
       .select('*')
+      .eq('event_id', currentEvent.id)
       .order('sort_order')
 
     if (error) {
@@ -152,6 +156,7 @@ export function VenueMap({ userName }: VenueMapProps) {
         })
         setSelectedZone({
           id: '',
+          event_id: currentEvent?.id || '',
           name: '',
           description: null,
           color: ZONE_COLORS[zones.length % ZONE_COLORS.length],
@@ -225,9 +230,11 @@ export function VenueMap({ userName }: VenueMapProps) {
   }
 
   const handleCreateZone = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_venue_zones')
       .insert([{
+        event_id: currentEvent.id,
         name: formData.name,
         description: formData.description || null,
         color: formData.color,

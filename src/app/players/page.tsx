@@ -11,16 +11,18 @@ import { PlayerList } from '@/components/players/player-list'
 import { PlayerForm } from '@/components/players/player-form'
 import { usePlayers } from '@/hooks/use-players'
 import { useUser } from '@/hooks/use-user'
+import { useEvent } from '@/contexts/event-context'
 import type { Player, PlayerPosition } from '@/types'
 
 const POSITIONS: PlayerPosition[] = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']
 
 export default function PlayersPage() {
   const { userName } = useUser()
+  const { currentEvent } = useEvent()
   const [positionFilter, setPositionFilter] = useState<PlayerPosition | undefined>()
   const [searchFilter, setSearchFilter] = useState('')
 
-  const { players, isLoading, createPlayer, updatePlayer, deletePlayer } = usePlayers({
+  const { players, isLoading, createPlayer, updatePlayer, deletePlayer } = usePlayers(currentEvent?.id, {
     position: positionFilter,
     search: searchFilter,
   })

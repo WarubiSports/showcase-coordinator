@@ -10,15 +10,17 @@ import { AttendeeForm } from '@/components/attendees/attendee-form'
 import { AttendeeFilters } from '@/components/attendees/attendee-filters'
 import { useAttendees } from '@/hooks/use-attendees'
 import { useUser } from '@/hooks/use-user'
+import { useEvent } from '@/contexts/event-context'
 import type { Attendee, AttendeeRole, AttendeeAvailability } from '@/types'
 
 export default function AttendeesPage() {
   const { userName } = useUser()
+  const { currentEvent } = useEvent()
   const [roleFilter, setRoleFilter] = useState<AttendeeRole | undefined>()
   const [searchFilter, setSearchFilter] = useState('')
   const [dateFilter, setDateFilter] = useState<string | undefined>()
 
-  const { attendees, isLoading, createAttendee, updateAttendee, deleteAttendee } = useAttendees({
+  const { attendees, isLoading, createAttendee, updateAttendee, deleteAttendee } = useAttendees(currentEvent?.id, {
     role: roleFilter,
     search: searchFilter,
     date: dateFilter,

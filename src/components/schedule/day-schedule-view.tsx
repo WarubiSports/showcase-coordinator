@@ -15,13 +15,9 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
+import { getEventDays } from '@/lib/constants'
 import type { DayGroup, DayActivity, Match, Material, Team } from '@/types'
-
-const EVENT_DAYS = [
-  { date: '2026-02-06', label: 'Friday', name: 'Kick-off Day' },
-  { date: '2026-02-07', label: 'Saturday', name: 'Event Day 1' },
-  { date: '2026-02-08', label: 'Sunday', name: 'Event Day 2' },
-]
 
 const MATERIAL_CATEGORIES = [
   'Equipment',
@@ -38,7 +34,9 @@ interface DayScheduleViewProps {
 }
 
 export function DayScheduleView({ userName }: DayScheduleViewProps) {
-  const [selectedDate, setSelectedDate] = useState(EVENT_DAYS[1].date) // Default to Saturday
+  const { currentEvent } = useEvent()
+  const eventDays = getEventDays(currentEvent)
+  const [selectedDate, setSelectedDate] = useState(eventDays[0]?.date || '')
   const [groups, setGroups] = useState<DayGroup[]>([])
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [matches, setMatches] = useState<Match[]>([])
@@ -89,21 +87,34 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     notes: '',
   })
 
+  // Reset selectedDate when event changes
   useEffect(() => {
-    fetchGroups()
-    fetchMaterials()
-    fetchTeams()
-  }, [])
+    if (eventDays.length > 0 && !eventDays.some(d => d.date === selectedDate)) {
+      setSelectedDate(eventDays[0].date)
+    }
+  }, [currentEvent?.id])
 
   useEffect(() => {
-    fetchActivities()
-    fetchMatches()
-  }, [selectedDate])
+    if (currentEvent) {
+      fetchGroups()
+      fetchMaterials()
+      fetchTeams()
+    }
+  }, [currentEvent?.id])
+
+  useEffect(() => {
+    if (currentEvent) {
+      fetchActivities()
+      fetchMatches()
+    }
+  }, [selectedDate, currentEvent?.id])
 
   const fetchGroups = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_day_groups')
       .select('*')
+      .eq('event_id', currentEvent.id)
       .order('sort_order')
 
     if (error) {
@@ -114,10 +125,12 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   }
 
   const fetchActivities = async () => {
+    if (!currentEvent) return
     setIsLoading(true)
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .select('*, showcase_day_groups(*)')
+      .eq('event_id', currentEvent.id)
       .eq('event_date', selectedDate)
       .order('start_time')
       .order('sort_order')
@@ -137,9 +150,11 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   }
 
   const fetchMatches = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_matches')
       .select('*')
+      .eq('event_id', currentEvent.id)
       .eq('event_date', selectedDate)
       .order('match_number')
 
@@ -151,9 +166,11 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   }
 
   const fetchMaterials = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_materials')
       .select('*')
+      .eq('event_id', currentEvent.id)
       .order('sort_order')
       .order('item')
 
@@ -165,6 +182,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
   }
 
   const fetchTeams = async () => {
+    if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_teams')
       .select('*')
@@ -183,6 +201,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .insert([{
+        event_id: currentEvent!.id,
         event_date: selectedDate,
         group_id: activityForm.group_id || null,
         start_time: formatTimeForDB(activityForm.start_time),
@@ -312,6 +331,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     const { data, error } = await supabase
       .from('showcase_matches')
       .insert([{
+        event_id: currentEvent!.id,
         event_date: selectedDate,
         match_number: matchForm.match_number,
         start_time: formatTimeForDB(matchForm.start_time),
@@ -403,6 +423,7 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     const { data, error } = await supabase
       .from('showcase_materials')
       .insert([{
+        event_id: currentEvent!.id,
         item: materialForm.item,
         category: materialForm.category || null,
         responsible: materialForm.responsible ? materialForm.responsible.split(',').map(s => s.trim()).filter(Boolean) : null,
@@ -617,8 +638,8 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
     <div className="space-y-6">
       {/* Day Selector */}
       <Tabs value={selectedDate} onValueChange={setSelectedDate}>
-        <TabsList className="grid w-full grid-cols-3">
-          {EVENT_DAYS.map((day) => (
+        <TabsList className={cn("grid w-full", eventDays.length <= 3 ? `grid-cols-${eventDays.length}` : 'grid-cols-3')}>
+          {eventDays.map((day) => (
             <TabsTrigger key={day.date} value={day.date} className="flex flex-col">
               <span className="font-semibold">{day.label}</span>
               <span className="text-xs text-muted-foreground">{day.name}</span>

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
 import type { Comment } from '@/types'
 
 interface TaskCommentsProps {
@@ -43,6 +44,7 @@ function formatTimeAgo(dateString: string): string {
 }
 
 export function TaskComments({ taskId, userName }: TaskCommentsProps) {
+  const { currentEvent } = useEvent()
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
@@ -73,6 +75,7 @@ export function TaskComments({ taskId, userName }: TaskCommentsProps) {
         .from('showcase_comments')
         .insert([
           {
+            event_id: currentEvent?.id,
             task_id: taskId,
             author: userName,
             content: newComment.trim(),
@@ -89,6 +92,7 @@ export function TaskComments({ taskId, userName }: TaskCommentsProps) {
       // Log activity
       await supabase.from('showcase_activity').insert([
         {
+          event_id: currentEvent?.id,
           entity_type: 'task',
           entity_id: taskId,
           action: 'commented',

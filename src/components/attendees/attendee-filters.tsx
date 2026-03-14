@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useEvent } from '@/contexts/event-context'
+import { getEventDays } from '@/lib/constants'
 import type { AttendeeRole } from '@/types'
 
 interface AttendeeFiltersProps {
@@ -21,16 +23,6 @@ interface AttendeeFiltersProps {
   onDateChange: (date: string | undefined) => void
 }
 
-const SHOWCASE_DAYS = [
-  { date: '2026-02-02', label: 'Mon, Feb 2' },
-  { date: '2026-02-03', label: 'Tue, Feb 3' },
-  { date: '2026-02-04', label: 'Wed, Feb 4' },
-  { date: '2026-02-05', label: 'Thu, Feb 5' },
-  { date: '2026-02-06', label: 'Fri, Feb 6' },
-  { date: '2026-02-07', label: 'Sat, Feb 7' },
-  { date: '2026-02-08', label: 'Sun, Feb 8' },
-]
-
 export function AttendeeFilters({
   role,
   search,
@@ -39,6 +31,11 @@ export function AttendeeFilters({
   onSearchChange,
   onDateChange,
 }: AttendeeFiltersProps) {
+  const { currentEvent } = useEvent()
+  const SHOWCASE_DAYS = getEventDays(currentEvent).map(d => ({
+    date: d.date,
+    label: `${d.label.slice(0, 3)}, ${new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+  }))
   const hasFilters = role || search || date
 
   const clearFilters = () => {

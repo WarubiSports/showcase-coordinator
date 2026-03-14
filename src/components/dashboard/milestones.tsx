@@ -5,17 +5,21 @@ import { Check, Circle, Calendar } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
 import type { Milestone } from '@/types'
 
 export function MilestonesTimeline() {
+  const { currentEvent } = useEvent()
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchMilestones = async () => {
+      if (!currentEvent) { setMilestones([]); setIsLoading(false); return }
       const { data } = await supabase
         .from('showcase_milestones')
         .select('*')
+        .eq('event_id', currentEvent.id)
         .order('target_date', { ascending: true })
 
       setMilestones(data || [])
@@ -23,7 +27,7 @@ export function MilestonesTimeline() {
     }
 
     fetchMilestones()
-  }, [])
+  }, [currentEvent?.id])
 
   const toggleMilestone = async (id: string, completed: boolean) => {
     await supabase

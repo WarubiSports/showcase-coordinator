@@ -10,7 +10,7 @@ interface AttendeeFilters {
   date?: string
 }
 
-export function useAttendees(filters?: AttendeeFilters) {
+export function useAttendees(eventId: string | undefined, filters?: AttendeeFilters) {
   const [attendees, setAttendees] = useState<Attendee[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -20,9 +20,12 @@ export function useAttendees(filters?: AttendeeFilters) {
     setError(null)
 
     try {
+      if (!eventId) { setAttendees([]); setIsLoading(false); return }
+
       let query = supabase
         .from('showcase_attendees')
         .select('*')
+        .eq('event_id', eventId)
         .order('name')
 
       if (filters?.role) {
@@ -61,7 +64,7 @@ export function useAttendees(filters?: AttendeeFilters) {
     } finally {
       setIsLoading(false)
     }
-  }, [filters?.role, filters?.search, filters?.date])
+  }, [eventId, filters?.role, filters?.search, filters?.date])
 
   useEffect(() => {
     fetchAttendees()
@@ -76,10 +79,12 @@ export function useAttendees(filters?: AttendeeFilters) {
     availability: AttendeeAvailability[]
     created_by: string
   }) => {
+    if (!eventId) throw new Error('No event selected')
     const { data, error } = await supabase
       .from('showcase_attendees')
       .insert([{
         ...attendee,
+        event_id: eventId,
         availability: JSON.stringify(attendee.availability),
       }])
       .select()

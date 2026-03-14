@@ -7,9 +7,11 @@ import { AssigneeView } from '@/components/dashboard/assignee-view'
 import { MilestonesTimeline } from '@/components/dashboard/milestones'
 import { useTasks } from '@/hooks/use-tasks'
 import { useCategories } from '@/hooks/use-categories'
+import { useEvent } from '@/contexts/event-context'
 
 export default function DashboardPage() {
-  const { tasks, isLoading } = useTasks()
+  const { currentEvent } = useEvent()
+  const { tasks, isLoading } = useTasks(currentEvent?.id)
   const { categories } = useCategories()
 
   return (

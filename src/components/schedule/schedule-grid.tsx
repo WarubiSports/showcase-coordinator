@@ -13,18 +13,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { useEvent } from '@/contexts/event-context'
+import { getEventDays } from '@/lib/constants'
 import type { ScheduleEvent, Task } from '@/types'
 import { CheckCircle2 } from 'lucide-react'
-
-const DAYS = [
-  { date: '2026-02-02', label: 'Feb 2', name: 'Monday' },
-  { date: '2026-02-03', label: 'Feb 3', name: 'Tuesday' },
-  { date: '2026-02-04', label: 'Feb 4', name: 'Wednesday' },
-  { date: '2026-02-05', label: 'Feb 5', name: 'Thursday' },
-  { date: '2026-02-06', label: 'Feb 6', name: 'Kick-off Day' },
-  { date: '2026-02-07', label: 'Feb 7', name: 'Event Day 1' },
-  { date: '2026-02-08', label: 'Feb 8', name: 'Event Day 2' },
-]
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 7) // 7am to 12am (midnight = 24)
 
@@ -73,6 +65,8 @@ interface ScheduledTask {
 
 export function ScheduleGrid({ userName }: ScheduleGridProps) {
   const router = useRouter()
+  const { currentEvent } = useEvent()
+  const DAYS = getEventDays(currentEvent)
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -81,7 +75,7 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
   const [formData, setFormData] = useState<EventFormData>({
     title: '',
     description: '',
-    event_date: DAYS[0].date,
+    event_date: DAYS[0]?.date || '',
     start_time: '09:00',
     end_time: '10:00',
     color: COLORS[0].value,
