@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Menu, Bell, User, LogOut, ChevronDown, Calendar } from 'lucide-react'
+import { Menu, Bell, User, LogOut, ChevronDown, Calendar, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useEvent } from '@/contexts/event-context'
 import { getEventStartDate } from '@/lib/constants'
+import { CreateEventDialog } from '@/components/events/create-event-dialog'
 
 interface HeaderProps {
   userName: string | null
@@ -60,6 +61,7 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
   const { events, currentEvent, pastEvents, setCurrentEvent, isSlugLocked, unlockEvents } = useEvent()
   const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
   const [countdown, setCountdown] = useState(getCountdown(eventStart))
+  const [showCreateEvent, setShowCreateEvent] = useState(false)
 
   useEffect(() => {
     setCountdown(getCountdown(eventStart))
@@ -72,6 +74,7 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
   const showSwitcher = !isSlugLocked && events.length > 1
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
@@ -101,10 +104,26 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
                       </div>
                     </DropdownMenuItem>
                   ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowCreateEvent(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Event
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <h1 className="text-lg font-bold leading-tight">{currentEvent?.name || 'Showcase Coordinator'}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold leading-tight">{currentEvent?.name || 'Showcase Coordinator'}</h1>
+                {!isSlugLocked && (
+                  <button
+                    onClick={() => setShowCreateEvent(true)}
+                    className="rounded-md p-0.5 text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                    title="Create new event"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             )}
             <div className="flex items-center gap-2">
               <p className="text-xs text-muted-foreground">{currentEvent?.location || ''}</p>
@@ -202,5 +221,8 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
         </div>
       </div>
     </header>
+
+    <CreateEventDialog open={showCreateEvent} onClose={() => setShowCreateEvent(false)} />
+    </>
   )
 }
