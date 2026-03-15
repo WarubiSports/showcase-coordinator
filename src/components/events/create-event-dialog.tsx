@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { useEvent } from '@/contexts/event-context'
 import { useEvents } from '@/hooks/use-events'
 import { supabase } from '@/lib/supabase'
-import type { ShowcaseEvent, ShowcaseEventType } from '@/types'
+import type { ShowcaseEventType } from '@/types'
 import { Copy, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -80,9 +80,8 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
         description: description.trim() || undefined,
       })
 
-      // Clone tasks from source event if selected
       if (cloneFromId) {
-        await cloneTasks(cloneFromId, event.id)
+        await cloneEventData(cloneFromId, event.id, startDate, endDate)
       }
 
       await refetchEvents()
@@ -104,7 +103,7 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
-            Set up a new showcase or camp. You can clone tasks from a previous event.
+            Set up a new showcase or camp. You can clone tasks and schedule from a previous event.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -194,19 +193,19 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
             />
           </div>
 
-          {/* Clone tasks */}
+          {/* Clone from previous event */}
           {events.length > 0 && (
             <div className="space-y-2 rounded-lg border p-3 bg-muted/30">
               <div className="flex items-center gap-2">
                 <Copy className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-sm font-medium">Clone Tasks From</Label>
+                <Label className="text-sm font-medium">Clone From Previous Event</Label>
               </div>
               <select
                 value={cloneFromId}
                 onChange={(e) => setCloneFromId(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="">Start fresh (no tasks)</option>
+                <option value="">Start fresh</option>
                 {events.map(ev => (
                   <option key={ev.id} value={ev.id}>
                     {ev.name} — {ev.location}
@@ -214,7 +213,7 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
                 ))}
               </select>
               <p className="text-xs text-muted-foreground">
-                Copies all tasks with their categories and priorities. Status resets to &quot;Not Started&quot;.
+                Copies tasks, day schedule, matches, and materials. Dates shift to match your new event. Statuses and scores reset.
               </p>
             </div>
           )}
@@ -235,23 +234,156 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
   )
 }
 
-async function cloneTasks(sourceEventId: string, targetEventId: string) {
-  const { data: sourceTasks, error } = await supabase
+/**
+ * Clone all operational data from a source event to a new target event.
+ * - Tasks: cloned with status reset to not_started
+ * - Day groups: cloned, IDs remapped for activities
+ * - Day activities: cloned with dates shifted to new event
+ * - Matches: cloned with dates shifted, scores reset
+ * - Materials: cloned with is_ready reset
+ */
+async function cloneEventData(
+  sourceEventId: string,
+  targetEventId: string,
+  targetStartDate: string,
+  targetEndDate: string,
+) {
+  // 1. Clone tasks
+  const { data: sourceTasks } = await supabase
     .from('showcase_tasks')
-    .select('title, description, category_id, priority, assignee, scheduled_date, scheduled_time, show_on_schedule, dependencies')
+    .select('title, description, category_id, priority, assignee, show_on_schedule, dependencies')
     .eq('event_id', sourceEventId)
 
-  if (error || !sourceTasks?.length) return
+  if (sourceTasks?.length) {
+    await supabase.from('showcase_tasks').insert(
+      sourceTasks.map(task => ({
+        ...task,
+        event_id: targetEventId,
+        status: 'not_started' as const,
+        progress: 0,
+      }))
+    )
+  }
 
-  const cloned = sourceTasks.map(task => ({
-    ...task,
-    event_id: targetEventId,
-    status: 'not_started' as const,
-    progress: 0,
-    created_by: null,
-    scheduled_date: null,
-    scheduled_time: null,
-  }))
+  // 2. Clone day groups (and build ID mapping)
+  // First, delete the default groups that createEvent already seeded
+  await supabase
+    .from('showcase_day_groups')
+    .delete()
+    .eq('event_id', targetEventId)
 
-  await supabase.from('showcase_tasks').insert(cloned)
+  const { data: sourceGroups } = await supabase
+    .from('showcase_day_groups')
+    .select('id, name, color, sort_order')
+    .eq('event_id', sourceEventId)
+    .order('sort_order')
+
+  const groupIdMap: Record<string, string> = {}
+
+  if (sourceGroups?.length) {
+    const { data: newGroups } = await supabase
+      .from('showcase_day_groups')
+      .insert(
+        sourceGroups.map(g => ({
+          name: g.name,
+          color: g.color,
+          sort_order: g.sort_order,
+          event_id: targetEventId,
+        }))
+      )
+      .select('id, name, sort_order')
+
+    // Map old group IDs to new ones by matching sort_order
+    if (newGroups) {
+      for (const oldGroup of sourceGroups) {
+        const newGroup = newGroups.find(ng => ng.sort_order === oldGroup.sort_order)
+        if (newGroup) groupIdMap[oldGroup.id] = newGroup.id
+      }
+    }
+  }
+
+  // 3. Build date mapping: source day N → target day N
+  const { data: sourceEvent } = await supabase
+    .from('showcase_events')
+    .select('start_date, end_date')
+    .eq('id', sourceEventId)
+    .single()
+
+  const dateMap: Record<string, string> = {}
+  if (sourceEvent) {
+    const srcStart = new Date(sourceEvent.start_date + 'T00:00:00')
+    const tgtStart = new Date(targetStartDate + 'T00:00:00')
+    const tgtEnd = new Date(targetEndDate + 'T00:00:00')
+    const srcEnd = new Date(sourceEvent.end_date + 'T00:00:00')
+
+    let dayIndex = 0
+    for (let d = new Date(srcStart); d <= srcEnd; d.setDate(d.getDate() + 1)) {
+      const targetDay = new Date(tgtStart)
+      targetDay.setDate(targetDay.getDate() + dayIndex)
+      // Only map if target day is within the new event's range
+      if (targetDay <= tgtEnd) {
+        dateMap[d.toISOString().split('T')[0]] = targetDay.toISOString().split('T')[0]
+      }
+      dayIndex++
+    }
+  }
+
+  // 4. Clone day activities
+  const { data: sourceActivities } = await supabase
+    .from('showcase_day_activities')
+    .select('event_date, group_id, start_time, end_time, activity, responsible, todos, notes, sort_order')
+    .eq('event_id', sourceEventId)
+
+  if (sourceActivities?.length) {
+    const clonedActivities = sourceActivities
+      .filter(a => dateMap[a.event_date]) // only clone days that fit
+      .map(a => ({
+        ...a,
+        event_id: targetEventId,
+        event_date: dateMap[a.event_date],
+        group_id: a.group_id ? groupIdMap[a.group_id] || null : null,
+      }))
+
+    if (clonedActivities.length) {
+      await supabase.from('showcase_day_activities').insert(clonedActivities)
+    }
+  }
+
+  // 5. Clone matches
+  const { data: sourceMatches } = await supabase
+    .from('showcase_matches')
+    .select('event_date, match_number, start_time, team_a, team_b, field, referee, notes')
+    .eq('event_id', sourceEventId)
+
+  if (sourceMatches?.length) {
+    const clonedMatches = sourceMatches
+      .filter(m => dateMap[m.event_date])
+      .map(m => ({
+        ...m,
+        event_id: targetEventId,
+        event_date: dateMap[m.event_date],
+        score_a: null,
+        score_b: null,
+      }))
+
+    if (clonedMatches.length) {
+      await supabase.from('showcase_matches').insert(clonedMatches)
+    }
+  }
+
+  // 6. Clone materials
+  const { data: sourceMaterials } = await supabase
+    .from('showcase_materials')
+    .select('item, category, responsible, notes, sort_order')
+    .eq('event_id', sourceEventId)
+
+  if (sourceMaterials?.length) {
+    await supabase.from('showcase_materials').insert(
+      sourceMaterials.map(m => ({
+        ...m,
+        event_id: targetEventId,
+        is_ready: false,
+      }))
+    )
+  }
 }
