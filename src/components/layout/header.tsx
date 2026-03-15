@@ -36,20 +36,32 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
+type EventStatus = 'upcoming' | 'live' | 'ended'
+
+function getEventStatus(event: { start_date: string; end_date: string } | null): EventStatus {
+  if (!event) return 'upcoming'
+  const now = new Date()
+  const endDate = new Date(event.end_date + 'T23:59:59')
+  const startDate = new Date(event.start_date + 'T00:00:00')
+  if (now > endDate) return 'ended'
+  if (now >= startDate) return 'live'
+  return 'upcoming'
+}
+
 function getCountdown(target: Date | null) {
-  if (!target) return { days: 0, hours: 0, minutes: 0, isLive: false }
+  if (!target) return { days: 0, hours: 0, minutes: 0 }
   const now = new Date()
   const diff = target.getTime() - now.getTime()
 
   if (diff <= 0) {
-    return { days: 0, hours: 0, minutes: 0, isLive: true }
+    return { days: 0, hours: 0, minutes: 0 }
   }
 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 
-  return { days, hours, minutes, isLive: false }
+  return { days, hours, minutes }
 }
 
 function formatShortDate(dateStr: string): string {
@@ -62,14 +74,16 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
   const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
   const [countdown, setCountdown] = useState(getCountdown(eventStart))
   const [showCreateEvent, setShowCreateEvent] = useState(false)
+  const eventStatus = getEventStatus(currentEvent)
 
   useEffect(() => {
+    if (eventStatus === 'ended') return
     setCountdown(getCountdown(eventStart))
     const interval = setInterval(() => {
       setCountdown(getCountdown(eventStart))
     }, 60000)
     return () => clearInterval(interval)
-  }, [eventStart])
+  }, [eventStart, eventStatus])
 
   const showSwitcher = !isSlugLocked && events.length > 1
 
@@ -158,9 +172,11 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Countdown */}
+          {/* Countdown / Status */}
           <div className="hidden sm:flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5">
-            {countdown.isLive ? (
+            {eventStatus === 'ended' ? (
+              <span className="text-sm font-medium text-muted-foreground">Completed</span>
+            ) : eventStatus === 'live' ? (
               <span className="text-sm font-semibold text-primary animate-pulse">Event Live!</span>
             ) : (
               <>

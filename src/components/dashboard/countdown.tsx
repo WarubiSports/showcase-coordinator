@@ -4,10 +4,23 @@ import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useEvent } from '@/contexts/event-context'
 import { getEventStartDate } from '@/lib/constants'
+import { CheckCircle2 } from 'lucide-react'
+
+type EventStatus = 'upcoming' | 'live' | 'ended'
 
 interface TimeUnit {
   value: number
   label: string
+}
+
+function getEventStatus(event: { start_date: string; end_date: string }): EventStatus {
+  const now = new Date()
+  const endDate = new Date(event.end_date + 'T23:59:59')
+  const startDate = new Date(event.start_date + 'T00:00:00')
+
+  if (now > endDate) return 'ended'
+  if (now >= startDate) return 'live'
+  return 'upcoming'
 }
 
 function getTimeRemaining(target: Date | null): TimeUnit[] {
@@ -15,9 +28,7 @@ function getTimeRemaining(target: Date | null): TimeUnit[] {
   const now = new Date()
   const diff = target.getTime() - now.getTime()
 
-  if (diff <= 0) {
-    return [{ value: 0, label: 'Event Live!' }]
-  }
+  if (diff <= 0) return []
 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
@@ -35,10 +46,10 @@ function getTimeRemaining(target: Date | null): TimeUnit[] {
 function formatDateRange(startDate: string, endDate: string): string {
   const start = new Date(startDate + 'T00:00:00')
   const end = new Date(endDate + 'T00:00:00')
-  const opts: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric', year: 'numeric' }
   if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
     return `${start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}-${end.getDate()}, ${end.getFullYear()}`
   }
+  const opts: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric', year: 'numeric' }
   return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)}`
 }
 
@@ -46,21 +57,25 @@ export function CountdownTimer() {
   const { currentEvent } = useEvent()
   const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
   const [timeUnits, setTimeUnits] = useState<TimeUnit[]>(getTimeRemaining(eventStart))
+  const status = currentEvent ? getEventStatus(currentEvent) : 'upcoming'
 
   useEffect(() => {
+    if (status !== 'upcoming') return
     setTimeUnits(getTimeRemaining(eventStart))
     const interval = setInterval(() => {
       setTimeUnits(getTimeRemaining(eventStart))
     }, 1000)
     return () => clearInterval(interval)
-  }, [eventStart])
-
-  const isLive = timeUnits.length === 1 && timeUnits[0].label === 'Event Live!'
+  }, [eventStart, status])
 
   if (!currentEvent) return null
 
+  const cardClass = status === 'ended'
+    ? 'bg-muted/50 border-border'
+    : 'bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20'
+
   return (
-    <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
+    <Card className={cardClass}>
       <CardContent className="py-6">
         <div className="text-center space-y-4">
           <div>
@@ -70,7 +85,14 @@ export function CountdownTimer() {
             </p>
           </div>
 
-          {isLive ? (
+          {status === 'ended' ? (
+            <div className="py-4 flex items-center justify-center gap-2">
+              <CheckCircle2 className="h-6 w-6 text-green-500" />
+              <span className="text-xl font-semibold text-muted-foreground">
+                Event Completed
+              </span>
+            </div>
+          ) : status === 'live' ? (
             <div className="py-4">
               <span className="text-3xl font-bold text-primary animate-pulse">
                 Event Live!
