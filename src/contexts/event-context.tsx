@@ -79,10 +79,10 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     setIsSlugLocked(false)
   }, [])
 
-  // Past events: events that ended before today, excluding current
+  // Past events: events that ended before today, excluding current and templates
   const now = new Date().toISOString().split('T')[0]
   const pastEvents = events.filter(e =>
-    e.id !== currentEvent?.id && e.end_date < now
+    e.id !== currentEvent?.id && e.end_date < now && !e.slug.startsWith('template-')
   )
 
   return (

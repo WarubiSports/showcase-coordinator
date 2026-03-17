@@ -36,10 +36,15 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-type EventStatus = 'upcoming' | 'live' | 'ended'
+type EventStatus = 'upcoming' | 'live' | 'ended' | 'template'
 
-function getEventStatus(event: { start_date: string; end_date: string } | null): EventStatus {
+function isTemplate(event: { slug: string } | null): boolean {
+  return !!event?.slug.startsWith('template-')
+}
+
+function getEventStatus(event: { slug: string; start_date: string; end_date: string } | null): EventStatus {
   if (!event) return 'upcoming'
+  if (isTemplate(event)) return 'template'
   const now = new Date()
   const endDate = new Date(event.end_date + 'T23:59:59')
   const startDate = new Date(event.start_date + 'T00:00:00')
@@ -174,7 +179,9 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
         <div className="flex items-center gap-2 md:gap-4">
           {/* Countdown / Status */}
           <div className="hidden sm:flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5">
-            {eventStatus === 'ended' ? (
+            {eventStatus === 'template' ? (
+              <span className="text-sm font-medium text-muted-foreground">Template</span>
+            ) : eventStatus === 'ended' ? (
               <span className="text-sm font-medium text-muted-foreground">Completed</span>
             ) : eventStatus === 'live' ? (
               <span className="text-sm font-semibold text-primary animate-pulse">Event Live!</span>

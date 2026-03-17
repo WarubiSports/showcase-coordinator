@@ -4,16 +4,21 @@ import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useEvent } from '@/contexts/event-context'
 import { getEventStartDate } from '@/lib/constants'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, FileText } from 'lucide-react'
 
-type EventStatus = 'upcoming' | 'live' | 'ended'
+type EventStatus = 'upcoming' | 'live' | 'ended' | 'template'
 
 interface TimeUnit {
   value: number
   label: string
 }
 
-function getEventStatus(event: { start_date: string; end_date: string }): EventStatus {
+function isTemplate(event: { slug: string }): boolean {
+  return event.slug.startsWith('template-')
+}
+
+function getEventStatus(event: { slug: string; start_date: string; end_date: string }): EventStatus {
+  if (isTemplate(event)) return 'template'
   const now = new Date()
   const endDate = new Date(event.end_date + 'T23:59:59')
   const startDate = new Date(event.start_date + 'T00:00:00')
@@ -70,7 +75,7 @@ export function CountdownTimer() {
 
   if (!currentEvent) return null
 
-  const cardClass = status === 'ended'
+  const cardClass = status === 'ended' || status === 'template'
     ? 'bg-muted/50 border-border'
     : 'bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20'
 
@@ -80,12 +85,25 @@ export function CountdownTimer() {
         <div className="text-center space-y-4">
           <div>
             <h2 className="text-2xl font-bold">{currentEvent.name}</h2>
-            <p className="text-muted-foreground">
-              {formatDateRange(currentEvent.start_date, currentEvent.end_date)} &bull; {currentEvent.location}
-            </p>
+            {status === 'template' ? (
+              <p className="text-muted-foreground">
+                Reusable template &bull; Clone this when creating a new event
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                {formatDateRange(currentEvent.start_date, currentEvent.end_date)} &bull; {currentEvent.location}
+              </p>
+            )}
           </div>
 
-          {status === 'ended' ? (
+          {status === 'template' ? (
+            <div className="py-4 flex items-center justify-center gap-2">
+              <FileText className="h-6 w-6 text-muted-foreground" />
+              <span className="text-xl font-semibold text-muted-foreground">
+                Template
+              </span>
+            </div>
+          ) : status === 'ended' ? (
             <div className="py-4 flex items-center justify-center gap-2">
               <CheckCircle2 className="h-6 w-6 text-green-500" />
               <span className="text-xl font-semibold text-muted-foreground">
