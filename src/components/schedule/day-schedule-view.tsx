@@ -242,21 +242,12 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       updated_at: new Date().toISOString(),
     }
 
-    console.log('Updating activity ID:', editingActivity.id)
-    console.log('Form state:', activityForm)
-    console.log('end_time from form:', activityForm.end_time, 'type:', typeof activityForm.end_time)
-    console.log('formatTimeForDB result:', formatTimeForDB(activityForm.end_time))
-    console.log('Update data:', updateData)
-
     const { data, error } = await supabase
       .from('showcase_day_activities')
       .update(updateData)
       .eq('id', editingActivity.id)
       .select('*, showcase_day_groups(*)')
       .single()
-
-    console.log('Supabase response - data:', data)
-    console.log('Supabase response - error:', error)
 
     if (error) {
       console.error('Update error:', error)
@@ -275,12 +266,9 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
       group: data.showcase_day_groups,
     }
 
-    console.log('Updated activity object:', updatedActivity)
-
     setActivities(prev => {
       const newActivities = prev.map(a => a.id === editingActivity.id ? updatedActivity : a)
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
-      console.log('New activities state:', newActivities.map(a => ({ id: a.id, activity: a.activity, start_time: a.start_time, end_time: a.end_time })))
       return newActivities
     })
 
@@ -891,7 +879,6 @@ export function DayScheduleView({ userName }: DayScheduleViewProps) {
                   type="time"
                   value={activityForm.end_time}
                   onChange={(e) => {
-                    console.log('End time onChange:', e.target.value)
                     setActivityForm(prev => ({ ...prev, end_time: e.target.value }))
                   }}
                 />
