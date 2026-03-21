@@ -34,7 +34,7 @@ interface VenueMapProps {
 }
 
 export function VenueMap({ userName }: VenueMapProps) {
-  const { currentEvent } = useEvent()
+  const { currentEvent, refetchEvents } = useEvent()
   const [zones, setZones] = useState<VenueZone[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -367,9 +367,7 @@ export function VenueMap({ userName }: VenueMapProps) {
 
       if (error) throw error
 
-      currentEvent.venue_lat = venueLat
-      currentEvent.venue_lng = venueLng
-      currentEvent.venue_zoom = venueZoom
+      await refetchEvents()
       setIsLocationOpen(false)
       toast.success('Venue location saved')
     } catch {

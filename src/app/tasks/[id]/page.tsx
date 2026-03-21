@@ -38,11 +38,14 @@ export default function TaskDetailPage() {
   const taskId = params.id as string
 
   useEffect(() => {
+    if (!currentEvent?.id) return
+
     const fetchTask = async () => {
       const { data, error } = await supabase
         .from('showcase_tasks')
         .select('*, showcase_categories(*)')
         .eq('id', taskId)
+        .eq('event_id', currentEvent.id)
         .single()
 
       if (error || !data) {
@@ -62,7 +65,7 @@ export default function TaskDetailPage() {
     }
 
     fetchTask()
-  }, [taskId, router])
+  }, [taskId, router, currentEvent?.id])
 
   const handleUpdate = async (data: TaskFormData) => {
     const { data: updated, error } = await supabase

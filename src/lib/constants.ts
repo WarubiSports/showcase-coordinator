@@ -23,7 +23,7 @@ export function getEventDays(event: ShowcaseEvent | null): { date: string; label
 export function getEventStartDate(event: ShowcaseEvent | null): Date | null {
   if (!event) return null
   const time = event.start_time || '09:00:00'
-  return new Date(`${event.start_date}T${time}+01:00`)
+  return new Date(`${event.start_date}T${time}`)
 }
 
 export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bgColor: string }> = {

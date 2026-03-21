@@ -24,6 +24,7 @@ export default function AnnouncementsPage() {
   }, [currentEvent?.id])
 
   const fetchAnnouncements = async () => {
+    setIsLoading(true)
     if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_announcements')

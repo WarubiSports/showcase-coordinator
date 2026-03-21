@@ -19,16 +19,6 @@ import { getEventDays } from '@/lib/constants'
 import type { DayGroup, DayActivity, Match, Attendee } from '@/types'
 import { MultiAssignSelect } from './multi-assign-select'
 
-// Subtitle info for groups (not stored in DB)
-const GROUP_SUBTITLES: Record<string, string> = {
-  'Group A': 'Team 4 & 5 + GK + Women',
-  'Group B': 'Team 1, 2, 3',
-  'GK+Women Training': 'Field 2',
-  'Women': 'Women\'s Program',
-  'Sunday Only': 'Players, Women, GK',
-  'Both Days Men': '+ ITP & BMG',
-  'Both Days Women': '+ DJK',
-}
 
 function formatTime(time: string): string {
   if (!time) return ''
@@ -60,8 +50,7 @@ interface StaffTimelineProps {
 
 export function StaffTimeline({ userName }: StaffTimelineProps) {
   const { currentEvent } = useEvent()
-  const eventDays = getEventDays(currentEvent)
-  const [selectedDate, setSelectedDate] = useState(eventDays[0]?.date || '')
+  const [selectedDate, setSelectedDate] = useState('')
   const [groups, setGroups] = useState<DayGroup[]>([])
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [matches, setMatches] = useState<Match[]>([])
@@ -85,8 +74,9 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
 
   // Reset selectedDate when event changes
   useEffect(() => {
-    if (eventDays.length > 0 && !eventDays.some(d => d.date === selectedDate)) {
-      setSelectedDate(eventDays[0].date)
+    const days = getEventDays(currentEvent)
+    if (days.length > 0) {
+      setSelectedDate(days[0].date)
     }
   }, [currentEvent?.id])
 
@@ -364,6 +354,8 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
   ]
   const uniqueNames = [...new Set(allResponsible)].sort()
 
+  const eventDays = getEventDays(currentEvent)
+
   if (isLoading) {
     return (
       <Card>
@@ -467,9 +459,6 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
                   style={{ backgroundColor: `${group.color}15`, borderColor: `${group.color}40`, color: group.color }}
                 >
                   <div>{group.name}</div>
-                  {GROUP_SUBTITLES[group.name] && (
-                    <div className="text-xs font-normal opacity-70 mt-0.5">{GROUP_SUBTITLES[group.name]}</div>
-                  )}
                 </div>
               )
 
@@ -643,59 +632,91 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
                 Add
               </Button>
             </div>
-            <div className="rounded-lg border overflow-hidden">
-              {/* Table header */}
-              <div className="grid grid-cols-[100px_1fr_1fr] sm:grid-cols-[120px_1fr_1fr] bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <div className="px-3 py-2 border-r">Time</div>
-                <div className="px-3 py-2 border-r">Field 1</div>
-                <div className="px-3 py-2">Field 2</div>
-              </div>
-              {/* Match rows by time slot */}
-              {matchTimeSlots.map((time, idx) => {
-                const field1 = matches.find(m => m.start_time === time && m.field === 'Field 1')
-                const field2 = matches.find(m => m.start_time === time && m.field === 'Field 2')
+            {(() => {
+              const fields = [...new Set(matches.map(m => m.field).filter(Boolean))].sort()
+              const fieldCount = Math.max(fields.length, 1)
+              const gridCols = `100px ${Array(fieldCount).fill('1fr').join(' ')}`
+              const gridColsSm = `120px ${Array(fieldCount).fill('1fr').join(' ')}`
 
-                return (
+              return (
+                <div className="rounded-lg border overflow-hidden">
+                  {/* Table header */}
                   <div
-                    key={time}
-                    className={cn(
-                      'grid grid-cols-[100px_1fr_1fr] sm:grid-cols-[120px_1fr_1fr] border-t',
-                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/20',
-                    )}
+                    className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                    style={{ display: 'grid', gridTemplateColumns: gridColsSm }}
                   >
-                    <div className="px-3 py-2.5 border-r text-sm font-medium tabular-nums">
-                      {formatTime(time)}
-                    </div>
-                    <div className={cn('px-3 py-2.5 border-r', filterPerson !== 'all' && field1 && !isMatchHighlighted(field1.referee) && 'opacity-30')}>
-                      {field1 ? (
-                        <MatchCell
-                          match={field1}
-                          attendees={attendees}
-                          onAssign={(val) => updateMatchReferee(field1.id, val)}
-                          onEdit={() => openEditMatch(field1)}
-                          onDelete={() => handleDeleteMatch(field1.id)}
-                        />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </div>
-                    <div className={cn('px-3 py-2.5', filterPerson !== 'all' && field2 && !isMatchHighlighted(field2.referee) && 'opacity-30')}>
-                      {field2 ? (
-                        <MatchCell
-                          match={field2}
-                          attendees={attendees}
-                          onAssign={(val) => updateMatchReferee(field2.id, val)}
-                          onEdit={() => openEditMatch(field2)}
-                          onDelete={() => handleDeleteMatch(field2.id)}
-                        />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </div>
+                    <div className="px-3 py-2 border-r">Time</div>
+                    {fields.length > 0 ? fields.map((field, i) => (
+                      <div key={field} className={cn('px-3 py-2', i < fields.length - 1 && 'border-r')}>
+                        {field}
+                      </div>
+                    )) : (
+                      <div className="px-3 py-2">Match</div>
+                    )}
                   </div>
-                )
-              })}
-            </div>
+                  {/* Match rows by time slot */}
+                  {matchTimeSlots.map((time, idx) => (
+                    <div
+                      key={time}
+                      className={cn('border-t', idx % 2 === 0 ? 'bg-background' : 'bg-muted/20')}
+                      style={{ display: 'grid', gridTemplateColumns: gridColsSm }}
+                    >
+                      <div className="px-3 py-2.5 border-r text-sm font-medium tabular-nums">
+                        {formatTime(time)}
+                      </div>
+                      {fields.length > 0 ? fields.map((field, i) => {
+                        const match = matches.find(m => m.start_time === time && m.field === field)
+                        return (
+                          <div
+                            key={field}
+                            className={cn(
+                              'px-3 py-2.5',
+                              i < fields.length - 1 && 'border-r',
+                              filterPerson !== 'all' && match && !isMatchHighlighted(match.referee) && 'opacity-30',
+                            )}
+                          >
+                            {match ? (
+                              <MatchCell
+                                match={match}
+                                attendees={attendees}
+                                onAssign={(val) => updateMatchReferee(match.id, val)}
+                                onEdit={() => openEditMatch(match)}
+                                onDelete={() => handleDeleteMatch(match.id)}
+                              />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        )
+                      }) : (() => {
+                        const slotMatches = matches.filter(m => m.start_time === time)
+                        return slotMatches.length > 0 ? slotMatches.map(match => (
+                          <div
+                            key={match.id}
+                            className={cn(
+                              'px-3 py-2.5',
+                              filterPerson !== 'all' && !isMatchHighlighted(match.referee) && 'opacity-30',
+                            )}
+                          >
+                            <MatchCell
+                              match={match}
+                              attendees={attendees}
+                              onAssign={(val) => updateMatchReferee(match.id, val)}
+                              onEdit={() => openEditMatch(match)}
+                              onDelete={() => handleDeleteMatch(match.id)}
+                            />
+                          </div>
+                        )) : (
+                          <div className="px-3 py-2.5">
+                            <span className="text-xs text-muted-foreground">—</span>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         )}
 

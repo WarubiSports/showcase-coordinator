@@ -63,6 +63,7 @@ export default function FeedbackPage() {
   }, [currentEvent?.id])
 
   const fetchFeedback = async () => {
+    setIsLoading(true)
     if (!currentEvent) return
     const { data, error } = await supabase
       .from('showcase_feedback')

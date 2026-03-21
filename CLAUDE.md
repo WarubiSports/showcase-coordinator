@@ -15,7 +15,7 @@ https://showcase-coordinator.vercel.app
 ---
 
 ## Project Overview
-Internal coordination tool for the **College Pro Showcase Germany** event (Feb 7-8, 2026 in Cologne). Manages tasks, schedules, players, attendees, and venue logistics. No authentication — uses localStorage for user names.
+Multi-event coordination tool for showcases, ID camps, and clinics. Manages tasks, day-of schedules, players, attendees, and venue logistics. Supports multiple events with event switching in the header.
 
 ## Tech Stack
 - **Framework:** Next.js 16 + React 19 + TypeScript
@@ -30,10 +30,11 @@ This app uses Supabase project `bdyiyeypkajxzhkefcyv` — **NOT** the shared ITP
 ## Key Directories
 - `/src/app/` - Next.js App Router pages
 - `/src/components/` - Feature-organized components + shadcn/ui
-- `/src/hooks/` - Data hooks (use-tasks, use-categories, use-players, use-attendees, use-user)
+- `/src/contexts/` - EventContext (current event selection + multi-event support)
+- `/src/hooks/` - Data hooks (use-tasks, use-categories, use-players, use-attendees, use-user, use-events)
 - `/src/lib/` - Supabase client, constants, utils
 - `/src/types/` - TypeScript types + Supabase database types
-- `/supabase/migrations/` - 12 migration files
+- `/supabase/migrations/` - Migration files
 - `/scripts/` - Utility scripts
 
 ## Pages
@@ -42,27 +43,33 @@ This app uses Supabase project `bdyiyeypkajxzhkefcyv` — **NOT** the shared ITP
 | `/` | Dashboard (countdown, progress, assignee workload, milestones) |
 | `/tasks` | Task management (cards/kanban/table views) |
 | `/tasks/[id]` | Task detail |
-| `/schedule` | Event schedule |
-| `/day-view` | Daily activity timeline |
+| `/day-view` | Event day staff schedule + venue map |
 | `/attendees` | Staff, alumni, coaches, scouts |
 | `/players` | Player profiles with test scores |
 | `/announcements` | Team communications |
 | `/feedback` | Bug/feature requests with screenshots |
+| `/event/[slug]` | Public event page (slug-locked) |
 
-## Event Config (src/lib/constants.ts)
-- `EVENT_DATE`: 2026-02-07T09:00:00+01:00
-- `EVENT_END_DATE`: 2026-02-08T18:00:00+01:00
-- `EVENT_LOCATION`: Cologne, Germany
+## Event System
+- Events stored in `showcase_events` table with start_date, end_date, location, type
+- `EventContext` (`src/contexts/event-context.tsx`) manages current event selection
+- Event dates derived dynamically via `getEventDays(currentEvent)` in `src/lib/constants.ts`
+- Countdown uses browser local time (no hardcoded timezone)
+- Single-day events auto-hide day tab selectors
+- Events can be cloned from templates or past events
 
 ## Database Tables
-- `showcase_tasks` - Task management with multi-assign
-- `showcase_categories` - Task categories
+- `showcase_events` - Event definitions (name, dates, location, type, slug)
+- `showcase_tasks` - Task management with multi-assign (event-scoped)
+- `showcase_categories` - Task categories (global, shared across events)
 - `showcase_comments` - Task comments
 - `showcase_milestones` - Event milestones
 - `showcase_activity` - Activity log
-- `showcase_announcements` - Team announcements
-- `showcase_schedule` - Event schedule
-- `showcase_attendees` - People (staff/alumni/coaches/scouts, multi-role)
+- `showcase_announcements` - Team announcements (event-scoped)
+- `showcase_day_groups` - Day schedule groups (event-scoped)
+- `showcase_day_activities` - Day schedule activities (event-scoped)
+- `showcase_matches` - Match schedule (event-scoped)
+- `showcase_attendees` - People (staff/alumni/coaches/scouts, multi-role, event-scoped)
 - `showcase_players` - Player profiles with physical test scores
 - Venue zones + rotation tables
 
