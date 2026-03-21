@@ -324,12 +324,22 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
     : '00:00'
   const matchStart = matches.length > 0 ? matches[0].start_time : '99:99'
 
-  const beforeGroups = generalActivities.filter(a => a.start_time < groupStart)
-  const midGeneral = generalActivities.filter(a => a.start_time >= groupEnd && a.start_time < matchStart)
-  const afterAll = generalActivities.filter(a => {
-    const matchEnd = matches.length > 0 ? matches[matches.length - 1].start_time : '00:00'
-    return a.start_time >= matchEnd && a.start_time >= groupEnd && !midGeneral.includes(a) && !beforeGroups.includes(a)
-  })
+  // When there are no group activities or matches, all general activities go in beforeGroups
+  const hasGroups = groupActivities.length > 0
+  const hasMatches = matches.length > 0
+
+  const beforeGroups = hasGroups
+    ? generalActivities.filter(a => a.start_time < groupStart)
+    : generalActivities // all go here when no groups
+  const midGeneral = hasGroups
+    ? generalActivities.filter(a => a.start_time >= groupEnd && a.start_time < matchStart)
+    : []
+  const afterAll = (hasGroups || hasMatches)
+    ? generalActivities.filter(a => {
+        const matchEnd = hasMatches ? matches[matches.length - 1].start_time : '00:00'
+        return a.start_time >= matchEnd && a.start_time >= groupEnd && !midGeneral.includes(a) && !beforeGroups.includes(a)
+      })
+    : []
 
   // Match times for grouped display
   const matchTimeSlots = [...new Set(matches.map(m => m.start_time))].sort()
@@ -393,15 +403,17 @@ export function StaffTimeline({ userName }: StaffTimelineProps) {
             </Select>
           </div>
         </div>
-        <Tabs value={selectedDate} onValueChange={setSelectedDate} className="mt-2">
-          <TabsList>
-            {eventDays.map(day => (
-              <TabsTrigger key={day.date} value={day.date} className="text-sm">
-                {day.label} — {day.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {eventDays.length > 1 && (
+          <Tabs value={selectedDate} onValueChange={setSelectedDate} className="mt-2">
+            <TabsList>
+              {eventDays.map(day => (
+                <TabsTrigger key={day.date} value={day.date} className="text-sm">
+                  {day.label} — {day.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-6">
