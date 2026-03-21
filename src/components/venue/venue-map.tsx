@@ -58,6 +58,8 @@ export function VenueMap({ userName }: VenueMapProps) {
   const [isLocationOpen, setIsLocationOpen] = useState(false)
   const [venueAddress, setVenueAddress] = useState('')
   const [venueZoom, setVenueZoom] = useState(currentEvent?.venue_zoom || 18)
+  const [venueLat, setVenueLat] = useState<number | null>(null)
+  const [venueLng, setVenueLng] = useState<number | null>(null)
   const [isGeocoding, setIsGeocoding] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -332,8 +334,8 @@ export function VenueMap({ userName }: VenueMapProps) {
     setIsFormOpen(true)
   }
 
-  const handleSetVenueLocation = async () => {
-    if (!currentEvent || !venueAddress.trim()) return
+  const handleGeocodeAddress = async () => {
+    if (!venueAddress.trim()) return
     setIsGeocoding(true)
     try {
       const res = await fetch(
@@ -345,27 +347,40 @@ export function VenueMap({ userName }: VenueMapProps) {
         toast.error('Address not found. Try a more specific location.')
         return
       }
-      const lat = parseFloat(data[0].lat)
-      const lng = parseFloat(data[0].lon)
+      setVenueLat(parseFloat(data[0].lat))
+      setVenueLng(parseFloat(data[0].lon))
+      toast.success('Found — adjust position with the arrows if needed')
+    } catch {
+      toast.error('Geocoding failed')
+    } finally {
+      setIsGeocoding(false)
+    }
+  }
 
+  const handleSaveVenueLocation = async () => {
+    if (!currentEvent || !venueLat || !venueLng) return
+    try {
       const { error } = await supabase
         .from('showcase_events')
-        .update({ venue_lat: lat, venue_lng: lng, venue_zoom: venueZoom, updated_at: new Date().toISOString() })
+        .update({ venue_lat: venueLat, venue_lng: venueLng, venue_zoom: venueZoom, updated_at: new Date().toISOString() })
         .eq('id', currentEvent.id)
 
       if (error) throw error
 
-      // Update local state
-      currentEvent.venue_lat = lat
-      currentEvent.venue_lng = lng
+      currentEvent.venue_lat = venueLat
+      currentEvent.venue_lng = venueLng
       currentEvent.venue_zoom = venueZoom
       setIsLocationOpen(false)
-      toast.success(`Venue set to ${data[0].display_name.split(',').slice(0, 3).join(',')}`)
+      toast.success('Venue location saved')
     } catch {
-      toast.error('Failed to set venue location')
-    } finally {
-      setIsGeocoding(false)
+      toast.error('Failed to save venue location')
     }
+  }
+
+  // Nudge lat/lng — amount depends on zoom level
+  const nudgeAmount = () => {
+    // At zoom 18, ~0.0002 is roughly 20m. Scale with zoom.
+    return 0.0002 * Math.pow(2, 18 - venueZoom)
   }
 
   const getDrawingRect = () => {
@@ -413,7 +428,7 @@ export function VenueMap({ userName }: VenueMapProps) {
               </Button>
             ) : (
               <>
-                <Button size="sm" variant="outline" onClick={() => { setVenueAddress(currentEvent?.location || ''); setVenueZoom(currentEvent?.venue_zoom || 18); setIsLocationOpen(true); }}>
+                <Button size="sm" variant="outline" onClick={() => { setVenueAddress(currentEvent?.location || ''); setVenueZoom(currentEvent?.venue_zoom || 18); setVenueLat(currentEvent?.venue_lat || null); setVenueLng(currentEvent?.venue_lng || null); setIsLocationOpen(true); }}>
                   <Search className="mr-2 h-4 w-4" />
                   Set Location
                 </Button>
@@ -720,25 +735,87 @@ export function VenueMap({ userName }: VenueMapProps) {
 
       {/* Venue Location Dialog */}
       <Dialog open={isLocationOpen} onOpenChange={setIsLocationOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Set Venue Location</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Venue Address</Label>
+            {/* Search */}
+            <div className="flex gap-2">
               <Input
                 value={venueAddress}
                 onChange={(e) => setVenueAddress(e.target.value)}
-                placeholder="e.g. SV Lövenich/Widdersdorf, Cologne"
-                onKeyDown={(e) => e.key === 'Enter' && handleSetVenueLocation()}
+                placeholder="Search address or venue name..."
+                onKeyDown={(e) => e.key === 'Enter' && handleGeocodeAddress()}
+                className="flex-1"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Enter the venue name or full address. The satellite view will load automatically.
-              </p>
+              <Button onClick={handleGeocodeAddress} disabled={isGeocoding || !venueAddress.trim()} size="sm">
+                {isGeocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
             </div>
+
+            {/* Map Preview with Nudge Controls */}
+            {venueLat && venueLng && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ? (
+              <div className="space-y-3">
+                <div className="relative rounded-lg overflow-hidden border">
+                  <img
+                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${venueLat},${venueLng}&zoom=${venueZoom}&size=600x300&scale=2&maptype=satellite&markers=color:red%7C${venueLat},${venueLng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}`}
+                    alt="Venue preview"
+                    className="w-full aspect-[2/1] object-cover"
+                    draggable={false}
+                  />
+                  {/* Directional nudge buttons overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="grid grid-cols-3 gap-0.5 pointer-events-auto">
+                      <div />
+                      <button
+                        onClick={() => setVenueLat(l => l ? l + nudgeAmount() : l)}
+                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
+                        title="Move north"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                      </button>
+                      <div />
+                      <button
+                        onClick={() => setVenueLng(l => l ? l - nudgeAmount() : l)}
+                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
+                        title="Move west"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                      </button>
+                      <div className="w-9 h-9" />
+                      <button
+                        onClick={() => setVenueLng(l => l ? l + nudgeAmount() : l)}
+                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
+                        title="Move east"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </button>
+                      <div />
+                      <button
+                        onClick={() => setVenueLat(l => l ? l - nudgeAmount() : l)}
+                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
+                        title="Move south"
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                      </button>
+                      <div />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Use arrows to fine-tune the position. Red pin shows center.
+                </p>
+              </div>
+            ) : !venueLat ? (
+              <div className="rounded-lg border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+                Search for an address to see the satellite preview
+              </div>
+            ) : null}
+
+            {/* Zoom slider */}
             <div>
-              <Label>Zoom Level: {venueZoom}</Label>
+              <Label>Zoom: {venueZoom}</Label>
               <input
                 type="range"
                 min={15}
@@ -752,16 +829,14 @@ export function VenueMap({ userName }: VenueMapProps) {
                 <span>Close</span>
               </div>
             </div>
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsLocationOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSetVenueLocation} disabled={isGeocoding || !venueAddress.trim()}>
-                {isGeocoding ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching...</>
-                ) : (
-                  <><Search className="mr-2 h-4 w-4" /> Set Location</>
-                )}
+              <Button onClick={handleSaveVenueLocation} disabled={!venueLat || !venueLng}>
+                <Save className="mr-2 h-4 w-4" />
+                Save Location
               </Button>
             </div>
           </div>

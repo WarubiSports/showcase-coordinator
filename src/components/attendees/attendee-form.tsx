@@ -193,7 +193,7 @@ export function AttendeeForm({ open, onClose, onSubmit, attendee }: AttendeeForm
           </div>
 
           <div>
-            <Label className="mb-3 block">Availability (Feb 2-8, 2026)</Label>
+            <Label className="mb-3 block">Availability{currentEvent ? ` (${currentEvent.start_date} – ${currentEvent.end_date})` : ''}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               {SHOWCASE_DAYS.map((day) => {
                 const isSelected = isDaySelected(day.date)

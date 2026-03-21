@@ -326,7 +326,7 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
           <div className="overflow-x-auto">
             <div className="min-w-[1200px]">
               {/* Header */}
-              <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-muted/50">
+              <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: `60px repeat(${DAYS.length}, 1fr)` }}>
                 <div className="p-2 text-center text-xs font-medium text-muted-foreground">Time</div>
                 {DAYS.map((day) => (
                   <div key={day.date} className="border-l p-2 text-center">
@@ -337,7 +337,7 @@ export function ScheduleGrid({ userName }: ScheduleGridProps) {
               </div>
 
               {/* Time grid */}
-              <div className="grid grid-cols-[60px_repeat(7,1fr)]" ref={gridRef}>
+              <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `60px repeat(${DAYS.length}, 1fr)` }}>
                 {/* Time labels */}
                 <div className="border-r">
                   {HOURS.map((hour) => (
