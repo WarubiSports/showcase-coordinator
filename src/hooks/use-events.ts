@@ -12,6 +12,9 @@ interface CreateEventInput {
   start_time?: string
   description?: string
   type?: ShowcaseEventType
+  venue_lat?: number
+  venue_lng?: number
+  venue_zoom?: number
 }
 
 export function useEvents() {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload, GripVertical, RotateCw } from 'lucide-react'
+import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload, GripVertical, RotateCw, Search, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,6 +53,12 @@ export function VenueMap({ userName }: VenueMapProps) {
 
   // Rotating state
   const [rotatingZone, setRotatingZone] = useState<string | null>(null)
+
+  // Venue location state
+  const [isLocationOpen, setIsLocationOpen] = useState(false)
+  const [venueAddress, setVenueAddress] = useState('')
+  const [venueZoom, setVenueZoom] = useState(currentEvent?.venue_zoom || 18)
+  const [isGeocoding, setIsGeocoding] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -326,6 +332,42 @@ export function VenueMap({ userName }: VenueMapProps) {
     setIsFormOpen(true)
   }
 
+  const handleSetVenueLocation = async () => {
+    if (!currentEvent || !venueAddress.trim()) return
+    setIsGeocoding(true)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(venueAddress.trim())}&format=json&limit=1`,
+        { headers: { 'User-Agent': 'ShowcaseCoordinator/1.0' } }
+      )
+      const data = await res.json()
+      if (data.length === 0) {
+        toast.error('Address not found. Try a more specific location.')
+        return
+      }
+      const lat = parseFloat(data[0].lat)
+      const lng = parseFloat(data[0].lon)
+
+      const { error } = await supabase
+        .from('showcase_events')
+        .update({ venue_lat: lat, venue_lng: lng, venue_zoom: venueZoom, updated_at: new Date().toISOString() })
+        .eq('id', currentEvent.id)
+
+      if (error) throw error
+
+      // Update local state
+      currentEvent.venue_lat = lat
+      currentEvent.venue_lng = lng
+      currentEvent.venue_zoom = venueZoom
+      setIsLocationOpen(false)
+      toast.success(`Venue set to ${data[0].display_name.split(',').slice(0, 3).join(',')}`)
+    } catch {
+      toast.error('Failed to set venue location')
+    } finally {
+      setIsGeocoding(false)
+    }
+  }
+
   const getDrawingRect = () => {
     if (!drawStart || !drawCurrent) return null
     return {
@@ -371,6 +413,10 @@ export function VenueMap({ userName }: VenueMapProps) {
               </Button>
             ) : (
               <>
+                <Button size="sm" variant="outline" onClick={() => { setVenueAddress(currentEvent?.location || ''); setVenueZoom(currentEvent?.venue_zoom || 18); setIsLocationOpen(true); }}>
+                  <Search className="mr-2 h-4 w-4" />
+                  Set Location
+                </Button>
                 <Button size="sm" variant={isEditMode ? 'default' : 'outline'} onClick={() => setIsEditMode(!isEditMode)}>
                   <Move className="mr-2 h-4 w-4" />
                   {isEditMode ? 'Done' : 'Move'}
@@ -411,9 +457,13 @@ export function VenueMap({ userName }: VenueMapProps) {
             if (draggingZone || rotatingZone) { handleMouseUp(); }
           }}
         >
-          {/* Venue Image */}
+          {/* Venue Image — dynamic satellite from Google Maps or fallback */}
           <img
-            src="/venue-map.jpg"
+            src={
+              currentEvent?.venue_lat && currentEvent?.venue_lng && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
+                ? `https://maps.googleapis.com/maps/api/staticmap?center=${currentEvent.venue_lat},${currentEvent.venue_lng}&zoom=${currentEvent.venue_zoom || 18}&size=800x600&scale=2&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}`
+                : '/venue-map.jpg'
+            }
             alt="Venue Map"
             className="w-full h-full object-cover pointer-events-none"
             onError={(e) => {
@@ -421,10 +471,10 @@ export function VenueMap({ userName }: VenueMapProps) {
                 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
                   <rect fill="#1a1a2e" width="800" height="600"/>
                   <text x="400" y="280" text-anchor="middle" fill="#666" font-family="system-ui" font-size="20">
-                    Upload venue-map.jpg to /public folder
+                    Set a venue location to load satellite view
                   </text>
                   <text x="400" y="320" text-anchor="middle" fill="#666" font-family="system-ui" font-size="14">
-                    SV Lövenich/Widdersdorf satellite image
+                    Edit event → enter venue address
                   </text>
                 </svg>
               `)
@@ -663,6 +713,56 @@ export function VenueMap({ userName }: VenueMapProps) {
                   {selectedZone?.id ? 'Update' : 'Create'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Venue Location Dialog */}
+      <Dialog open={isLocationOpen} onOpenChange={setIsLocationOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Venue Location</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Venue Address</Label>
+              <Input
+                value={venueAddress}
+                onChange={(e) => setVenueAddress(e.target.value)}
+                placeholder="e.g. SV Lövenich/Widdersdorf, Cologne"
+                onKeyDown={(e) => e.key === 'Enter' && handleSetVenueLocation()}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter the venue name or full address. The satellite view will load automatically.
+              </p>
+            </div>
+            <div>
+              <Label>Zoom Level: {venueZoom}</Label>
+              <input
+                type="range"
+                min={15}
+                max={20}
+                value={venueZoom}
+                onChange={(e) => setVenueZoom(parseInt(e.target.value))}
+                className="w-full mt-1"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Wide</span>
+                <span>Close</span>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsLocationOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSetVenueLocation} disabled={isGeocoding || !venueAddress.trim()}>
+                {isGeocoding ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching...</>
+                ) : (
+                  <><Search className="mr-2 h-4 w-4" /> Set Location</>
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>

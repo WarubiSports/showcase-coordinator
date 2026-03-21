@@ -11,6 +11,9 @@ export interface ShowcaseEvent {
   start_time: string | null
   description: string | null
   type: ShowcaseEventType
+  venue_lat: number | null
+  venue_lng: number | null
+  venue_zoom: number | null
   created_at: string
   updated_at: string
 }

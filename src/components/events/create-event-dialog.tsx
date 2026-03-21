@@ -69,6 +69,23 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
 
     setIsSubmitting(true)
     try {
+      // Geocode the location
+      let venue_lat: number | undefined
+      let venue_lng: number | undefined
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location.trim())}&format=json&limit=1`,
+          { headers: { 'User-Agent': 'ShowcaseCoordinator/1.0' } }
+        )
+        const geoData = await geoRes.json()
+        if (geoData.length > 0) {
+          venue_lat = parseFloat(geoData[0].lat)
+          venue_lng = parseFloat(geoData[0].lon)
+        }
+      } catch {
+        // Geocoding is best-effort
+      }
+
       const event = await createEvent({
         name: name.trim(),
         slug,
@@ -78,6 +95,8 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
         start_time: startTime + ':00',
         type,
         description: description.trim() || undefined,
+        venue_lat,
+        venue_lng,
       })
 
       if (cloneFromId) {
