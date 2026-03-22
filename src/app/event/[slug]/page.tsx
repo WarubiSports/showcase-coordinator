@@ -329,60 +329,70 @@ export default function EventRegistrationPage() {
 
       {/* Hero */}
       <div
-        className="relative py-12 sm:py-20 px-4 overflow-hidden"
+        className="relative py-16 sm:py-24 px-4 overflow-hidden"
         style={{
-          background: `linear-gradient(160deg, ${accentColor}20 0%, ${accentColor}08 40%, transparent 70%)`,
+          background: `linear-gradient(170deg, ${accentColor}30 0%, ${accentColor}12 30%, ${accentColor}05 60%, transparent 100%)`,
         }}
       >
-        {/* Subtle dot pattern overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
-        />
-        <div className="relative max-w-2xl mx-auto text-center space-y-5 sm:space-y-6">
+        {/* Geometric accent lines */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full opacity-[0.04]" style={{ border: `2px solid ${accentColor}` }} />
+          <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{ border: `2px solid ${accentColor}` }} />
+        </div>
+        {/* Top accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
+
+        <div className="relative max-w-2xl mx-auto text-center space-y-6 sm:space-y-8">
           <div
-            className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
+            className="inline-block px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.2em]"
             style={{ backgroundColor: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}33` }}
           >
             {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
           </div>
-          <h1 className="text-3xl sm:text-5xl font-bold leading-tight px-2">{event.name}</h1>
+          <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">{event.name}</h1>
           {referrerName && (
             <p className="text-sm text-gray-400">
               Recommended by <span className="font-semibold text-white">{referrerName}</span>
             </p>
           )}
 
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-5 text-gray-300 text-sm sm:text-base">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
-              <span>{dateDisplay}</span>
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-300">
+            <div className="flex items-center gap-2.5 text-sm sm:text-base">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                <Calendar className="h-4 w-4" style={{ color: accentColor }} />
+              </div>
+              <span className="font-medium">{dateDisplay}</span>
             </div>
             {event.start_time && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
-                <span>{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
+              <div className="flex items-center gap-2.5 text-sm sm:text-base">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                  <Clock className="h-4 w-4" style={{ color: accentColor }} />
+                </div>
+                <span className="font-medium">{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
-              <span>{event.location}</span>
+            <div className="flex items-center gap-2.5 text-sm sm:text-base">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                <MapPin className="h-4 w-4" style={{ color: accentColor }} />
+              </div>
+              <span className="font-medium">{event.location}</span>
             </div>
           </div>
 
-          {event.price && (
-            <p className="text-2xl sm:text-3xl font-bold" style={{ color: accentColor }}>
-              {event.currency === 'EUR' ? '€' : '$'}{event.price}
-              <span className="text-sm font-normal text-gray-400 ml-2">per player</span>
-            </p>
-          )}
+          <div className="flex items-center justify-center gap-6">
+            {event.price && (
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl sm:text-5xl font-black" style={{ color: accentColor }}>
+                  {event.currency === 'EUR' ? '€' : '$'}{event.price}
+                </span>
+                <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
+              </div>
+            )}
+          </div>
 
           {event.age_min && event.age_max && (
-            <p className="text-gray-400">
-              Open to ages {event.age_min}–{event.age_max}
+            <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">
+              Open to ages <span className="text-white">{event.age_min}–{event.age_max}</span>
             </p>
           )}
         </div>
@@ -391,10 +401,10 @@ export default function EventRegistrationPage() {
       <div className="flex-1">
         {/* Description */}
         {event.registration_details && (
-          <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10">
-            <div className="prose prose-invert prose-sm max-w-none">
+          <div className="max-w-2xl mx-auto px-4 py-10 sm:py-12">
+            <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-6 sm:p-8">
               {event.registration_details.split('\n').map((line, i) => (
-                <p key={i} className="text-gray-300 leading-relaxed">{line}</p>
+                <p key={i} className="text-gray-300 text-base leading-relaxed">{line}</p>
               ))}
             </div>
           </div>
@@ -402,32 +412,37 @@ export default function EventRegistrationPage() {
 
         {/* Scouts / Coaches */}
         {scouts.length > 0 && (
-          <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10">
-            <h2 className="text-xl font-bold text-center mb-6">Coaches & Scouts Attending</h2>
+          <div className="max-w-2xl mx-auto px-4 py-10 sm:py-14">
+            <div className="text-center mb-8">
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] mb-2" style={{ color: accentColor }}>Who&apos;s Attending</p>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Coaches & Scouts</h2>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
               {scouts.map((scout) => (
                 <div
                   key={scout.id}
-                  className="rounded-xl border border-gray-800 bg-gray-900/80 p-4 text-center space-y-2 hover:border-gray-700 transition-colors"
+                  className="group rounded-2xl border border-gray-800 bg-gray-900/60 p-5 text-center space-y-3 hover:border-gray-600 hover:bg-gray-900/90 transition-all duration-300"
                 >
                   {scout.logo_url ? (
                     <img
                       src={scout.logo_url}
                       alt={scout.organization || scout.name}
-                      className="h-12 w-12 object-contain mx-auto"
+                      className="h-14 w-14 object-contain mx-auto group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
                     <div
-                      className="h-12 w-12 rounded-full mx-auto flex items-center justify-center text-lg font-bold"
-                      style={{ backgroundColor: `${accentColor}22`, color: accentColor }}
+                      className="h-14 w-14 rounded-2xl mx-auto flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform duration-300"
+                      style={{ backgroundColor: `${accentColor}15`, color: accentColor, border: `1px solid ${accentColor}25` }}
                     >
                       {scout.name.charAt(0)}
                     </div>
                   )}
-                  <p className="font-medium text-sm text-white">{scout.name}</p>
-                  {scout.organization && (
-                    <p className="text-xs text-gray-400">{scout.organization}</p>
-                  )}
+                  <div>
+                    <p className="font-bold text-sm text-white">{scout.name}</p>
+                    {scout.organization && (
+                      <p className="text-[11px] text-gray-500 mt-0.5">{scout.organization}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -436,17 +451,17 @@ export default function EventRegistrationPage() {
 
         {/* Spots remaining progress bar */}
         {event.max_players && (
-          <div className="max-w-2xl mx-auto px-4 pb-6">
-            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4 space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">
+          <div className="max-w-2xl mx-auto px-4 pb-8">
+            <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-white">
                   {isFull ? 'Event is full' : `${spotsRemaining} spot${spotsRemaining === 1 ? '' : 's'} remaining`}
                 </span>
-                <span className="text-gray-500">
-                  {registeredCount} / {event.max_players} registered
+                <span className="text-xs font-medium text-gray-500 tabular-nums">
+                  {registeredCount} / {event.max_players}
                 </span>
               </div>
-              <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
@@ -495,19 +510,19 @@ export default function EventRegistrationPage() {
                 setShowForm(true)
                 setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
               }}
-              className="btn-pulse w-full py-4 sm:py-5 rounded-xl text-lg font-bold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+              className="btn-pulse w-full py-5 sm:py-6 rounded-2xl text-lg sm:text-xl font-black uppercase tracking-wider text-white transition-all hover:brightness-110 active:scale-[0.98]"
               style={{ backgroundColor: accentColor }}
             >
               Register Now
               {spotsRemaining !== null && spotsRemaining <= 20 && (
-                <span className="ml-2 text-sm font-normal opacity-80">
+                <span className="ml-2 text-sm font-normal opacity-80 normal-case tracking-normal">
                   ({spotsRemaining} spot{spotsRemaining === 1 ? '' : 's'} left)
                 </span>
               )}
             </button>
           ) : (
-            <div ref={formRef} className="rounded-xl border border-gray-800 bg-gray-900/80 p-5 sm:p-6 animate-fade-up">
-              <h2 className="text-xl font-bold mb-6">Player Registration</h2>
+            <div ref={formRef} className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 sm:p-8 animate-fade-up">
+              <h2 className="text-2xl font-black uppercase tracking-tight mb-6">Player Registration</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Player Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -638,7 +653,7 @@ export default function EventRegistrationPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !form.name || !form.email}
-                  className="w-full py-3.5 sm:py-3 rounded-xl text-white font-semibold text-base transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100"
+                  className="w-full py-4 rounded-2xl text-white font-black text-base uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100"
                   style={{ backgroundColor: accentColor }}
                 >
                   {isSubmitting ? (
@@ -663,14 +678,14 @@ export default function EventRegistrationPage() {
 
 function Footer() {
   return (
-    <footer className="py-6 text-center">
-      <p className="text-xs text-gray-600">
+    <footer className="py-8 text-center border-t border-gray-900">
+      <p className="text-[11px] text-gray-600 uppercase tracking-widest">
         Powered by{' '}
         <a
           href="https://warubi-sports.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-500 hover:text-gray-400 transition-colors"
+          className="text-gray-500 hover:text-gray-300 transition-colors font-semibold"
         >
           Warubi Sports
         </a>
