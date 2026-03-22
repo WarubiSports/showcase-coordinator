@@ -398,6 +398,26 @@ export default function EventRegistrationPage() {
         </div>
       </div>
 
+      {/* Logo Banner Strip */}
+      {scouts.some(s => s.logo_url) && (
+        <div className="border-y border-gray-800/60 bg-gray-900/30 py-8 sm:py-10 overflow-hidden">
+          <div className="max-w-4xl mx-auto px-4">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 mb-6">Represented Programs</p>
+            <div className="flex items-center justify-center gap-8 sm:gap-12 flex-wrap">
+              {scouts.filter(s => s.logo_url).map((scout) => (
+                <div key={scout.id} className="flex flex-col items-center gap-2 group">
+                  <img
+                    src={scout.logo_url!}
+                    alt={scout.organization || scout.name}
+                    className="h-16 sm:h-20 w-16 sm:w-20 object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1">
         {/* Description */}
         {event.registration_details && (
@@ -445,6 +465,50 @@ export default function EventRegistrationPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Venue / Facility */}
+        {event.location && (
+          <div className="max-w-2xl mx-auto px-4 py-10 sm:py-14">
+            <div className="text-center mb-8">
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] mb-2" style={{ color: accentColor }}>Location</p>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Venue & Facilities</h2>
+            </div>
+            <div className="rounded-2xl border border-gray-800 bg-gray-900/60 overflow-hidden">
+              {event.venue_lat && event.venue_lng && (
+                <div className="w-full h-48 sm:h-64 bg-gray-800">
+                  <iframe
+                    title="Venue Map"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${event.venue_lat},${event.venue_lng}&zoom=15&maptype=satellite`}
+                  />
+                </div>
+              )}
+              <div className="p-5 sm:p-6 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center mt-0.5" style={{ backgroundColor: `${accentColor}20` }}>
+                    <MapPin className="h-4 w-4" style={{ color: accentColor }} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-sm">{event.location}</p>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(event.location)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs mt-1 inline-block hover:underline"
+                      style={{ color: accentColor }}
+                    >
+                      Get Directions &rarr;
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
