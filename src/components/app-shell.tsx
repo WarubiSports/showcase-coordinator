@@ -16,7 +16,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, selectedCategory, onCategorySelect }: AppShellProps) {
-  const { userName, setUserName, clearUserName, isLoading, hasUser } = useUser()
+  const { userName, setUserName, clearUserName, userRole, setUserRole, isLoading, hasUser } = useUser()
   const { categories } = useCategories()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [localCategory, setLocalCategory] = useState<string | null>(null)
@@ -39,6 +39,8 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
       <div className="min-h-screen bg-background">
         <Header
           userName={userName}
+          userRole={userRole}
+          onRoleToggle={() => setUserRole(userRole === 'admin' ? 'coach' : 'admin')}
           onMenuClick={() => setSidebarOpen(true)}
           onLogout={clearUserName}
         />
@@ -49,6 +51,7 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
           onCategorySelect={handleCategorySelect}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          userRole={userRole}
         />
 
         <main className="md:pl-64 pb-16 md:pb-0">
@@ -57,7 +60,7 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
           </div>
         </main>
 
-        <MobileNav />
+        <MobileNav userRole={userRole} />
         <FeedbackButton />
       </div>
     </>

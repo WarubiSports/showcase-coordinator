@@ -69,8 +69,11 @@ export const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: strin
 
 export const STORAGE_KEYS = {
   USER_NAME: 'showcase_user_name',
+  USER_ROLE: 'showcase_user_role',
   LAST_VISIT: 'showcase_last_visit',
   TASK_VIEW: 'showcase_task_view',
 }
+
+export type UserRole = 'coach' | 'admin'
 
 export const TASK_STATUSES: TaskStatus[] = ['not_started', 'in_progress', 'complete']

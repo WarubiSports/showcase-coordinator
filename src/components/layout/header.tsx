@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Menu, Bell, User, LogOut, ChevronDown, Calendar, Plus } from 'lucide-react'
+import { Menu, Bell, User, LogOut, ChevronDown, Calendar, Plus, Shield, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -21,8 +21,12 @@ import { useEvent } from '@/contexts/event-context'
 import { getEventStartDate } from '@/lib/constants'
 import { CreateEventDialog } from '@/components/events/create-event-dialog'
 
+import type { UserRole } from '@/lib/constants'
+
 interface HeaderProps {
   userName: string | null
+  userRole: UserRole
+  onRoleToggle: () => void
   onMenuClick: () => void
   onLogout: () => void
 }
@@ -74,7 +78,7 @@ function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
-export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
+export function Header({ userName, userRole, onRoleToggle, onMenuClick, onLogout }: HeaderProps) {
   const { events, currentEvent, pastEvents, setCurrentEvent, isSlugLocked, unlockEvents } = useEvent()
   const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
   const [countdown, setCountdown] = useState(getCountdown(eventStart))
@@ -224,6 +228,13 @@ export function Header({ userName, onMenuClick, onLogout }: HeaderProps) {
                 <DropdownMenuItem disabled>
                   <User className="mr-2 h-4 w-4" />
                   <span>{userName}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onRoleToggle}>
+                  {userRole === 'admin' ? (
+                    <><Eye className="mr-2 h-4 w-4" /><span>Switch to Coach View</span></>
+                  ) : (
+                    <><Shield className="mr-2 h-4 w-4" /><span>Switch to Admin View</span></>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
