@@ -12,19 +12,34 @@ import { PlayerForm } from '@/components/players/player-form'
 import { usePlayers } from '@/hooks/use-players'
 import { useUser } from '@/hooks/use-user'
 import { useEvent } from '@/contexts/event-context'
-import type { Player, PlayerPosition } from '@/types'
+import type { Player, PlayerPosition, PaymentStatus } from '@/types'
 
 const POSITIONS: PlayerPosition[] = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST']
+
+type PaymentFilter = 'all' | 'registered' | PaymentStatus
 
 export default function PlayersPage() {
   const { userName } = useUser()
   const { currentEvent } = useEvent()
   const [positionFilter, setPositionFilter] = useState<PlayerPosition | undefined>()
   const [searchFilter, setSearchFilter] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all')
 
   const { players, isLoading, createPlayer, updatePlayer, deletePlayer } = usePlayers(currentEvent?.id, {
     position: positionFilter,
     search: searchFilter,
+  })
+
+  // Payment status counts (computed from full list, before filtering)
+  const registeredCount = players.filter((p) => p.registered_at).length
+  const paidCount = players.filter((p) => p.payment_status === 'paid').length
+  const pendingCount = players.filter((p) => p.payment_status === 'pending').length
+
+  // Apply payment filter client-side
+  const filteredPlayers = players.filter((p) => {
+    if (paymentFilter === 'all') return true
+    if (paymentFilter === 'registered') return !!p.registered_at
+    return p.payment_status === paymentFilter
   })
 
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -82,6 +97,16 @@ export default function PlayersPage() {
     }
   }
 
+  const handleTogglePayment = async (id: string, currentStatus: PaymentStatus) => {
+    const nextStatus: PaymentStatus = currentStatus === 'pending' ? 'paid' : 'pending'
+    try {
+      await updatePlayer(id, { payment_status: nextStatus })
+      toast.success(`Payment marked as ${nextStatus}`)
+    } catch {
+      toast.error('Failed to update payment status')
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to remove this player?')) return
     try {
@@ -124,10 +149,22 @@ export default function PlayersPage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           <div className="rounded-lg border bg-card p-3 text-center">
             <div className="text-2xl font-bold text-primary">{players.length}</div>
             <div className="text-xs text-muted-foreground">Total Players</div>
+          </div>
+          <div className="rounded-lg border bg-card p-3 text-center">
+            <div className="text-2xl font-bold text-blue-500">{registeredCount}</div>
+            <div className="text-xs text-muted-foreground">Registered</div>
+          </div>
+          <div className="rounded-lg border bg-card p-3 text-center">
+            <div className="text-2xl font-bold text-green-500">{paidCount}</div>
+            <div className="text-xs text-muted-foreground">Paid</div>
+          </div>
+          <div className="rounded-lg border bg-card p-3 text-center">
+            <div className="text-2xl font-bold text-yellow-500">{pendingCount}</div>
+            <div className="text-xs text-muted-foreground">Pending</div>
           </div>
           <div className="rounded-lg border bg-card p-3 text-center">
             <div className="text-2xl font-bold text-green-500">{playersWithScores}</div>
@@ -138,12 +175,6 @@ export default function PlayersPage() {
               {players.length - playersWithScores}
             </div>
             <div className="text-xs text-muted-foreground">Pending Tests</div>
-          </div>
-          <div className="rounded-lg border bg-card p-3 text-center">
-            <div className="text-2xl font-bold text-blue-500">
-              {players.filter((p) => p.position === 'GK').length}
-            </div>
-            <div className="text-xs text-muted-foreground">Goalkeepers</div>
           </div>
         </div>
 
@@ -172,14 +203,30 @@ export default function PlayersPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={paymentFilter}
+            onValueChange={(val) => setPaymentFilter(val as PaymentFilter)}
+          >
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Payment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="registered">Registered</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="refunded">Refunded</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <PlayerList
-          players={players}
+          players={filteredPlayers}
           isLoading={isLoading}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onUpdateScores={handleUpdateScores}
+          onTogglePayment={handleTogglePayment}
         />
 
         <PlayerForm

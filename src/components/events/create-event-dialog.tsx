@@ -11,6 +11,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { useEvent } from '@/contexts/event-context'
 import { useEvents } from '@/hooks/use-events'
 import { supabase } from '@/lib/supabase'
@@ -48,6 +50,13 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
   const [type, setType] = useState<ShowcaseEventType>('showcase')
   const [description, setDescription] = useState('')
   const [cloneFromId, setCloneFromId] = useState<string>('')
+  const [price, setPrice] = useState<string>('')
+  const [currency, setCurrency] = useState<'USD' | 'EUR'>('USD')
+  const [ageMin, setAgeMin] = useState<string>('')
+  const [ageMax, setAgeMax] = useState<string>('')
+  const [registrationOpen, setRegistrationOpen] = useState(false)
+  const [registrationDetails, setRegistrationDetails] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const slug = slugify(name + (startDate ? `-${startDate.slice(0, 4)}` : ''))
@@ -61,6 +70,13 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
     setType('showcase')
     setDescription('')
     setCloneFromId('')
+    setPrice('')
+    setCurrency('USD')
+    setAgeMin('')
+    setAgeMax('')
+    setRegistrationOpen(false)
+    setRegistrationDetails('')
+    setEndTime('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,10 +109,17 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
         start_date: startDate,
         end_date: endDate,
         start_time: startTime + ':00',
+        end_time: endTime ? endTime + ':00' : undefined,
         type,
         description: description.trim() || undefined,
         venue_lat,
         venue_lng,
+        price: price ? parseFloat(price) : undefined,
+        currency,
+        age_min: ageMin ? parseInt(ageMin, 10) : undefined,
+        age_max: ageMax ? parseInt(ageMax, 10) : undefined,
+        registration_open: registrationOpen,
+        registration_details: registrationDetails.trim() || undefined,
       })
 
       if (cloneFromId) {
@@ -177,7 +200,7 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="event-time">Start Time</Label>
               <Input
@@ -185,6 +208,15 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="event-end-time">End Time</Label>
+              <Input
+                id="event-end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -236,6 +268,85 @@ export function CreateEventDialog({ open, onClose }: CreateEventDialogProps) {
               </p>
             </div>
           )}
+
+          {/* Registration */}
+          <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+            <p className="text-sm font-medium">Registration</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="event-price">Price</Label>
+                <Input
+                  id="event-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-currency">Currency</Label>
+                <select
+                  id="event-currency"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as 'USD' | 'EUR')}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (&euro;)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="event-age-min">Age Min</Label>
+                <Input
+                  id="event-age-min"
+                  type="number"
+                  min="1"
+                  max="99"
+                  placeholder="e.g. 14"
+                  value={ageMin}
+                  onChange={(e) => setAgeMin(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-age-max">Age Max</Label>
+                <Input
+                  id="event-age-max"
+                  type="number"
+                  min="1"
+                  max="99"
+                  placeholder="e.g. 19"
+                  value={ageMax}
+                  onChange={(e) => setAgeMax(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Switch
+                id="event-registration-open"
+                checked={registrationOpen}
+                onCheckedChange={setRegistrationOpen}
+              />
+              <Label htmlFor="event-registration-open">Registration Open</Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="event-registration-details">Registration Details (optional)</Label>
+              <Textarea
+                id="event-registration-details"
+                placeholder="Additional info shown on the registration page..."
+                value={registrationDetails}
+                onChange={(e) => setRegistrationDetails(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting || !name.trim() || !location.trim() || !startDate || !endDate}>
             {isSubmitting ? (

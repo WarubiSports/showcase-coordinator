@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { Player } from '@/types'
+import type { Player, PaymentStatus } from '@/types'
 
 interface PlayerListProps {
   players: Player[]
@@ -15,6 +15,22 @@ interface PlayerListProps {
   onEdit: (player: Player) => void
   onDelete: (id: string) => void
   onUpdateScores: (id: string, scores: Partial<Player>) => void
+  onTogglePayment: (id: string, currentStatus: PaymentStatus) => void
+}
+
+const PAYMENT_BADGE_STYLES: Record<PaymentStatus, string> = {
+  paid: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
+  pending: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
+  refunded: 'bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/30',
+}
+
+function formatDate(dateString: string | null): string | null {
+  if (!dateString) return null
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 function getBest(val1: number | null, val2: number | null, lowerIsBetter = false): number | null {
@@ -28,12 +44,14 @@ function PlayerCard({
   player,
   onEdit,
   onDelete,
-  onUpdateScores
+  onUpdateScores,
+  onTogglePayment,
 }: {
   player: Player
   onEdit: () => void
   onDelete: () => void
   onUpdateScores: (scores: Partial<Player>) => void
+  onTogglePayment: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [scores, setScores] = useState({
@@ -78,6 +96,22 @@ function PlayerCard({
               {player.birth_year && <span>{player.birth_year}</span>}
               {player.club && <span>{player.club}</span>}
               {player.country && <span>{player.country}</span>}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={onTogglePayment}
+                className="focus:outline-none"
+                title={player.payment_status === 'refunded' ? 'Refunded' : `Click to mark as ${player.payment_status === 'pending' ? 'paid' : 'pending'}`}
+              >
+                <Badge className={`cursor-pointer ${PAYMENT_BADGE_STYLES[player.payment_status]}`}>
+                  {player.payment_status}
+                </Badge>
+              </button>
+              {player.registered_at && (
+                <span className="text-xs text-muted-foreground">
+                  Reg. {formatDate(player.registered_at)}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -225,7 +259,7 @@ function PlayerCard({
   )
 }
 
-export function PlayerList({ players, isLoading, onEdit, onDelete, onUpdateScores }: PlayerListProps) {
+export function PlayerList({ players, isLoading, onEdit, onDelete, onUpdateScores, onTogglePayment }: PlayerListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -253,6 +287,7 @@ export function PlayerList({ players, isLoading, onEdit, onDelete, onUpdateScore
           onEdit={() => onEdit(player)}
           onDelete={() => onDelete(player.id)}
           onUpdateScores={(scores) => onUpdateScores(player.id, scores)}
+          onTogglePayment={() => onTogglePayment(player.id, player.payment_status)}
         />
       ))}
     </div>

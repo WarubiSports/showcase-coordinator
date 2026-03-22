@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
-import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2 } from 'lucide-react'
+import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 const POSITIONS: { value: PlayerPosition; label: string }[] = [
@@ -37,12 +37,25 @@ function formatDateShort(dateStr: string) {
 }
 
 function formatTime(timeStr: string) {
-  const [h, m] = timeStr.split(':')
-  const hour = parseInt(h)
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const h12 = hour % 12 || 12
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  const h = parseInt(parts[0] || '0', 10)
+  const m = parts[1] || '00'
+  if (isNaN(h)) return timeStr
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
   return `${h12}:${m} ${ampm}`
 }
+
+// Reusable input style generator with dynamic focus ring
+function inputStyle(accentColor: string): React.CSSProperties {
+  return {
+    '--ring-color': accentColor,
+  } as React.CSSProperties
+}
+
+const INPUT_CLASS =
+  'w-full rounded-lg bg-gray-800/80 border border-gray-700 px-3 py-2.5 sm:py-2 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-colors'
 
 export default function EventRegistrationPage() {
   const params = useParams()
@@ -58,6 +71,7 @@ export default function EventRegistrationPage() {
   const [showForm, setShowForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
+  const [parentExpanded, setParentExpanded] = useState(false)
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -71,9 +85,28 @@ export default function EventRegistrationPage() {
     parent_phone: '',
   })
 
+  const formRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     loadEvent()
   }, [slug])
+
+  // Set document title when event loads
+  useEffect(() => {
+    if (event) {
+      document.title = `${event.name} | Registration`
+    }
+    return () => {
+      document.title = 'Showcase Coordinator'
+    }
+  }, [event])
+
+  // Auto-expand parent section for minors
+  useEffect(() => {
+    if (event && event.age_max && event.age_max <= 17) {
+      setParentExpanded(true)
+    }
+  }, [event])
 
   const loadEvent = async () => {
     const { data: eventData, error: eventError } = await supabase
@@ -184,10 +217,13 @@ export default function EventRegistrationPage() {
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center space-y-3">
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center">
+            <AlertCircle className="h-8 w-8 text-gray-500" />
+          </div>
           <h1 className="text-2xl font-bold text-white">Event Not Found</h1>
-          <p className="text-gray-400">This event doesn&apos;t exist or has been removed.</p>
+          <p className="text-gray-400 max-w-sm">This event doesn&apos;t exist or has been removed. Check the URL and try again.</p>
         </div>
       </div>
     )
@@ -202,75 +238,123 @@ export default function EventRegistrationPage() {
   const dateDisplay = event.start_date === event.end_date
     ? formatDate(event.start_date)
     : `${formatDateShort(event.start_date)} – ${formatDateShort(event.end_date)}, ${new Date(event.start_date + 'T00:00:00').getFullYear()}`
+  const spotsRemaining = event.max_players ? event.max_players - registeredCount : null
+  const spotsFraction = event.max_players ? registeredCount / event.max_players : 0
 
   // Success state
   if (isRegistered) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center space-y-6">
-          <div
-            className="mx-auto w-16 h-16 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: accentColor }}
-          >
-            <Check className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">You&apos;re Registered!</h1>
-          <p className="text-gray-400">
-            We&apos;ve sent a confirmation to <span className="text-white">{form.email}</span>.
-            {event.price ? ` Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price} is due before the event.` : ''}
-          </p>
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-left space-y-2">
-            <p className="font-semibold text-white">{event.name}</p>
-            <p className="text-sm text-gray-400">{dateDisplay}</p>
-            {event.start_time && (
-              <p className="text-sm text-gray-400">
-                {formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}
-              </p>
-            )}
-            <p className="text-sm text-gray-400">{event.location}</p>
+      <div className="min-h-screen bg-gray-950 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full text-center space-y-6">
+            <div
+              className="mx-auto w-20 h-20 rounded-full flex items-center justify-center animate-[scale-in_0.3s_ease-out]"
+              style={{ backgroundColor: accentColor }}
+            >
+              <Check className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white">You&apos;re Registered!</h1>
+            <p className="text-gray-400 text-base sm:text-lg">
+              We&apos;ve sent a confirmation to <span className="text-white font-medium">{form.email}</span>.
+              {event.price ? ` Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price} is due before the event.` : ''}
+            </p>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-left space-y-3">
+              <p className="font-semibold text-white text-lg">{event.name}</p>
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Calendar className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
+                <span>{dateDisplay}</span>
+              </div>
+              {event.start_time && (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Clock className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
+                  <span>{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <MapPin className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
+                <span>{event.location}</span>
+              </div>
+            </div>
           </div>
         </div>
+        <Footer />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+      {/* Accent-color CSS custom properties for focus rings */}
+      <style>{`
+        .accent-focus:focus {
+          --tw-ring-color: ${accentColor};
+          box-shadow: 0 0 0 2px ${accentColor};
+          border-color: transparent;
+        }
+        .accent-focus:focus-visible {
+          --tw-ring-color: ${accentColor};
+          box-shadow: 0 0 0 2px ${accentColor};
+          border-color: transparent;
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 0 0 ${accentColor}40; }
+          50% { box-shadow: 0 0 0 8px ${accentColor}00; }
+        }
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+          animation: fade-up 0.4s ease-out;
+        }
+        .btn-pulse {
+          animation: pulse-glow 2.5s ease-in-out infinite;
+        }
+      `}</style>
+
       {/* Hero */}
       <div
-        className="relative py-16 px-4"
+        className="relative py-12 sm:py-20 px-4 overflow-hidden"
         style={{
-          background: `linear-gradient(135deg, ${accentColor}22 0%, transparent 60%)`,
+          background: `linear-gradient(160deg, ${accentColor}20 0%, ${accentColor}08 40%, transparent 70%)`,
         }}
       >
-        <div className="max-w-2xl mx-auto text-center space-y-6">
+        {/* Subtle dot pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+        <div className="relative max-w-2xl mx-auto text-center space-y-5 sm:space-y-6">
           <div
-            className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"
-            style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
+            className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
+            style={{ backgroundColor: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}33` }}
           >
             {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold leading-tight">{event.name}</h1>
+          <h1 className="text-3xl sm:text-5xl font-bold leading-tight px-2">{event.name}</h1>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-gray-300">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-5 text-gray-300 text-sm sm:text-base">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" style={{ color: accentColor }} />
+              <Calendar className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
               <span>{dateDisplay}</span>
             </div>
             {event.start_time && (
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" style={{ color: accentColor }} />
+                <Clock className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
                 <span>{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" style={{ color: accentColor }} />
+              <MapPin className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
               <span>{event.location}</span>
             </div>
           </div>
 
           {event.price && (
-            <p className="text-2xl font-bold" style={{ color: accentColor }}>
+            <p className="text-2xl sm:text-3xl font-bold" style={{ color: accentColor }}>
               {event.currency === 'EUR' ? '€' : '$'}{event.price}
               <span className="text-sm font-normal text-gray-400 ml-2">per player</span>
             </p>
@@ -284,233 +368,293 @@ export default function EventRegistrationPage() {
         </div>
       </div>
 
-      {/* Description */}
-      {event.registration_details && (
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="prose prose-invert prose-sm max-w-none">
-            {event.registration_details.split('\n').map((line, i) => (
-              <p key={i} className="text-gray-300">{line}</p>
-            ))}
+      <div className="flex-1">
+        {/* Description */}
+        {event.registration_details && (
+          <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10">
+            <div className="prose prose-invert prose-sm max-w-none">
+              {event.registration_details.split('\n').map((line, i) => (
+                <p key={i} className="text-gray-300 leading-relaxed">{line}</p>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Scouts / Coaches */}
-      {scouts.length > 0 && (
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <h2 className="text-xl font-bold text-center mb-6">Coaches & Scouts Attending</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {scouts.map((scout) => (
-              <div
-                key={scout.id}
-                className="rounded-xl border border-gray-800 bg-gray-900 p-4 text-center space-y-2"
-              >
-                {scout.logo_url ? (
-                  <img
-                    src={scout.logo_url}
-                    alt={scout.organization || scout.name}
-                    className="h-12 w-12 object-contain mx-auto"
-                  />
-                ) : (
-                  <div
-                    className="h-12 w-12 rounded-full mx-auto flex items-center justify-center text-lg font-bold"
-                    style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
-                  >
-                    {scout.name.charAt(0)}
-                  </div>
-                )}
-                <p className="font-medium text-sm text-white">{scout.name}</p>
-                {scout.organization && (
-                  <p className="text-xs text-gray-400">{scout.organization}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Registration Section */}
-      <div className="max-w-2xl mx-auto px-4 py-8 pb-16">
-        {!canRegister ? (
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 text-center">
-            <p className="text-gray-400">
-              {!event.registration_open
-                ? 'Registration is not yet open for this event.'
-                : isFull
-                  ? 'This event is full.'
-                  : 'Registration deadline has passed.'}
-            </p>
-          </div>
-        ) : !showForm ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full py-4 rounded-xl text-lg font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ backgroundColor: accentColor }}
-          >
-            Register Now
-            {event.max_players && (
-              <span className="ml-2 text-sm font-normal opacity-80">
-                ({event.max_players - registeredCount} spots left)
-              </span>
-            )}
-          </button>
-        ) : (
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-            <h2 className="text-xl font-bold mb-6">Player Registration</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Player Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
-                    style={{ focusRingColor: accentColor } as React.CSSProperties}
-                    placeholder="John Smith"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
-                    placeholder="player@email.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
-                    placeholder="+1 (555) 000-0000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Birth Year</label>
-                  <input
-                    type="number"
-                    min={2000}
-                    max={2015}
-                    value={form.birth_year}
-                    onChange={(e) => setForm({ ...form, birth_year: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
-                    placeholder="2008"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Position</label>
-                  <select
-                    value={form.position}
-                    onChange={(e) => setForm({ ...form, position: e.target.value as PlayerPosition })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:ring-2"
-                  >
-                    <option value="">Select position</option>
-                    {POSITIONS.map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Club / Team</label>
-                  <input
-                    type="text"
-                    value={form.club}
-                    onChange={(e) => setForm({ ...form, club: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
-                    placeholder="FC Example"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Country</label>
-                  <input
-                    type="text"
-                    value={form.country}
-                    onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
-                    placeholder="USA"
-                  />
-                </div>
-              </div>
-
-              {/* Parent / Guardian */}
-              <div className="pt-4 border-t border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById('parent-section')
-                    if (el) el.classList.toggle('hidden')
-                  }}
-                  className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+        {/* Scouts / Coaches */}
+        {scouts.length > 0 && (
+          <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10">
+            <h2 className="text-xl font-bold text-center mb-6">Coaches & Scouts Attending</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              {scouts.map((scout) => (
+                <div
+                  key={scout.id}
+                  className="rounded-xl border border-gray-800 bg-gray-900/80 p-4 text-center space-y-2 hover:border-gray-700 transition-colors"
                 >
-                  <Users className="h-4 w-4" />
-                  Parent / Guardian Info (optional)
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-                <div id="parent-section" className="hidden mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {scout.logo_url ? (
+                    <img
+                      src={scout.logo_url}
+                      alt={scout.organization || scout.name}
+                      className="h-12 w-12 object-contain mx-auto"
+                    />
+                  ) : (
+                    <div
+                      className="h-12 w-12 rounded-full mx-auto flex items-center justify-center text-lg font-bold"
+                      style={{ backgroundColor: `${accentColor}22`, color: accentColor }}
+                    >
+                      {scout.name.charAt(0)}
+                    </div>
+                  )}
+                  <p className="font-medium text-sm text-white">{scout.name}</p>
+                  {scout.organization && (
+                    <p className="text-xs text-gray-400">{scout.organization}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Spots remaining progress bar */}
+        {event.max_players && (
+          <div className="max-w-2xl mx-auto px-4 pb-6">
+            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">
+                  {isFull ? 'Event is full' : `${spotsRemaining} spot${spotsRemaining === 1 ? '' : 's'} remaining`}
+                </span>
+                <span className="text-gray-500">
+                  {registeredCount} / {event.max_players} registered
+                </span>
+              </div>
+              <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(spotsFraction * 100, 100)}%`,
+                    backgroundColor: spotsFraction >= 0.9 ? '#EF4444' : accentColor,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Registration Section */}
+        <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8 pb-12 sm:pb-16">
+          {!canRegister ? (
+            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-8 text-center space-y-4">
+              <div className="mx-auto w-14 h-14 rounded-full bg-gray-800 flex items-center justify-center">
+                <AlertCircle className="h-7 w-7 text-gray-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">
+                {!event.registration_open
+                  ? 'Registration Not Yet Open'
+                  : isFull
+                    ? 'Event Full'
+                    : 'Registration Closed'}
+              </h3>
+              <p className="text-gray-400 text-sm max-w-sm mx-auto">
+                {!event.registration_open
+                  ? 'Registration for this event has not opened yet. Check back later.'
+                  : isFull
+                    ? 'All spots for this event have been filled. Contact the organizer for waitlist options.'
+                    : 'The registration deadline for this event has passed.'}
+              </p>
+              {/* Still show event info */}
+              <div className="pt-4 border-t border-gray-800">
+                <div className="text-sm text-gray-500 space-y-1">
+                  <p>{dateDisplay}</p>
+                  {event.start_time && <p>{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</p>}
+                  <p>{event.location}</p>
+                </div>
+              </div>
+            </div>
+          ) : !showForm ? (
+            <button
+              onClick={() => {
+                setShowForm(true)
+                setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+              }}
+              className="btn-pulse w-full py-4 sm:py-5 rounded-xl text-lg font-bold text-white transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{ backgroundColor: accentColor }}
+            >
+              Register Now
+              {spotsRemaining !== null && spotsRemaining <= 20 && (
+                <span className="ml-2 text-sm font-normal opacity-80">
+                  ({spotsRemaining} spot{spotsRemaining === 1 ? '' : 's'} left)
+                </span>
+              )}
+            </button>
+          ) : (
+            <div ref={formRef} className="rounded-xl border border-gray-800 bg-gray-900/80 p-5 sm:p-6 animate-fade-up">
+              <h2 className="text-xl font-bold mb-6">Player Registration</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Player Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Parent Name</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name *</label>
                     <input
                       type="text"
-                      value={form.parent_name}
-                      onChange={(e) => setForm({ ...form, parent_name: e.target.value })}
-                      className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
+                      required
+                      autoFocus
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                      placeholder="John Smith"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Parent Email</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Email *</label>
                     <input
                       type="email"
-                      value={form.parent_email}
-                      onChange={(e) => setForm({ ...form, parent_email: e.target.value })}
-                      className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
+                      required
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                      placeholder="player@email.com"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Parent Phone</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Phone</label>
                     <input
                       type="tel"
-                      value={form.parent_phone}
-                      onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
-                      className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Birth Year</label>
+                    <input
+                      type="number"
+                      min={2000}
+                      max={2015}
+                      value={form.birth_year}
+                      onChange={(e) => setForm({ ...form, birth_year: e.target.value })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                      placeholder="2008"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Position</label>
+                    <select
+                      value={form.position}
+                      onChange={(e) => setForm({ ...form, position: e.target.value as PlayerPosition })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                    >
+                      <option value="">Select position</option>
+                      {POSITIONS.map((p) => (
+                        <option key={p.value} value={p.value}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Club / Team</label>
+                    <input
+                      type="text"
+                      value={form.club}
+                      onChange={(e) => setForm({ ...form, club: e.target.value })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                      placeholder="FC Example"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Country</label>
+                    <input
+                      type="text"
+                      value={form.country}
+                      onChange={(e) => setForm({ ...form, country: e.target.value })}
+                      className={`${INPUT_CLASS} accent-focus`}
+                      placeholder="USA"
                     />
                   </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !form.name || !form.email}
-                className="w-full py-3 rounded-lg text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: accentColor }}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Registering...
-                  </span>
-                ) : (
-                  'Complete Registration'
-                )}
-              </button>
-            </form>
-          </div>
-        )}
+                {/* Parent / Guardian */}
+                <div className="pt-4 border-t border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => setParentExpanded(!parentExpanded)}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  >
+                    <Users className="h-4 w-4" />
+                    Parent / Guardian Info {event.age_max && event.age_max <= 17 ? '(recommended)' : '(optional)'}
+                    {parentExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </button>
+                  {parentExpanded && (
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-up">
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-1.5">Parent Name</label>
+                        <input
+                          type="text"
+                          value={form.parent_name}
+                          onChange={(e) => setForm({ ...form, parent_name: e.target.value })}
+                          className={`${INPUT_CLASS} accent-focus`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1.5">Parent Email</label>
+                        <input
+                          type="email"
+                          value={form.parent_email}
+                          onChange={(e) => setForm({ ...form, parent_email: e.target.value })}
+                          className={`${INPUT_CLASS} accent-focus`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1.5">Parent Phone</label>
+                        <input
+                          type="tel"
+                          value={form.parent_phone}
+                          onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
+                          className={`${INPUT_CLASS} accent-focus`}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-        {/* Spots counter */}
-        {event.max_players && canRegister && (
-          <p className="text-center text-sm text-gray-500 mt-4">
-            {registeredCount} / {event.max_players} registered
-          </p>
-        )}
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !form.name || !form.email}
+                  className="w-full py-3.5 sm:py-3 rounded-xl text-white font-semibold text-base transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Registering...
+                    </span>
+                  ) : (
+                    'Complete Registration'
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
+
+      <Footer />
     </div>
+  )
+}
+
+function Footer() {
+  return (
+    <footer className="py-6 text-center">
+      <p className="text-xs text-gray-600">
+        Powered by{' '}
+        <a
+          href="https://warubi-sports.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-500 hover:text-gray-400 transition-colors"
+        >
+          Warubi Sports
+        </a>
+      </p>
+    </footer>
   )
 }

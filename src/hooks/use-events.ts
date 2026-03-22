@@ -16,6 +16,12 @@ interface CreateEventInput {
   venue_lat?: number
   venue_lng?: number
   venue_zoom?: number
+  price?: number
+  currency?: string
+  age_min?: number
+  age_max?: number
+  registration_open?: boolean
+  registration_details?: string
 }
 
 export function useEvents() {
