@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
-import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle } from 'lucide-react'
+import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { STORAGE_KEYS } from '@/lib/constants'
 import { toast } from 'sonner'
 
 const POSITIONS: { value: PlayerPosition; label: string }[] = [
@@ -68,6 +69,12 @@ export default function EventRegistrationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [registeredCount, setRegisteredCount] = useState(0)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const name = localStorage.getItem(STORAGE_KEYS.USER_NAME)
+    if (name) setIsAdmin(true)
+  }, [])
   const [referrerName, setReferrerName] = useState<string | null>(null)
 
   // Registration form
@@ -326,6 +333,16 @@ export default function EventRegistrationPage() {
           animation: pulse-glow 2.5s ease-in-out infinite;
         }
       `}</style>
+
+      {/* Admin back link */}
+      {isAdmin && (
+        <div className="px-4 pt-3 pb-0">
+          <a href="/" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors">
+            <ArrowLeft className="w-3 h-3" />
+            Back to Dashboard
+          </a>
+        </div>
+      )}
 
       {/* Hero */}
       <div
