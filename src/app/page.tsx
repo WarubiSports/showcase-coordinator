@@ -6,6 +6,7 @@ import { HeroStats } from '@/components/dashboard/hero-stats'
 import { PlayersOverview } from '@/components/dashboard/players-overview'
 import { AttendeesOverview } from '@/components/dashboard/attendees-overview'
 import { MyTasks } from '@/components/dashboard/my-tasks'
+import { QuickActions } from '@/components/dashboard/quick-actions'
 import { useTasks } from '@/hooks/use-tasks'
 import { usePlayers } from '@/hooks/use-players'
 import { useAttendees } from '@/hooks/use-attendees'
@@ -25,6 +26,8 @@ export default function DashboardPage() {
     <AppShell>
       <div className="space-y-6">
         <CountdownTimer />
+
+        <QuickActions event={currentEvent} players={players} />
 
         <HeroStats
           players={players}
