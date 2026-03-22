@@ -68,6 +68,7 @@ export default function EventRegistrationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [registeredCount, setRegisteredCount] = useState(0)
+  const [referrerName, setReferrerName] = useState<string | null>(null)
 
   // Registration form
   const [showForm, setShowForm] = useState(false)
@@ -140,6 +141,17 @@ export default function EventRegistrationPage() {
 
     setScouts(scoutsRes.data || [])
     setRegisteredCount(countRes.count || 0)
+
+    // Look up referring scout name
+    if (referredByScoutId) {
+      const { data: scoutData } = await supabase
+        .from('scouts')
+        .select('name')
+        .eq('id', referredByScoutId)
+        .single()
+      if (scoutData?.name) setReferrerName(scoutData.name)
+    }
+
     setIsLoading(false)
   }
 
@@ -338,6 +350,11 @@ export default function EventRegistrationPage() {
             {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight px-2">{event.name}</h1>
+          {referrerName && (
+            <p className="text-sm text-gray-400">
+              Recommended by <span className="font-semibold text-white">{referrerName}</span>
+            </p>
+          )}
 
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-5 text-gray-300 text-sm sm:text-base">
             <div className="flex items-center gap-2">
