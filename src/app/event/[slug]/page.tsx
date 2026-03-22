@@ -513,30 +513,6 @@ export default function EventRegistrationPage() {
           </div>
         )}
 
-        {/* Spots remaining progress bar */}
-        {event.max_players && (
-          <div className="max-w-2xl mx-auto px-4 pb-8">
-            <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-white">
-                  {isFull ? 'Event is full' : `${spotsRemaining} spot${spotsRemaining === 1 ? '' : 's'} remaining`}
-                </span>
-                <span className="text-xs font-medium text-gray-500 tabular-nums">
-                  {registeredCount} / {event.max_players}
-                </span>
-              </div>
-              <div className="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(spotsFraction * 100, 100)}%`,
-                    backgroundColor: spotsFraction >= 0.9 ? '#EF4444' : accentColor,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Registration Section */}
         <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8 pb-12 sm:pb-16">
