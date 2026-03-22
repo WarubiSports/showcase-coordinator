@@ -9,11 +9,35 @@ export interface ShowcaseEvent {
   start_date: string
   end_date: string
   start_time: string | null
+  end_time: string | null
   description: string | null
   type: ShowcaseEventType
   venue_lat: number | null
   venue_lng: number | null
   venue_zoom: number | null
+  // Registration fields
+  price: number | null
+  currency: string
+  age_min: number | null
+  age_max: number | null
+  registration_open: boolean
+  registration_deadline: string | null
+  max_players: number | null
+  accent_color: string
+  registration_details: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type PaymentStatus = 'pending' | 'paid' | 'refunded'
+
+export interface EventScout {
+  id: string
+  event_id: string
+  name: string
+  organization: string | null
+  logo_url: string | null
+  sort_order: number
   created_at: string
   updated_at: string
 }
@@ -259,6 +283,13 @@ export interface Player {
   high_jump_1: number | null
   high_jump_2: number | null
   notes: string | null
+  // Registration fields
+  parent_name: string | null
+  parent_email: string | null
+  parent_phone: string | null
+  payment_status: PaymentStatus
+  registered_at: string | null
+  confirmation_sent_at: string | null
   created_by: string | null
   created_at: string
   updated_at: string

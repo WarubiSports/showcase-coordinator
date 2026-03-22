@@ -10,6 +10,7 @@ interface CreateEventInput {
   start_date: string
   end_date: string
   start_time?: string
+  end_time?: string
   description?: string
   type?: ShowcaseEventType
   venue_lat?: number
