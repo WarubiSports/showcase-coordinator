@@ -24,8 +24,8 @@ Multi-event coordination tool for showcases, ID camps, and clinics. Manages task
 - **Drag-drop:** @dnd-kit
 - **Deploy:** Vercel
 
-## IMPORTANT: Separate Supabase Project
-This app uses Supabase project `bdyiyeypkajxzhkefcyv` — **NOT** the shared ITP project (`umblyhwumtadlvgccdwg`).
+## Supabase Project
+This app now uses the shared Supabase project `umblyhwumtadlvgccdwg` (migrated from `bdyiyeypkajxzhkefcyv` on 2026-03-22). All showcase_* tables have RLS enabled with permissive anon policies (no auth required).
 
 ## Key Directories
 - `/src/app/` - Next.js App Router pages

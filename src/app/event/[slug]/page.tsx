@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
 import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle } from 'lucide-react'
@@ -59,7 +59,9 @@ const INPUT_CLASS =
 
 export default function EventRegistrationPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const slug = params.slug as string
+  const referredByScoutId = searchParams.get('ref') || null
 
   const [event, setEvent] = useState<ShowcaseEvent | null>(null)
   const [scouts, setScouts] = useState<EventScout[]>([])
@@ -164,6 +166,7 @@ export default function EventRegistrationPage() {
           payment_status: 'pending',
           registered_at: new Date().toISOString(),
           created_by: 'registration',
+          referred_by_scout_id: referredByScoutId,
         }])
 
       if (insertError) {
