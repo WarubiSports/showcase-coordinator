@@ -25,6 +25,8 @@ export interface ShowcaseEvent {
   max_players: number | null
   accent_color: string
   registration_details: string | null
+  host_name: string | null
+  host_logo_url: string | null
   created_at: string
   updated_at: string
 }

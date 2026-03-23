@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
-import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap } from 'lucide-react'
 import { STORAGE_KEYS } from '@/lib/constants'
 import { toast } from 'sonner'
 
@@ -46,6 +46,14 @@ function formatTime(timeStr: string) {
   const ampm = h >= 12 ? 'PM' : 'AM'
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
   return `${h12}:${m} ${ampm}`
+}
+
+// Countdown helper
+function getDaysUntil(dateStr: string): number {
+  const eventDate = new Date(dateStr + 'T00:00:00')
+  const now = new Date()
+  const diff = eventDate.getTime() - now.getTime()
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
 
 // Reusable input style generator with dynamic focus ring
@@ -366,7 +374,19 @@ export default function EventRegistrationPage() {
           >
             {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
           </div>
-          <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">{event.name}</h1>
+          {event.host_logo_url && (
+            <div className="mb-2">
+              <img src={event.host_logo_url} alt={event.host_name || ''} className="h-16 sm:h-20 mx-auto object-contain" />
+            </div>
+          )}
+          <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">
+            {event.host_name ? event.name.replace(event.host_name + ' - ', '').replace(event.host_name + ' — ', '') : event.name}
+          </h1>
+          {event.host_name && (
+            <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+              Hosted by {event.host_name}
+            </p>
+          )}
           {referrerName && (
             <p className="text-sm text-gray-400">
               Recommended by <span className="font-semibold text-white">{referrerName}</span>
@@ -412,6 +432,19 @@ export default function EventRegistrationPage() {
               Open to ages <span className="text-white">{event.age_min}–{event.age_max}</span>
             </p>
           )}
+
+          {/* Countdown */}
+          {(() => {
+            const days = getDaysUntil(event.start_date)
+            return days > 0 && days <= 120 ? (
+              <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border" style={{ borderColor: accentColor + '40', backgroundColor: accentColor + '10' }}>
+                <Timer className="h-4 w-4" style={{ color: accentColor }} />
+                <span className="text-sm font-bold" style={{ color: accentColor }}>
+                  {days === 1 ? 'Tomorrow!' : `${days} days away`}
+                </span>
+              </div>
+            ) : null
+          })()}
         </div>
       </div>
 
@@ -530,6 +563,32 @@ export default function EventRegistrationPage() {
           </div>
         )}
 
+
+        {/* What You Get */}
+        <div className="max-w-2xl mx-auto px-4 py-10 sm:py-14">
+          <div className="text-center mb-8">
+            <p className="text-[11px] font-bold uppercase tracking-[0.25em] mb-2" style={{ color: accentColor }}>Why Attend</p>
+            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">What You Get</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { icon: Trophy, title: 'Live Evaluation', desc: 'Assessed by college coaches and professional scouts on-site' },
+              { icon: Video, title: 'Game Footage', desc: 'Filmed sessions you can use for your recruiting profile' },
+              { icon: Star, title: 'Direct Exposure', desc: 'Face time with program staff — not just a name on a list' },
+              { icon: Zap, title: 'Personalized Feedback', desc: 'Know exactly where you stand and what to work on' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 p-5 hover:border-gray-600 transition-colors">
+                <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center" style={{ backgroundColor: accentColor + '15' }}>
+                  <item.icon className="h-5 w-5" style={{ color: accentColor }} />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">{item.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Registration Section */}
         <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8 pb-12 sm:pb-16">
