@@ -346,18 +346,27 @@ export function VenueMap({ userName }: VenueMapProps) {
     if (!venueAddress.trim()) return
     setIsGeocoding(true)
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(venueAddress.trim())}&format=json&limit=1`,
-        { headers: { 'User-Agent': 'ShowcaseCoordinator/1.0' } }
-      )
-      const data = await res.json()
-      if (data.length === 0) {
-        toast.error('Address not found. Try a more specific location.')
-        return
+      const addr = venueAddress.trim()
+      const parts = addr.split(',').map(s => s.trim())
+      // Try full address, then without venue name, then just city/state
+      const attempts = [addr]
+      if (parts.length > 2) attempts.push(parts.slice(1).join(', '))
+      if (parts.length > 1) attempts.push(parts[parts.length - 1])
+
+      for (const attempt of attempts) {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(attempt)}&format=json&limit=1`,
+          { headers: { 'User-Agent': 'ShowcaseCoordinator/1.0' } }
+        )
+        const data = await res.json()
+        if (data.length > 0) {
+          setVenueLat(parseFloat(data[0].lat))
+          setVenueLng(parseFloat(data[0].lon))
+          toast.success('Found — drag the map to fine-tune position')
+          return
+        }
       }
-      setVenueLat(parseFloat(data[0].lat))
-      setVenueLng(parseFloat(data[0].lon))
-      toast.success('Found — adjust position with the arrows if needed')
+      toast.error('Address not found. Try a simpler location.')
     } catch {
       toast.error('Geocoding failed')
     } finally {
