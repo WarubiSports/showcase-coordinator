@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, Edit2, Trash2, Move, MapPin, Save, X, Upload, GripVertical, RotateCw, Search, Loader2 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,13 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useEvent } from '@/contexts/event-context'
 import type { VenueZone, VenueZoneType } from '@/types'
+
+
+// Lazy-loaded Leaflet map (avoids SSR issues with Next.js)
+const VenueLeafletMap = dynamic(() => import('./venue-leaflet-map').then(m => ({ default: m.VenueLeafletMap })), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>,
+})
 
 const ZONE_TYPES: { value: VenueZoneType; label: string; color: string }[] = [
   { value: 'field', label: 'Playing Field', color: '#22C55E' },
@@ -470,30 +478,25 @@ export function VenueMap({ userName }: VenueMapProps) {
             if (draggingZone || rotatingZone) { handleMouseUp(); }
           }}
         >
-          {/* Venue Image — dynamic satellite from Google Maps or fallback */}
-          <img
-            src={
-              currentEvent?.venue_lat && currentEvent?.venue_lng && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
-                ? `https://maps.googleapis.com/maps/api/staticmap?center=${currentEvent.venue_lat},${currentEvent.venue_lng}&zoom=${currentEvent.venue_zoom || 18}&size=800x600&scale=2&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}`
-                : '/venue-map.jpg'
-            }
-            alt="Venue Map"
-            className="w-full h-full object-cover pointer-events-none"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'data:image/svg+xml,' + encodeURIComponent(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-                  <rect fill="#1a1a2e" width="800" height="600"/>
-                  <text x="400" y="280" text-anchor="middle" fill="#666" font-family="system-ui" font-size="20">
-                    Set a venue location to load satellite view
-                  </text>
-                  <text x="400" y="320" text-anchor="middle" fill="#666" font-family="system-ui" font-size="14">
-                    Edit event → enter venue address
-                  </text>
-                </svg>
-              `)
-            }}
-            draggable={false}
-          />
+          {/* Venue Background — Leaflet static or fallback */}
+          {currentEvent?.venue_lat && currentEvent?.venue_lng ? (
+            <div className="w-full h-full pointer-events-none">
+              <VenueLeafletMap
+                lat={currentEvent.venue_lat}
+                lng={currentEvent.venue_lng}
+                zoom={currentEvent.venue_zoom || 18}
+                interactive={false}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">Set a venue location to load the map</p>
+                <p className="text-xs mt-1">Click &quot;Set Location&quot; above</p>
+              </div>
+            </div>
+          )}
 
           {/* Existing Zones */}
           {zones.map((zone) => {
@@ -752,64 +755,26 @@ export function VenueMap({ userName }: VenueMapProps) {
               </Button>
             </div>
 
-            {/* Map Preview with Nudge Controls */}
-            {venueLat && venueLng && process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ? (
+            {/* Map Preview */}
+            {venueLat && venueLng ? (
               <div className="space-y-3">
-                <div className="relative rounded-lg overflow-hidden border">
-                  <img
-                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${venueLat},${venueLng}&zoom=${venueZoom}&size=600x300&scale=2&maptype=satellite&markers=color:red%7C${venueLat},${venueLng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}`}
-                    alt="Venue preview"
-                    className="w-full aspect-[2/1] object-cover"
-                    draggable={false}
+                <div className="rounded-lg overflow-hidden border" style={{ height: 300 }}>
+                  <VenueLeafletMap
+                    lat={venueLat}
+                    lng={venueLng}
+                    zoom={venueZoom}
+                    onMove={(lat, lng) => { setVenueLat(lat); setVenueLng(lng); }}
                   />
-                  {/* Directional nudge buttons overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="grid grid-cols-3 gap-0.5 pointer-events-auto">
-                      <div />
-                      <button
-                        onClick={() => setVenueLat(l => l ? l + nudgeAmount() : l)}
-                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
-                        title="Move north"
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                      </button>
-                      <div />
-                      <button
-                        onClick={() => setVenueLng(l => l ? l - nudgeAmount() : l)}
-                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
-                        title="Move west"
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-                      </button>
-                      <div className="w-9 h-9" />
-                      <button
-                        onClick={() => setVenueLng(l => l ? l + nudgeAmount() : l)}
-                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
-                        title="Move east"
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                      </button>
-                      <div />
-                      <button
-                        onClick={() => setVenueLat(l => l ? l - nudgeAmount() : l)}
-                        className="w-9 h-9 bg-black/60 hover:bg-black/80 text-white rounded flex items-center justify-center transition-colors"
-                        title="Move south"
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-                      </button>
-                      <div />
-                    </div>
-                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
-                  Use arrows to fine-tune the position. Red pin shows center.
+                  Drag the map to adjust position. Pin stays centered.
                 </p>
               </div>
-            ) : !venueLat ? (
+            ) : (
               <div className="rounded-lg border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
-                Search for an address to see the satellite preview
+                Search for an address to see the map preview
               </div>
-            ) : null}
+            )}
 
             {/* Zoom slider */}
             <div>
