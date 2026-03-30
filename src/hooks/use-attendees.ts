@@ -85,7 +85,6 @@ export function useAttendees(eventId: string | undefined, filters?: AttendeeFilt
       .insert([{
         ...attendee,
         event_id: eventId,
-        availability: JSON.stringify(attendee.availability),
       }])
       .select()
       .single()
@@ -94,7 +93,8 @@ export function useAttendees(eventId: string | undefined, filters?: AttendeeFilt
 
     const newAttendee: Attendee = {
       ...data,
-      availability: attendee.availability,
+      roles: typeof data.roles === 'string' ? JSON.parse(data.roles) : data.roles || [],
+      availability: typeof data.availability === 'string' ? JSON.parse(data.availability) : data.availability || [],
     }
 
     setAttendees((prev) => [...prev, newAttendee].sort((a, b) => a.name.localeCompare(b.name)))
@@ -108,10 +108,6 @@ export function useAttendees(eventId: string | undefined, filters?: AttendeeFilt
     const updateData: Record<string, unknown> = {
       ...updates,
       updated_at: new Date().toISOString(),
-    }
-
-    if (updates.availability) {
-      updateData.availability = JSON.stringify(updates.availability)
     }
 
     const { data, error } = await supabase

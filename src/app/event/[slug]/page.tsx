@@ -56,13 +56,6 @@ function getDaysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
 
-// Reusable input style generator with dynamic focus ring
-function inputStyle(accentColor: string): React.CSSProperties {
-  return {
-    '--ring-color': accentColor,
-  } as React.CSSProperties
-}
-
 const INPUT_CLASS =
   'w-full rounded-lg bg-gray-800/80 border border-gray-700 px-3 py-2.5 sm:py-2 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-colors'
 
@@ -81,7 +74,8 @@ export default function EventRegistrationPage() {
 
   useEffect(() => {
     const name = localStorage.getItem(STORAGE_KEYS.USER_NAME)
-    if (name) setIsAdmin(true)
+    const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE)
+    if (name && role === 'admin') setIsAdmin(true)
   }, [])
   const [referrerName, setReferrerName] = useState<string | null>(null)
 
@@ -107,7 +101,7 @@ export default function EventRegistrationPage() {
 
   useEffect(() => {
     loadEvent()
-  }, [slug])
+  }, [slug, referredByScoutId])
 
   // Set document title when event loads
   useEffect(() => {

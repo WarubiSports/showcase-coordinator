@@ -426,7 +426,7 @@ async function cloneEventData(
     // Map old group IDs to new ones by matching sort_order
     if (newGroups) {
       for (const oldGroup of sourceGroups) {
-        const newGroup = newGroups.find(ng => ng.name === oldGroup.name)
+        const newGroup = newGroups.find(ng => ng.sort_order === oldGroup.sort_order)
         if (newGroup) groupIdMap[oldGroup.id] = newGroup.id
       }
     }
