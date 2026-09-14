@@ -17,6 +17,9 @@ https://showcase-coordinator.vercel.app
 ## Project Overview
 Multi-event coordination tool for showcases, ID camps, and clinics. Manages tasks, day-of schedules, players, attendees, and venue logistics. Supports multiple events with event switching in the header.
 
+## Scope Boundary (decided 2026-05-07)
+This app is for actual showcases (Cologne, Shark, future US events) only. Futures and Female Camp are coordinated entirely in Warubi Ops (ITP-Staff-App). A Futures→showcase_players sync trigger was built (2026-05-06) and rolled back the next day (`20260507000003_drop_futures_sync.sql`) — don't rebuild Futures features here.
+
 ## Tech Stack
 - **Framework:** Next.js 16 + React 19 + TypeScript
 - **UI:** shadcn/ui + Radix UI + Tailwind CSS 4
@@ -34,8 +37,7 @@ This app now uses the shared Supabase project `umblyhwumtadlvgccdwg` (migrated f
 - `/src/hooks/` - Data hooks (use-tasks, use-categories, use-players, use-attendees, use-user, use-events)
 - `/src/lib/` - Supabase client, constants, utils
 - `/src/types/` - TypeScript types + Supabase database types
-- `/supabase/migrations/` - Migration files
-- `/scripts/` - Utility scripts
+- `/supabase/migrations/` - Migration files. Gotcha: because the Supabase project is shared, some migrations here (May 2026) alter tables owned by other apps (`trial_prospects`, `events`, `event_attendees`) — don't assume this folder only touches `showcase_*` tables.
 
 ## Pages
 | Route | Purpose |
@@ -48,7 +50,10 @@ This app now uses the shared Supabase project `umblyhwumtadlvgccdwg` (migrated f
 | `/players` | Player profiles with test scores |
 | `/announcements` | Team communications |
 | `/feedback` | Bug/feature requests with screenshots |
-| `/event/[slug]` | Public event page (slug-locked) |
+| `/settings` | User/app settings |
+| `/event/[slug]` | Public event page (slug-locked, with registration) |
+| `/event/[slug]/manage` | Scout coordinator access to an event |
+| `/api/registration-email` | Registration email API route |
 
 ## Event System
 - Events stored in `showcase_events` table with start_date, end_date, location, type
@@ -71,16 +76,17 @@ This app now uses the shared Supabase project `umblyhwumtadlvgccdwg` (migrated f
 - `showcase_matches` - Match schedule (event-scoped)
 - `showcase_attendees` - People (staff/alumni/coaches/scouts, multi-role, event-scoped)
 - `showcase_players` - Player profiles with physical test scores
-- Venue zones + rotation tables
+- `showcase_event_scouts` - Scout registrations for public event pages
+- `showcase_feedback` - Bug/feature requests
+- `showcase_materials` - Event materials
+- `showcase_venue_zones` - Venue zones (rotation is a column here, not a separate table)
+- `showcase_venue_settings` - Venue configuration
 
-## Hook Pattern (example: use-tasks.ts)
-- Fetch from Supabase with category joins
-- Support filtering: category, status, priority, assignee, search
-- CRUD methods returned from hook
-- Activity logging on create/update
+## Hook Pattern
+Data hooks follow `use-tasks.ts`: Supabase fetch with joins, filter support, CRUD methods, activity logging on writes.
 
 ## Auth
-No authentication. User identified by name stored in localStorage (`SHOWCASE_USER_NAME`).
+No authentication. User identified by name + role in localStorage (`showcase_user_name`, `showcase_user_role` — see `STORAGE_KEYS` in `src/lib/constants.ts`).
 
 ## Environment Variables
 ```
