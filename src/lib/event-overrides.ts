@@ -3,8 +3,18 @@
 
 export interface EventDayLink {
   label: string
-  sublabel: string
+  dateNum: string
+  month: string
+  detail: string
   slug: string
+}
+
+export interface EventHero {
+  eyebrow: string
+  title: string
+  subtitle: string
+  tagline: string
+  partnerLogos: { src: string; alt: string }[]
 }
 
 export interface EventHighlight {
@@ -25,14 +35,25 @@ export interface EventOverride {
   highlights?: EventHighlight[]
   contact?: EventContact
   presentedBy?: string
+  hero?: EventHero
 }
 
 const HAWAII_808_2026: EventOverride = {
   earlyBirdPrice: 40,
   days: [
-    { label: 'Boys', sublabel: 'Dec 20', slug: '808-showcase-boys' },
-    { label: 'Girls', sublabel: 'Dec 21', slug: '808-showcase-girls' },
+    { label: 'Boys', dateNum: '20', month: 'Dec', detail: 'Field 9 · 9 AM to 12 PM', slug: '808-showcase-boys' },
+    { label: 'Girls', dateNum: '21', month: 'Dec', detail: 'Field 6 · 9 AM to 12 PM', slug: '808-showcase-girls' },
   ],
+  hero: {
+    eyebrow: '808 Futbol Club × 1.FC Köln ITP',
+    title: 'Showcase',
+    subtitle: 'College ID Camp',
+    tagline: 'Find your own path.',
+    partnerLogos: [
+      { src: '/events/808/808-crest.png', alt: '808 Futbol Club' },
+      { src: '/events/808/fc-koeln-crest.png', alt: '1.FC Köln' },
+    ],
+  },
   highlights: [
     { title: 'College Coaches', desc: 'Play in front of college coaches from Hawaii Pacific, Chaminade and UH Hilo, with more to come' },
     { title: '1.FC Köln ITP Scouts', desc: 'Direct exposure to scouts from the Bundesliga club’s International Talent Program' },

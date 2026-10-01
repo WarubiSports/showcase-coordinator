@@ -7,6 +7,7 @@ import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
 import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap, Mail, Phone } from 'lucide-react'
 import { STORAGE_KEYS } from '@/lib/constants'
 import { getEventOverride } from '@/lib/event-overrides'
+import { EventHero } from '@/components/events/event-hero'
 import { toast } from 'sonner'
 
 const POSITIONS: { value: PlayerPosition; label: string }[] = [
@@ -94,6 +95,7 @@ export default function EventRegistrationPage() {
 
   // Registration form
   const [showForm, setShowForm] = useState(false)
+  const [showSticky, setShowSticky] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
   const [parentExpanded, setParentExpanded] = useState(false)
@@ -111,6 +113,14 @@ export default function EventRegistrationPage() {
   })
 
   const formRef = useRef<HTMLDivElement>(null)
+
+  // Sticky register bar once the hero has scrolled away
+  useEffect(() => {
+    const onScroll = () => setShowSticky(window.scrollY > 700)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     loadEvent()
@@ -279,6 +289,11 @@ export default function EventRegistrationPage() {
   const spotsRemaining = event.max_players ? event.max_players - registeredCount : null
   const spotsFraction = event.max_players ? registeredCount / event.max_players : 0
 
+  const openForm = () => {
+    setShowForm(true)
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+  }
+
   // Success state
   if (isRegistered) {
     return (
@@ -361,132 +376,146 @@ export default function EventRegistrationPage() {
       )}
 
       {/* Hero */}
-      <div
-        className="relative py-16 sm:py-24 px-4 overflow-hidden"
-        style={{
-          background: `linear-gradient(170deg, ${accentColor}30 0%, ${accentColor}12 30%, ${accentColor}05 60%, transparent 100%)`,
-        }}
-      >
-        {/* Geometric accent lines */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full opacity-[0.04]" style={{ border: `2px solid ${accentColor}` }} />
-          <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{ border: `2px solid ${accentColor}` }} />
-        </div>
-        {/* Top accent bar */}
-        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
-
-        <div className="relative max-w-2xl mx-auto text-center space-y-6 sm:space-y-8">
-          <div
-            className="inline-block px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.2em]"
-            style={{ backgroundColor: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}33` }}
-          >
-            {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
+      {extras.hero ? (
+        <EventHero
+          event={event}
+          hero={extras.hero}
+          days={extras.days}
+          earlyBirdPrice={extras.earlyBirdPrice}
+          slug={slug}
+          accentColor={accentColor}
+          daysAway={getDaysUntil(event.start_date)}
+          canRegister={canRegister}
+          onRegister={openForm}
+        />
+      ) : (
+        <div
+          className="relative py-16 sm:py-24 px-4 overflow-hidden"
+          style={{
+            background: `linear-gradient(170deg, ${accentColor}30 0%, ${accentColor}12 30%, ${accentColor}05 60%, transparent 100%)`,
+          }}
+        >
+          {/* Geometric accent lines */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full opacity-[0.04]" style={{ border: `2px solid ${accentColor}` }} />
+            <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{ border: `2px solid ${accentColor}` }} />
           </div>
-          {event.host_logo_url && (
-            <div className="mb-2">
-              <img src={event.host_logo_url} alt={event.host_name || ''} className="h-16 sm:h-20 mx-auto object-contain" />
-            </div>
-          )}
-          <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">
-            {event.host_name ? event.name.replace(event.host_name + ' - ', '').replace(event.host_name + ' — ', '') : event.name}
-          </h1>
-          {event.host_name && (
-            <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
-              Hosted by {event.host_name}
-            </p>
-          )}
-          {referrerName && (
-            <p className="text-sm text-gray-400">
-              Recommended by <span className="font-semibold text-white">{referrerName}</span>
-            </p>
-          )}
+          {/* Top accent bar */}
+          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
 
-          {extras.days && (
-            <div className="inline-flex rounded-2xl border border-gray-800 bg-gray-900/70 p-1.5 gap-1.5">
-              {extras.days.map((day) => {
-                const isCurrent = day.slug === slug
-                return (
-                  <a
-                    key={day.slug}
-                    href={`/event/${day.slug}`}
-                    aria-current={isCurrent ? 'page' : undefined}
-                    className={`min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-2.5 transition-all ${isCurrent ? 'text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-800/80'}`}
-                    style={isCurrent ? { backgroundColor: accentColor } : undefined}
-                  >
-                    <span className="block text-base font-black uppercase tracking-wider">{day.label}</span>
-                    <span className={`block text-[11px] font-semibold uppercase tracking-widest ${isCurrent ? 'text-white/80' : 'text-gray-500'}`}>{day.sublabel}</span>
-                  </a>
-                )
-              })}
+          <div className="relative max-w-2xl mx-auto text-center space-y-6 sm:space-y-8">
+            <div
+              className="inline-block px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.2em]"
+              style={{ backgroundColor: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}33` }}
+            >
+              {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
             </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-300">
-            <div className="flex items-center gap-2.5 text-sm sm:text-base">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                <Calendar className="h-4 w-4" style={{ color: accentColor }} />
+            {event.host_logo_url && (
+              <div className="mb-2">
+                <img src={event.host_logo_url} alt={event.host_name || ''} className="h-16 sm:h-20 mx-auto object-contain" />
               </div>
-              <span className="font-medium">{dateDisplay}</span>
-            </div>
-            {event.start_time && (
+            )}
+            <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">
+              {event.host_name ? event.name.replace(event.host_name + ' - ', '').replace(event.host_name + ' — ', '') : event.name}
+            </h1>
+            {event.host_name && (
+              <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+                Hosted by {event.host_name}
+              </p>
+            )}
+            {referrerName && (
+              <p className="text-sm text-gray-400">
+                Recommended by <span className="font-semibold text-white">{referrerName}</span>
+              </p>
+            )}
+
+            {extras.days && (
+              <div className="inline-flex rounded-2xl border border-gray-800 bg-gray-900/70 p-1.5 gap-1.5">
+                {extras.days.map((day) => {
+                  const isCurrent = day.slug === slug
+                  return (
+                    <a
+                      key={day.slug}
+                      href={`/event/${day.slug}`}
+                      aria-current={isCurrent ? 'page' : undefined}
+                      className={`min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-2.5 transition-all ${isCurrent ? 'text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-800/80'}`}
+                      style={isCurrent ? { backgroundColor: accentColor } : undefined}
+                    >
+                      <span className="block text-base font-black uppercase tracking-wider">{day.label}</span>
+                      <span className={`block text-[11px] font-semibold uppercase tracking-widest ${isCurrent ? 'text-white/80' : 'text-gray-500'}`}>{day.month} {day.dateNum}</span>
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-300">
               <div className="flex items-center gap-2.5 text-sm sm:text-base">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                  <Clock className="h-4 w-4" style={{ color: accentColor }} />
+                  <Calendar className="h-4 w-4" style={{ color: accentColor }} />
                 </div>
-                <span className="font-medium">{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
+                <span className="font-medium">{dateDisplay}</span>
               </div>
-            )}
-            <div className="flex items-center gap-2.5 text-sm sm:text-base">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                <MapPin className="h-4 w-4" style={{ color: accentColor }} />
+              {event.start_time && (
+                <div className="flex items-center gap-2.5 text-sm sm:text-base">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                    <Clock className="h-4 w-4" style={{ color: accentColor }} />
+                  </div>
+                  <span className="font-medium">{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5 text-sm sm:text-base">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                  <MapPin className="h-4 w-4" style={{ color: accentColor }} />
+                </div>
+                <span className="font-medium">{event.location}</span>
               </div>
-              <span className="font-medium">{event.location}</span>
             </div>
-          </div>
 
-          <div className="flex items-center justify-center gap-6">
-            {event.price && (
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl sm:text-5xl font-black" style={{ color: accentColor }}>
-                  {event.currency === 'EUR' ? '€' : '$'}{event.price}
-                </span>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
-              </div>
+            <div className="flex items-center justify-center gap-6">
+              {event.price && (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl sm:text-5xl font-black" style={{ color: accentColor }}>
+                    {event.currency === 'EUR' ? '€' : '$'}{event.price}
+                  </span>
+                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
+                </div>
+              )}
+              {event.price && extras.earlyBirdPrice && (
+                <div
+                  className="rounded-xl px-3 py-1.5 text-left leading-tight"
+                  style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}40` }}
+                >
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>Early Bird</span>
+                  <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{extras.earlyBirdPrice}</span>
+                </div>
+              )}
+            </div>
+
+            {event.age_min && event.age_max && (
+              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">
+                Open to ages <span className="text-white">{event.age_min}–{event.age_max}</span>
+              </p>
             )}
-            {event.price && extras.earlyBirdPrice && (
-              <div
-                className="rounded-xl px-3 py-1.5 text-left leading-tight"
-                style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}40` }}
-              >
-                <span className="block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>Early Bird</span>
-                <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{extras.earlyBirdPrice}</span>
-              </div>
-            )}
+
+            {/* Countdown */}
+            {(() => {
+              const days = getDaysUntil(event.start_date)
+              return days > 0 && days <= 120 ? (
+                <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border" style={{ borderColor: accentColor + '40', backgroundColor: accentColor + '10' }}>
+                  <Timer className="h-4 w-4" style={{ color: accentColor }} />
+                  <span className="text-sm font-bold" style={{ color: accentColor }}>
+                    {days === 1 ? 'Tomorrow!' : `${days} days away`}
+                  </span>
+                </div>
+              ) : null
+            })()}
           </div>
-
-          {event.age_min && event.age_max && (
-            <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">
-              Open to ages <span className="text-white">{event.age_min}–{event.age_max}</span>
-            </p>
-          )}
-
-          {/* Countdown */}
-          {(() => {
-            const days = getDaysUntil(event.start_date)
-            return days > 0 && days <= 120 ? (
-              <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border" style={{ borderColor: accentColor + '40', backgroundColor: accentColor + '10' }}>
-                <Timer className="h-4 w-4" style={{ color: accentColor }} />
-                <span className="text-sm font-bold" style={{ color: accentColor }}>
-                  {days === 1 ? 'Tomorrow!' : `${days} days away`}
-                </span>
-              </div>
-            ) : null
-          })()}
         </div>
-      </div>
+      )}
 
       {/* Logo Banner Strip */}
-      {scouts.some(s => s.logo_url) && (
+      {!extras.hero && scouts.some(s => s.logo_url) && (
         <div className="border-y border-gray-800/60 bg-gray-900/30 py-8 sm:py-10 overflow-hidden">
           <div className="max-w-4xl mx-auto px-4">
             <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 mb-6">Represented Programs</p>
@@ -507,7 +536,7 @@ export default function EventRegistrationPage() {
 
       <div className="flex-1">
         {/* Description */}
-        {event.registration_details && (
+        {!extras.hero && event.registration_details && (
           <div className="max-w-2xl mx-auto px-4 py-10 sm:py-12">
             <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-6 sm:p-8">
               {event.registration_details.split('\n').map((line, i) => (
@@ -654,10 +683,7 @@ export default function EventRegistrationPage() {
             </div>
           ) : !showForm ? (
             <button
-              onClick={() => {
-                setShowForm(true)
-                setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
-              }}
+              onClick={openForm}
               className="btn-pulse w-full py-5 sm:py-6 rounded-2xl text-lg sm:text-xl font-black uppercase tracking-wider text-white transition-all hover:brightness-110 active:scale-[0.98]"
               style={{ backgroundColor: accentColor }}
             >
@@ -843,6 +869,28 @@ export default function EventRegistrationPage() {
           </div>
         )}
       </div>
+
+      {canRegister && !showForm && (
+        <>
+          <div className="h-20" />
+          <div
+            className={`fixed inset-x-0 bottom-0 z-40 px-4 pb-4 pt-6 bg-gradient-to-t from-gray-950 via-gray-950/90 to-transparent transition-all duration-300 ${showSticky ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}
+          >
+            <button
+              onClick={openForm}
+              className="mx-auto flex w-full max-w-md items-center justify-between rounded-2xl px-5 py-4 text-white font-black uppercase tracking-wider shadow-2xl active:scale-[0.98]"
+              style={{ backgroundColor: accentColor }}
+            >
+              <span>Register now</span>
+              {event.price && (
+                <span className="text-sm font-bold normal-case tracking-normal text-white/85">
+                  {extras.earlyBirdPrice ? `Early bird ${event.currency === 'EUR' ? '€' : '$'}${extras.earlyBirdPrice}` : `${event.currency === 'EUR' ? '€' : '$'}${event.price}`}
+                </span>
+              )}
+            </button>
+          </div>
+        </>
+      )}
 
       <Footer presentedBy={extras.presentedBy} />
     </div>
