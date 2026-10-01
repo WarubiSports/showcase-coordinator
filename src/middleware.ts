@@ -4,7 +4,9 @@ const PUBLIC_FILE = /\.(.*)$/
 
 function isPublicRegistrationPath(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
-  return parts.length === 2 && parts[0] === 'event'
+  if (parts[0] !== 'event') return false
+  // /event/<slug> and its link-preview image /event/<slug>/opengraph-image
+  return parts.length === 2 || (parts.length === 3 && parts[2].startsWith('opengraph-image'))
 }
 
 function isPublicPath(pathname: string) {

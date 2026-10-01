@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
-import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap } from 'lucide-react'
+import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap, Mail, Phone } from 'lucide-react'
 import { STORAGE_KEYS } from '@/lib/constants'
+import { getEventOverride } from '@/lib/event-overrides'
 import { toast } from 'sonner'
 
 const POSITIONS: { value: PlayerPosition; label: string }[] = [
@@ -56,6 +57,14 @@ function getDaysUntil(dateStr: string): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
 
+const DEFAULT_HIGHLIGHTS = [
+  { icon: Trophy, title: 'Live Evaluation', desc: 'Assessed by college coaches and professional scouts on-site' },
+  { icon: Video, title: 'Game Footage', desc: 'Filmed sessions you can use for your recruiting profile' },
+  { icon: Star, title: 'Direct Exposure', desc: 'Face time with program staff — not just a name on a list' },
+  { icon: Zap, title: 'Personalized Feedback', desc: 'Know exactly where you stand and what to work on' },
+]
+const HIGHLIGHT_ICONS = [Trophy, Star, Users, Zap]
+
 const INPUT_CLASS =
   'w-full rounded-lg bg-gray-800/80 border border-gray-700 px-3 py-2.5 sm:py-2 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-colors'
 
@@ -64,6 +73,10 @@ export default function EventRegistrationPage() {
   const searchParams = useSearchParams()
   const slug = params.slug as string
   const referredByScoutId = searchParams.get('ref') || null
+  const extras = getEventOverride(slug)
+  const highlights = extras.highlights
+    ? extras.highlights.map((h, i) => ({ ...h, icon: HIGHLIGHT_ICONS[i % HIGHLIGHT_ICONS.length] }))
+    : DEFAULT_HIGHLIGHTS
 
   const [event, setEvent] = useState<ShowcaseEvent | null>(null)
   const [scouts, setScouts] = useState<EventScout[]>([])
@@ -205,6 +218,7 @@ export default function EventRegistrationPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            eventSlug: slug,
             playerName: form.name.trim(),
             playerEmail: form.email.trim(),
             parentEmail: form.parent_email.trim() || null,
@@ -280,7 +294,7 @@ export default function EventRegistrationPage() {
             <h1 className="text-3xl sm:text-4xl font-bold text-white">You&apos;re Registered!</h1>
             <p className="text-gray-400 text-base sm:text-lg">
               We&apos;ve sent a confirmation to <span className="text-white font-medium">{form.email}</span>.
-              {event.price ? ` Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price} is due before the event.` : ''}
+              {event.price ? ` Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price}${extras.earlyBirdPrice ? ` ($${extras.earlyBirdPrice} early bird)` : ''} is due before the event.` : ''}
             </p>
             <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-left space-y-3">
               <p className="font-semibold text-white text-lg">{event.name}</p>
@@ -387,6 +401,26 @@ export default function EventRegistrationPage() {
             </p>
           )}
 
+          {extras.days && (
+            <div className="inline-flex rounded-2xl border border-gray-800 bg-gray-900/70 p-1.5 gap-1.5">
+              {extras.days.map((day) => {
+                const isCurrent = day.slug === slug
+                return (
+                  <a
+                    key={day.slug}
+                    href={`/event/${day.slug}`}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    className={`min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-2.5 transition-all ${isCurrent ? 'text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-800/80'}`}
+                    style={isCurrent ? { backgroundColor: accentColor } : undefined}
+                  >
+                    <span className="block text-base font-black uppercase tracking-wider">{day.label}</span>
+                    <span className={`block text-[11px] font-semibold uppercase tracking-widest ${isCurrent ? 'text-white/80' : 'text-gray-500'}`}>{day.sublabel}</span>
+                  </a>
+                )
+              })}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-300">
             <div className="flex items-center gap-2.5 text-sm sm:text-base">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
@@ -417,6 +451,15 @@ export default function EventRegistrationPage() {
                   {event.currency === 'EUR' ? '€' : '$'}{event.price}
                 </span>
                 <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
+              </div>
+            )}
+            {event.price && extras.earlyBirdPrice && (
+              <div
+                className="rounded-xl px-3 py-1.5 text-left leading-tight"
+                style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}40` }}
+              >
+                <span className="block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>Early Bird</span>
+                <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{extras.earlyBirdPrice}</span>
               </div>
             )}
           </div>
@@ -565,12 +608,7 @@ export default function EventRegistrationPage() {
             <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">What You Get</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { icon: Trophy, title: 'Live Evaluation', desc: 'Assessed by college coaches and professional scouts on-site' },
-              { icon: Video, title: 'Game Footage', desc: 'Filmed sessions you can use for your recruiting profile' },
-              { icon: Star, title: 'Direct Exposure', desc: 'Face time with program staff — not just a name on a list' },
-              { icon: Zap, title: 'Personalized Feedback', desc: 'Know exactly where you stand and what to work on' },
-            ].map((item, i) => (
+            {highlights.map((item, i) => (
               <div key={i} className="flex items-start gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 p-5 hover:border-gray-600 transition-colors">
                 <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center" style={{ backgroundColor: accentColor + '15' }}>
                   <item.icon className="h-5 w-5" style={{ color: accentColor }} />
@@ -779,16 +817,42 @@ export default function EventRegistrationPage() {
             </div>
           )}
         </div>
+
+        {/* Organizer contact */}
+        {extras.contact && (
+          <div className="max-w-2xl mx-auto px-4 pb-14">
+            <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5 sm:p-6 text-center space-y-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: accentColor }}>Questions?</p>
+              <div>
+                <p className="font-bold text-white">{extras.contact.name}</p>
+                <p className="text-xs text-gray-500">{extras.contact.role}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 text-sm">
+                <a href={`mailto:${extras.contact.email}`} className="inline-flex items-center gap-2 text-gray-300 hover:text-white">
+                  <Mail className="h-4 w-4" style={{ color: accentColor }} />
+                  {extras.contact.email}
+                </a>
+                {extras.contact.phone && (
+                  <a href={`tel:${extras.contact.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-2 text-gray-300 hover:text-white">
+                    <Phone className="h-4 w-4" style={{ color: accentColor }} />
+                    {extras.contact.phone}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <Footer />
+      <Footer presentedBy={extras.presentedBy} />
     </div>
   )
 }
 
-function Footer() {
+function Footer({ presentedBy }: { presentedBy?: string }) {
   return (
-    <footer className="py-8 text-center border-t border-gray-900">
+    <footer className="py-8 px-4 text-center border-t border-gray-900 space-y-2">
+      {presentedBy && <p className="text-xs text-gray-500 max-w-xl mx-auto leading-relaxed">{presentedBy}</p>}
       <p className="text-[11px] text-gray-600 uppercase tracking-widest">
         Powered by{' '}
         <a

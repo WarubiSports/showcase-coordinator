@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getEventOverride } from '@/lib/event-overrides'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -11,7 +12,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { playerName, playerEmail, parentEmail, eventName, eventDate, eventLocation, eventTime, price, currency } = body
+  const { eventSlug, playerName, playerEmail, parentEmail, eventName, eventDate, eventLocation, eventTime, price, currency } = body
+  const extras = getEventOverride(typeof eventSlug === 'string' ? eventSlug : '')
 
   const safePlayerName = escapeHtml(playerName || '')
   const safeEventName = escapeHtml(eventName || '')
@@ -21,7 +23,12 @@ export async function POST(req: NextRequest) {
   const safePrice = escapeHtml(String(price || ''))
 
   const currencySymbol = currency === 'EUR' ? '€' : '$'
-  const priceInfo = price ? `<p style="font-size:18px;font-weight:bold;color:#3B82F6;margin:16px 0">${currencySymbol}${safePrice} — Payment due before the event</p>` : ''
+  const earlyBird = extras.earlyBirdPrice ? ` (${currencySymbol}${extras.earlyBirdPrice} early bird)` : ''
+  const priceInfo = price ? `<p style="font-size:18px;font-weight:bold;color:#3B82F6;margin:16px 0">${currencySymbol}${safePrice}${earlyBird}. Payment due before the event.</p>` : ''
+  const contact = extras.contact
+  const contactInfo = contact
+    ? `Questions? Reply to this email or contact ${escapeHtml(contact.name)}, ${escapeHtml(contact.role)}: ${escapeHtml(contact.email)}${contact.phone ? `, ${escapeHtml(contact.phone)}` : ''}`
+    : 'If you have questions, reply to this email.'
 
   const html = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:500px;margin:0 auto;padding:20px">
@@ -38,7 +45,7 @@ export async function POST(req: NextRequest) {
       ${priceInfo}
 
       <p style="color:#999;font-size:12px;margin-top:32px">
-        If you have questions, reply to this email.
+        ${contactInfo}
       </p>
     </div>
   `
@@ -56,8 +63,9 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         from: 'Warubi Sports <noreply@warubi-sports.com>',
         to: recipients,
-        subject: `Registration Confirmed — ${eventName}`,
+        subject: `Registration Confirmed: ${eventName}`,
         html,
+        ...(contact ? { reply_to: contact.email } : {}),
       }),
     })
 
