@@ -3,25 +3,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import type { ShowcaseEvent, EventScout, PlayerPosition } from '@/types'
+import type { ShowcaseEvent, EventScout } from '@/types'
 import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap, Mail, Phone } from 'lucide-react'
 import { STORAGE_KEYS } from '@/lib/constants'
 import { getEventOverride } from '@/lib/event-overrides'
-import { EventHero } from '@/components/events/event-hero'
+import { RegistrationForm, type RegistrationFormState } from '@/components/events/registration-form'
+import { EventLanding, EventLandingSuccess } from '@/components/events/event-landing'
 import { toast } from 'sonner'
-
-const POSITIONS: { value: PlayerPosition; label: string }[] = [
-  { value: 'GK', label: 'Goalkeeper' },
-  { value: 'CB', label: 'Center Back' },
-  { value: 'LB', label: 'Left Back' },
-  { value: 'RB', label: 'Right Back' },
-  { value: 'CDM', label: 'Defensive Mid' },
-  { value: 'CM', label: 'Central Mid' },
-  { value: 'CAM', label: 'Attacking Mid' },
-  { value: 'LW', label: 'Left Wing' },
-  { value: 'RW', label: 'Right Wing' },
-  { value: 'ST', label: 'Striker' },
-]
 
 function formatDate(dateStr: string) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
@@ -66,9 +54,6 @@ const DEFAULT_HIGHLIGHTS = [
 ]
 const HIGHLIGHT_ICONS = [Trophy, Star, Users, Zap]
 
-const INPUT_CLASS =
-  'w-full rounded-lg bg-gray-800/80 border border-gray-700 px-3 py-2.5 sm:py-2 text-base sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-colors'
-
 export default function EventRegistrationPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -99,12 +84,12 @@ export default function EventRegistrationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
   const [parentExpanded, setParentExpanded] = useState(false)
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RegistrationFormState>({
     name: '',
     email: '',
     phone: '',
     birth_year: '',
-    position: '' as PlayerPosition | '',
+    position: '',
     club: '',
     country: '',
     parent_name: '',
@@ -289,6 +274,31 @@ export default function EventRegistrationPage() {
   const spotsRemaining = event.max_players ? event.max_players - registeredCount : null
   const spotsFraction = event.max_players ? registeredCount / event.max_players : 0
 
+  const timeDisplay = event.start_time
+    ? `${formatTime(event.start_time)}${event.end_time ? ` to ${formatTime(event.end_time)}` : ''}`
+    : null
+  const mapEmbedUrl = event.venue_lat && event.venue_lng
+    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${event.venue_lat},${event.venue_lng}&zoom=15&maptype=satellite`
+    : null
+  const closedLabel = !event.registration_open
+    ? 'Registration for this event has not opened yet. Check back later.'
+    : isFull
+      ? 'All spots for this event have been filled. Contact the organizer for waitlist options.'
+      : 'The registration deadline for this event has passed.'
+  const paymentNote = event.price
+    ? `Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price}${extras.earlyBirdPrice ? ` ($${extras.earlyBirdPrice} early bird)` : ''} is due before the event.`
+    : null
+  const formProps = {
+    form,
+    setForm,
+    onSubmit: handleSubmit,
+    isSubmitting,
+    parentExpanded,
+    setParentExpanded,
+    parentRecommended: !!(event.age_max && event.age_max <= 17),
+    formRef,
+  }
+
   const openForm = () => {
     setShowForm(true)
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
@@ -296,6 +306,19 @@ export default function EventRegistrationPage() {
 
   // Success state
   if (isRegistered) {
+    if (extras.hero) {
+      return (
+        <EventLandingSuccess
+          event={event}
+          hero={extras.hero}
+          accentColor={accentColor}
+          email={form.email}
+          dateDisplay={dateDisplay}
+          timeDisplay={timeDisplay}
+          paymentNote={paymentNote}
+        />
+      )
+    }
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
@@ -309,7 +332,7 @@ export default function EventRegistrationPage() {
             <h1 className="text-3xl sm:text-4xl font-bold text-white">You&apos;re Registered!</h1>
             <p className="text-gray-400 text-base sm:text-lg">
               We&apos;ve sent a confirmation to <span className="text-white font-medium">{form.email}</span>.
-              {event.price ? ` Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price}${extras.earlyBirdPrice ? ` ($${extras.earlyBirdPrice} early bird)` : ''} is due before the event.` : ''}
+              {paymentNote ? ` ${paymentNote}` : ''}
             </p>
             <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-left space-y-3">
               <p className="font-semibold text-white text-lg">{event.name}</p>
@@ -332,6 +355,28 @@ export default function EventRegistrationPage() {
         </div>
         <Footer />
       </div>
+    )
+  }
+
+  if (extras.hero) {
+    return (
+      <EventLanding
+        event={event}
+        scouts={scouts}
+        extras={{ ...extras, hero: extras.hero }}
+        slug={slug}
+        accentColor={accentColor}
+        dateDisplay={dateDisplay}
+        timeDisplay={timeDisplay}
+        mapEmbedUrl={mapEmbedUrl}
+        canRegister={canRegister}
+        closedLabel={closedLabel}
+        showForm={showForm}
+        showSticky={showSticky}
+        daysAway={getDaysUntil(event.start_date)}
+        onRegister={openForm}
+        formProps={formProps}
+      />
     )
   }
 
@@ -376,146 +421,132 @@ export default function EventRegistrationPage() {
       )}
 
       {/* Hero */}
-      {extras.hero ? (
-        <EventHero
-          event={event}
-          hero={extras.hero}
-          days={extras.days}
-          earlyBirdPrice={extras.earlyBirdPrice}
-          slug={slug}
-          accentColor={accentColor}
-          daysAway={getDaysUntil(event.start_date)}
-          canRegister={canRegister}
-          onRegister={openForm}
-        />
-      ) : (
-        <div
-          className="relative py-16 sm:py-24 px-4 overflow-hidden"
-          style={{
-            background: `linear-gradient(170deg, ${accentColor}30 0%, ${accentColor}12 30%, ${accentColor}05 60%, transparent 100%)`,
-          }}
-        >
-          {/* Geometric accent lines */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full opacity-[0.04]" style={{ border: `2px solid ${accentColor}` }} />
-            <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{ border: `2px solid ${accentColor}` }} />
-          </div>
-          {/* Top accent bar */}
-          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
-
-          <div className="relative max-w-2xl mx-auto text-center space-y-6 sm:space-y-8">
-            <div
-              className="inline-block px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.2em]"
-              style={{ backgroundColor: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}33` }}
-            >
-              {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
-            </div>
-            {event.host_logo_url && (
-              <div className="mb-2">
-                <img src={event.host_logo_url} alt={event.host_name || ''} className="h-16 sm:h-20 mx-auto object-contain" />
-              </div>
-            )}
-            <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">
-              {event.host_name ? event.name.replace(event.host_name + ' - ', '').replace(event.host_name + ' — ', '') : event.name}
-            </h1>
-            {event.host_name && (
-              <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
-                Hosted by {event.host_name}
-              </p>
-            )}
-            {referrerName && (
-              <p className="text-sm text-gray-400">
-                Recommended by <span className="font-semibold text-white">{referrerName}</span>
-              </p>
-            )}
-
-            {extras.days && (
-              <div className="inline-flex rounded-2xl border border-gray-800 bg-gray-900/70 p-1.5 gap-1.5">
-                {extras.days.map((day) => {
-                  const isCurrent = day.slug === slug
-                  return (
-                    <a
-                      key={day.slug}
-                      href={`/event/${day.slug}`}
-                      aria-current={isCurrent ? 'page' : undefined}
-                      className={`min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-2.5 transition-all ${isCurrent ? 'text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-800/80'}`}
-                      style={isCurrent ? { backgroundColor: accentColor } : undefined}
-                    >
-                      <span className="block text-base font-black uppercase tracking-wider">{day.label}</span>
-                      <span className={`block text-[11px] font-semibold uppercase tracking-widest ${isCurrent ? 'text-white/80' : 'text-gray-500'}`}>{day.month} {day.dateNum}</span>
-                    </a>
-                  )
-                })}
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-300">
-              <div className="flex items-center gap-2.5 text-sm sm:text-base">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                  <Calendar className="h-4 w-4" style={{ color: accentColor }} />
-                </div>
-                <span className="font-medium">{dateDisplay}</span>
-              </div>
-              {event.start_time && (
-                <div className="flex items-center gap-2.5 text-sm sm:text-base">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                    <Clock className="h-4 w-4" style={{ color: accentColor }} />
-                  </div>
-                  <span className="font-medium">{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2.5 text-sm sm:text-base">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                  <MapPin className="h-4 w-4" style={{ color: accentColor }} />
-                </div>
-                <span className="font-medium">{event.location}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-6">
-              {event.price && (
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-black" style={{ color: accentColor }}>
-                    {event.currency === 'EUR' ? '€' : '$'}{event.price}
-                  </span>
-                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
-                </div>
-              )}
-              {event.price && extras.earlyBirdPrice && (
-                <div
-                  className="rounded-xl px-3 py-1.5 text-left leading-tight"
-                  style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}40` }}
-                >
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>Early Bird</span>
-                  <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{extras.earlyBirdPrice}</span>
-                </div>
-              )}
-            </div>
-
-            {event.age_min && event.age_max && (
-              <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">
-                Open to ages <span className="text-white">{event.age_min}–{event.age_max}</span>
-              </p>
-            )}
-
-            {/* Countdown */}
-            {(() => {
-              const days = getDaysUntil(event.start_date)
-              return days > 0 && days <= 120 ? (
-                <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border" style={{ borderColor: accentColor + '40', backgroundColor: accentColor + '10' }}>
-                  <Timer className="h-4 w-4" style={{ color: accentColor }} />
-                  <span className="text-sm font-bold" style={{ color: accentColor }}>
-                    {days === 1 ? 'Tomorrow!' : `${days} days away`}
-                  </span>
-                </div>
-              ) : null
-            })()}
-          </div>
+      <div
+        className="relative py-16 sm:py-24 px-4 overflow-hidden"
+        style={{
+          background: `linear-gradient(170deg, ${accentColor}30 0%, ${accentColor}12 30%, ${accentColor}05 60%, transparent 100%)`,
+        }}
+      >
+        {/* Geometric accent lines */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full opacity-[0.04]" style={{ border: `2px solid ${accentColor}` }} />
+          <div className="absolute -bottom-1/3 -left-1/4 w-[600px] h-[600px] rounded-full opacity-[0.03]" style={{ border: `2px solid ${accentColor}` }} />
         </div>
-      )}
+        {/* Top accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }} />
+
+        <div className="relative max-w-2xl mx-auto text-center space-y-6 sm:space-y-8">
+          <div
+            className="inline-block px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.2em]"
+            style={{ backgroundColor: `${accentColor}22`, color: accentColor, border: `1px solid ${accentColor}33` }}
+          >
+            {event.type === 'id_camp' ? 'ID Camp' : event.type === 'futures' ? 'Futures' : 'Showcase'}
+          </div>
+          {event.host_logo_url && (
+            <div className="mb-2">
+              <img src={event.host_logo_url} alt={event.host_name || ''} className="h-16 sm:h-20 mx-auto object-contain" />
+            </div>
+          )}
+          <h1 className="text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight uppercase">
+            {event.host_name ? event.name.replace(event.host_name + ' - ', '').replace(event.host_name + ' — ', '') : event.name}
+          </h1>
+          {event.host_name && (
+            <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accentColor }}>
+              Hosted by {event.host_name}
+            </p>
+          )}
+          {referrerName && (
+            <p className="text-sm text-gray-400">
+              Recommended by <span className="font-semibold text-white">{referrerName}</span>
+            </p>
+          )}
+
+          {extras.days && (
+            <div className="inline-flex rounded-2xl border border-gray-800 bg-gray-900/70 p-1.5 gap-1.5">
+              {extras.days.map((day) => {
+                const isCurrent = day.slug === slug
+                return (
+                  <a
+                    key={day.slug}
+                    href={`/event/${day.slug}`}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    className={`min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-2.5 transition-all ${isCurrent ? 'text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-800/80'}`}
+                    style={isCurrent ? { backgroundColor: accentColor } : undefined}
+                  >
+                    <span className="block text-base font-black uppercase tracking-wider">{day.label}</span>
+                    <span className={`block text-[11px] font-semibold uppercase tracking-widest ${isCurrent ? 'text-white/80' : 'text-gray-500'}`}>{day.month} {day.dateNum}</span>
+                  </a>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-300">
+            <div className="flex items-center gap-2.5 text-sm sm:text-base">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                <Calendar className="h-4 w-4" style={{ color: accentColor }} />
+              </div>
+              <span className="font-medium">{dateDisplay}</span>
+            </div>
+            {event.start_time && (
+              <div className="flex items-center gap-2.5 text-sm sm:text-base">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                  <Clock className="h-4 w-4" style={{ color: accentColor }} />
+                </div>
+                <span className="font-medium">{formatTime(event.start_time)}{event.end_time ? ` – ${formatTime(event.end_time)}` : ''}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2.5 text-sm sm:text-base">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
+                <MapPin className="h-4 w-4" style={{ color: accentColor }} />
+              </div>
+              <span className="font-medium">{event.location}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-6">
+            {event.price && (
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl sm:text-5xl font-black" style={{ color: accentColor }}>
+                  {event.currency === 'EUR' ? '€' : '$'}{event.price}
+                </span>
+                <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
+              </div>
+            )}
+            {event.price && extras.earlyBirdPrice && (
+              <div
+                className="rounded-xl px-3 py-1.5 text-left leading-tight"
+                style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}40` }}
+              >
+                <span className="block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>Early Bird</span>
+                <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{extras.earlyBirdPrice}</span>
+              </div>
+            )}
+          </div>
+
+          {event.age_min && event.age_max && (
+            <p className="text-sm font-semibold uppercase tracking-widest text-gray-400">
+              Open to ages <span className="text-white">{event.age_min}–{event.age_max}</span>
+            </p>
+          )}
+
+          {/* Countdown */}
+          {(() => {
+            const days = getDaysUntil(event.start_date)
+            return days > 0 && days <= 120 ? (
+              <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border" style={{ borderColor: accentColor + '40', backgroundColor: accentColor + '10' }}>
+                <Timer className="h-4 w-4" style={{ color: accentColor }} />
+                <span className="text-sm font-bold" style={{ color: accentColor }}>
+                  {days === 1 ? 'Tomorrow!' : `${days} days away`}
+                </span>
+              </div>
+            ) : null
+          })()}
+        </div>
+      </div>
 
       {/* Logo Banner Strip */}
-      {!extras.hero && scouts.some(s => s.logo_url) && (
+      {scouts.some(s => s.logo_url) && (
         <div className="border-y border-gray-800/60 bg-gray-900/30 py-8 sm:py-10 overflow-hidden">
           <div className="max-w-4xl mx-auto px-4">
             <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 mb-6">Represented Programs</p>
@@ -536,7 +567,7 @@ export default function EventRegistrationPage() {
 
       <div className="flex-1">
         {/* Description */}
-        {!extras.hero && event.registration_details && (
+        {event.registration_details && (
           <div className="max-w-2xl mx-auto px-4 py-10 sm:py-12">
             <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-6 sm:p-8">
               {event.registration_details.split('\n').map((line, i) => (
@@ -602,7 +633,7 @@ export default function EventRegistrationPage() {
                     style={{ border: 0 }}
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${event.venue_lat},${event.venue_lng}&zoom=15&maptype=satellite`}
+                    src={mapEmbedUrl ?? undefined}
                   />
                 </div>
               )}
@@ -695,152 +726,7 @@ export default function EventRegistrationPage() {
               )}
             </button>
           ) : (
-            <div ref={formRef} className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 sm:p-8 animate-fade-up">
-              <h2 className="text-2xl font-black uppercase tracking-tight mb-6">Player Registration</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Player Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                      placeholder="John Smith"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                      placeholder="player@email.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Phone</label>
-                    <input
-                      type="tel"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                      placeholder="+1 (555) 000-0000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Birth Year</label>
-                    <input
-                      type="number"
-                      min={2000}
-                      max={2015}
-                      value={form.birth_year}
-                      onChange={(e) => setForm({ ...form, birth_year: e.target.value })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                      placeholder="2008"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Position</label>
-                    <select
-                      value={form.position}
-                      onChange={(e) => setForm({ ...form, position: e.target.value as PlayerPosition })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                    >
-                      <option value="">Select position</option>
-                      {POSITIONS.map((p) => (
-                        <option key={p.value} value={p.value}>{p.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Club / Team</label>
-                    <input
-                      type="text"
-                      value={form.club}
-                      onChange={(e) => setForm({ ...form, club: e.target.value })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                      placeholder="FC Example"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Country</label>
-                    <input
-                      type="text"
-                      value={form.country}
-                      onChange={(e) => setForm({ ...form, country: e.target.value })}
-                      className={`${INPUT_CLASS} accent-focus`}
-                      placeholder="USA"
-                    />
-                  </div>
-                </div>
-
-                {/* Parent / Guardian */}
-                <div className="pt-4 border-t border-gray-800">
-                  <button
-                    type="button"
-                    onClick={() => setParentExpanded(!parentExpanded)}
-                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    <Users className="h-4 w-4" />
-                    Parent / Guardian Info {event.age_max && event.age_max <= 17 ? '(recommended)' : '(optional)'}
-                    {parentExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </button>
-                  {parentExpanded && (
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-up">
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-1.5">Parent Name</label>
-                        <input
-                          type="text"
-                          value={form.parent_name}
-                          onChange={(e) => setForm({ ...form, parent_name: e.target.value })}
-                          className={`${INPUT_CLASS} accent-focus`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1.5">Parent Email</label>
-                        <input
-                          type="email"
-                          value={form.parent_email}
-                          onChange={(e) => setForm({ ...form, parent_email: e.target.value })}
-                          className={`${INPUT_CLASS} accent-focus`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1.5">Parent Phone</label>
-                        <input
-                          type="tel"
-                          value={form.parent_phone}
-                          onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
-                          className={`${INPUT_CLASS} accent-focus`}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !form.name || !form.email}
-                  className="w-full py-4 rounded-2xl text-white font-black text-base uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100"
-                  style={{ backgroundColor: accentColor }}
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Registering...
-                    </span>
-                  ) : (
-                    'Complete Registration'
-                  )}
-                </button>
-              </form>
-            </div>
+            <RegistrationForm variant="dark" accentColor={accentColor} {...formProps} />
           )}
         </div>
 

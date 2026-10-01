@@ -9,11 +9,11 @@ export interface EventDayLink {
   slug: string
 }
 
+// Presence of a hero config switches the event to the light club-style landing page
 export interface EventHero {
-  eyebrow: string
+  kicker: string
   title: string
-  subtitle: string
-  tagline: string
+  intro: string
   partnerLogos: { src: string; alt: string }[]
 }
 
@@ -45,10 +45,9 @@ const HAWAII_808_2026: EventOverride = {
     { label: 'Girls', dateNum: '21', month: 'Dec', detail: 'Field 6 · 9 AM to 12 PM', slug: '808-showcase-girls' },
   ],
   hero: {
-    eyebrow: '808 Futbol Club × 1.FC Köln Football School',
-    title: 'Showcase',
-    subtitle: 'College ID Camp',
-    tagline: 'Find your own path.',
+    kicker: '808 Futbol Club · Waipahu, Hawaii',
+    title: 'Showcase & College ID Camp',
+    intro: 'Find your own path. One morning in front of college coaches and 1.FC Köln ITP scouts, with small-sided games and performance testing.',
     partnerLogos: [
       { src: '/events/808/808-crest.png', alt: '808 Futbol Club' },
       { src: '/events/808/fc-koeln-football-school.png', alt: '1.FC Köln Football School' },
