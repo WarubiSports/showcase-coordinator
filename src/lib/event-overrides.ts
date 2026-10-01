@@ -45,13 +45,13 @@ const HAWAII_808_2026: EventOverride = {
     { label: 'Girls', dateNum: '21', month: 'Dec', detail: 'Field 6 · 9 AM to 12 PM', slug: '808-showcase-girls' },
   ],
   hero: {
-    eyebrow: '808 Futbol Club × 1.FC Köln ITP',
+    eyebrow: '808 Futbol Club × 1.FC Köln Football School',
     title: 'Showcase',
     subtitle: 'College ID Camp',
     tagline: 'Find your own path.',
     partnerLogos: [
       { src: '/events/808/808-crest.png', alt: '808 Futbol Club' },
-      { src: '/events/808/fc-koeln-crest.png', alt: '1.FC Köln' },
+      { src: '/events/808/fc-koeln-football-school.png', alt: '1.FC Köln Football School' },
     ],
   },
   highlights: [
