@@ -1,6 +1,7 @@
 import type { Dispatch, FormEvent, RefObject, SetStateAction } from 'react'
 import { ChevronDown, ChevronUp, Loader2, Users } from 'lucide-react'
 import type { PlayerPosition } from '@/types'
+import { PositionPitch } from '@/components/events/position-pitch'
 
 export interface RegistrationFormState {
   name: string
@@ -130,19 +131,30 @@ export const RegistrationForm = ({
               placeholder="2008"
             />
           </div>
-          <div>
-            <label className={s.label}>Position</label>
-            <select
-              value={form.position}
-              onChange={(e) => setForm({ ...form, position: e.target.value as PlayerPosition })}
-              className={s.input}
-            >
-              <option value="">Select position</option>
-              {POSITIONS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
-          </div>
+          {variant === 'light' ? (
+            <div className="sm:col-span-2">
+              <label className={s.label}>Position</label>
+              <PositionPitch
+                value={form.position}
+                onChange={(position) => setForm({ ...form, position })}
+                accentColor={accentColor}
+              />
+            </div>
+          ) : (
+            <div>
+              <label className={s.label}>Position</label>
+              <select
+                value={form.position}
+                onChange={(e) => setForm({ ...form, position: e.target.value as PlayerPosition })}
+                className={s.input}
+              >
+                <option value="">Select position</option>
+                {POSITIONS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className={s.label}>Club / Team</label>
             <input

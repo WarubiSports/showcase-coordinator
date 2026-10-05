@@ -312,11 +312,13 @@ export default function EventRegistrationPage() {
         <EventLandingSuccess
           event={event}
           hero={extras.hero}
+          utcOffset={extras.utcOffset}
           accentColor={accentColor}
           email={form.email}
           dateDisplay={dateDisplay}
           timeDisplay={timeDisplay}
           paymentNote={paymentNote}
+          shareUrl={`${window.location.origin}/event/${slug}`}
         />
       )
     }

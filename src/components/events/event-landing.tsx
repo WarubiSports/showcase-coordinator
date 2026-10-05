@@ -1,7 +1,8 @@
+import { useEffect, useRef } from 'react'
 import { Barlow_Condensed } from 'next/font/google'
-import { Check } from 'lucide-react'
+import { CalendarPlus, Check, MessageCircle, Timer } from 'lucide-react'
 import type { EventScout, ShowcaseEvent } from '@/types'
-import { activeEarlyBird, priceLine, type EventHero, type EventOverride } from '@/lib/event-overrides'
+import { activeEarlyBird, earlyBirdDaysLeft, priceLine, type EventHero, type EventOverride } from '@/lib/event-overrides'
 import { RegistrationForm, type RegistrationFormProps } from '@/components/events/registration-form'
 
 const display = Barlow_Condensed({ subsets: ['latin'], weight: ['700', '800'] })
@@ -46,6 +47,30 @@ const ClubBar = ({ hero }: { hero: EventHero }) => (
   </div>
 )
 
+// Muted match loop as a red duotone; stays on the poster frame for reduced-motion users
+const HeroVideo = ({ video, accentColor }: { video: NonNullable<EventHero['video']>; accentColor: string }) => {
+  const ref = useRef<HTMLVideoElement>(null)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) ref.current?.pause()
+  }, [])
+  return (
+    <div className="absolute inset-0" aria-hidden>
+      <video
+        ref={ref}
+        className="h-full w-full object-cover grayscale contrast-125"
+        src={video.src}
+        poster={video.poster}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+      />
+      <div className="absolute inset-0 opacity-[0.62]" style={{ backgroundColor: accentColor }} />
+    </div>
+  )
+}
+
 // Light, club-style landing page for partner events (enabled via a hero config in event-overrides)
 export const EventLanding = ({
   event,
@@ -64,6 +89,7 @@ export const EventLanding = ({
 }: EventLandingProps) => {
   const { hero, days, highlights, contact, presentedBy, payment } = extras
   const earlyBird = activeEarlyBird(extras)
+  const earlyBirdDays = earlyBirdDaysLeft(extras)
   const cur = currencySymbol(event.currency)
   const h2 = `${display.className} text-[32px] font-bold uppercase leading-none text-gray-950`
 
@@ -77,13 +103,17 @@ export const EventLanding = ({
         className="relative overflow-hidden text-white"
         style={{ backgroundColor: accentColor, clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 28px), 0 100%)' }}
       >
-        <span
-          aria-hidden
-          className={`${display.className} pointer-events-none absolute -right-6 top-6 select-none text-[220px] sm:text-[300px] font-extrabold leading-none text-transparent`}
-          style={{ WebkitTextStroke: '2px rgba(255,255,255,0.14)' }}
-        >
-          808
-        </span>
+        {hero.video ? (
+          <HeroVideo video={hero.video} accentColor={accentColor} />
+        ) : (
+          <span
+            aria-hidden
+            className={`${display.className} pointer-events-none absolute -right-6 top-6 select-none text-[220px] sm:text-[300px] font-extrabold leading-none text-transparent`}
+            style={{ WebkitTextStroke: '2px rgba(255,255,255,0.14)' }}
+          >
+            808
+          </span>
+        )}
         <div className="relative max-w-3xl mx-auto px-5 pt-7 pb-14">
           <p className="text-sm font-semibold text-white/85">{hero.kicker}</p>
           <h1 className={`${display.className} mt-1 uppercase`}>
@@ -140,10 +170,17 @@ export const EventLanding = ({
             )}
           </dl>
 
+          {canRegister && earlyBirdDays > 0 && (
+            <p className="mt-7 flex items-center gap-1.5 text-sm font-semibold">
+              <Timer className="h-4 w-4" />
+              Early bird ends in {earlyBirdDays} {earlyBirdDays === 1 ? 'day' : 'days'}
+            </p>
+          )}
+
           {canRegister && (
             <button
               onClick={onRegister}
-              className={`${display.className} mt-8 w-full sm:w-auto rounded-md bg-white px-10 py-3 text-[26px] font-bold uppercase leading-none hover:bg-gray-100`}
+              className={`${display.className} ${earlyBirdDays > 0 ? 'mt-3' : 'mt-8'} w-full sm:w-auto rounded-md bg-white px-10 py-3 text-[26px] font-bold uppercase leading-none hover:bg-gray-100`}
               style={{ color: accentColor }}
             >
               Register now
@@ -294,14 +331,40 @@ export const EventLanding = ({
 interface EventLandingSuccessProps {
   event: ShowcaseEvent
   hero: EventHero
+  utcOffset?: string
   accentColor: string
   email: string
   dateDisplay: string
   timeDisplay: string | null
   paymentNote: string | null
+  shareUrl: string
 }
 
-export const EventLandingSuccess = ({ event, hero, accentColor, email, dateDisplay, timeDisplay, paymentNote }: EventLandingSuccessProps) => (
+const toCalStamp = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+
+// Google Calendar link + .ics file for the event (end defaults to 3 hours after start)
+const calendarLinks = (event: ShowcaseEvent, utcOffset: string | undefined, url: string) => {
+  const offset = utcOffset ?? 'Z'
+  const start = new Date(`${event.start_date}T${event.start_time ?? '09:00'}${offset}`)
+  const end = event.end_time
+    ? new Date(`${event.end_date}T${event.end_time}${offset}`)
+    : new Date(start.getTime() + 3 * 3_600_000)
+  const details = `Register / details: ${url}`
+  const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.name)}&dates=${toCalStamp(start)}/${toCalStamp(end)}&location=${encodeURIComponent(event.location)}&details=${encodeURIComponent(details)}`
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Warubi Sports//Showcase//EN', 'BEGIN:VEVENT',
+    `UID:${event.id}@showcase-coordinator`, `DTSTAMP:${toCalStamp(new Date())}`,
+    `DTSTART:${toCalStamp(start)}`, `DTEND:${toCalStamp(end)}`,
+    `SUMMARY:${event.name}`, `LOCATION:${event.location.replace(/,/g, '\\,')}`, `DESCRIPTION:${details}`,
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n')
+  return { google, ics: `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}` }
+}
+
+export const EventLandingSuccess = ({ event, hero, utcOffset, accentColor, email, dateDisplay, timeDisplay, paymentNote, shareUrl }: EventLandingSuccessProps) => {
+  const cal = calendarLinks(event, utcOffset, shareUrl)
+  const shareText = `${event.name}, ${dateDisplay} in ${event.location}. Register here: ${shareUrl}`
+  return (
   <div className="min-h-screen bg-white text-gray-950">
     <ClubBar hero={hero} />
     <div className="max-w-xl mx-auto px-5 py-14">
@@ -317,6 +380,36 @@ export const EventLandingSuccess = ({ event, hero, accentColor, email, dateDispl
         <p className="text-gray-600">{dateDisplay}{timeDisplay ? `, ${timeDisplay}` : ''}</p>
         <p className="text-gray-600">{event.location}</p>
       </div>
+      <div className="mt-6 grid gap-2 sm:grid-cols-2">
+        <a
+          href={cal.google}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-md border border-gray-300 px-4 py-3 text-sm font-semibold hover:bg-gray-50"
+        >
+          <CalendarPlus className="h-4 w-4" />
+          Add to Google Calendar
+        </a>
+        <a
+          href={cal.ics}
+          download={`${event.slug}.ics`}
+          className="flex items-center justify-center gap-2 rounded-md border border-gray-300 px-4 py-3 text-sm font-semibold hover:bg-gray-50"
+        >
+          <CalendarPlus className="h-4 w-4" />
+          Apple / Outlook calendar
+        </a>
+      </div>
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 flex items-center justify-center gap-2 rounded-md px-4 py-3.5 font-bold text-white"
+        style={{ backgroundColor: accentColor }}
+      >
+        <MessageCircle className="h-5 w-5" />
+        Send to a teammate
+      </a>
     </div>
   </div>
-)
+  )
+}
