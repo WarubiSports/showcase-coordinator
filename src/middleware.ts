@@ -5,18 +5,19 @@ const PUBLIC_FILE = /\.(.*)$/
 function isPublicRegistrationPath(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
   if (parts[0] !== 'event') return false
-  // /event/<slug> and its link-preview image /event/<slug>/opengraph-image
-  return parts.length === 2 || (parts.length === 3 && parts[2].startsWith('opengraph-image'))
+  // /event/<slug>, its link-preview image, and the organizer view (gated by its own link key)
+  return parts.length === 2 || (parts.length === 3 && (parts[2].startsWith('opengraph-image') || parts[2] === 'organizer'))
 }
 
 function isPublicPath(pathname: string) {
   return (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/registration-email') ||
+    pathname.startsWith('/api/organizer/') ||
     pathname === '/favicon.ico' ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml' ||
-    PUBLIC_FILE.test(pathname) ||
+    (PUBLIC_FILE.test(pathname) && !pathname.startsWith('/api/')) ||
     isPublicRegistrationPath(pathname)
   )
 }

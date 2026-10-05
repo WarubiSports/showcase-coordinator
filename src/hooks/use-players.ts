@@ -1,8 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import type { Player, PlayerPosition } from '@/types'
+
+const adminFetch = async <T,>(url: string, init?: RequestInit): Promise<T> => {
+  const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`)
+  return body as T
+}
 
 interface PlayerFilters {
   position?: PlayerPosition
@@ -21,22 +27,11 @@ export function usePlayers(eventId: string | undefined, filters?: PlayerFilters)
     try {
       if (!eventId) { setPlayers([]); setIsLoading(false); return }
 
-      let query = supabase
-        .from('showcase_players')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('name')
-
-      if (filters?.position) {
-        query = query.eq('position', filters.position)
-      }
-      if (filters?.search) {
-        query = query.ilike('name', `%${filters.search}%`)
-      }
-
-      const { data, error: fetchError } = await query
-
-      if (fetchError) throw fetchError
+      // showcase_players holds minors' contact data: reads go through the admin API (service role)
+      const params = new URLSearchParams({ event_id: eventId })
+      if (filters?.position) params.set('position', filters.position)
+      if (filters?.search) params.set('search', filters.search)
+      const data = await adminFetch<Player[]>(`/api/admin/players?${params}`)
 
       setPlayers(data || [])
     } catch (err) {
@@ -62,13 +57,10 @@ export function usePlayers(eventId: string | undefined, filters?: PlayerFilters)
     created_by: string
   }) => {
     if (!eventId) throw new Error('No event selected')
-    const { data, error } = await supabase
-      .from('showcase_players')
-      .insert([{ ...player, event_id: eventId }])
-      .select()
-      .single()
-
-    if (error) throw error
+    const data = await adminFetch<Player>('/api/admin/players', {
+      method: 'POST',
+      body: JSON.stringify({ eventId, player }),
+    })
 
     setPlayers((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
     return data
@@ -78,17 +70,10 @@ export function usePlayers(eventId: string | undefined, filters?: PlayerFilters)
     id: string,
     updates: Partial<Omit<Player, 'id' | 'created_at'>>
   ) => {
-    const { data, error } = await supabase
-      .from('showcase_players')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
+    const data = await adminFetch<Player>(`/api/admin/players/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
 
     setPlayers((prev) =>
       prev.map((p) => (p.id === id ? data : p))
@@ -112,8 +97,7 @@ export function usePlayers(eventId: string | undefined, filters?: PlayerFilters)
   }
 
   const deletePlayer = async (id: string) => {
-    const { error } = await supabase.from('showcase_players').delete().eq('id', id)
-    if (error) throw error
+    await adminFetch(`/api/admin/players/${id}`, { method: 'DELETE' })
     setPlayers((prev) => prev.filter((p) => p.id !== id))
   }
 

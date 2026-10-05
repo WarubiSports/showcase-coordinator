@@ -150,14 +150,12 @@ export default function EventRegistrationPage() {
         .select('*')
         .eq('event_id', eventData.id)
         .order('sort_order'),
-      supabase
-        .from('showcase_players')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_id', eventData.id),
+      // Public key can't read registrations (minors' data); a security-definer RPC returns the count only
+      supabase.rpc('showcase_registration_count', { p_event_id: eventData.id }),
     ])
 
     setScouts(scoutsRes.data || [])
-    setRegisteredCount(countRes.count || 0)
+    setRegisteredCount((countRes.data as number | null) ?? 0)
 
     // Look up referring scout name
     if (referredByScoutId) {
