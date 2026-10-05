@@ -1,7 +1,7 @@
 import { Barlow_Condensed } from 'next/font/google'
 import { Check } from 'lucide-react'
 import type { EventScout, ShowcaseEvent } from '@/types'
-import type { EventHero, EventOverride } from '@/lib/event-overrides'
+import { activeEarlyBird, priceLine, type EventHero, type EventOverride } from '@/lib/event-overrides'
 import { RegistrationForm, type RegistrationFormProps } from '@/components/events/registration-form'
 
 const display = Barlow_Condensed({ subsets: ['latin'], weight: ['700', '800'] })
@@ -12,8 +12,6 @@ interface EventLandingProps {
   extras: EventOverride & { hero: EventHero }
   slug: string
   accentColor: string
-  dateDisplay: string
-  timeDisplay: string | null
   mapEmbedUrl: string | null
   canRegister: boolean
   closedLabel: string
@@ -55,8 +53,6 @@ export const EventLanding = ({
   extras,
   slug,
   accentColor,
-  dateDisplay,
-  timeDisplay,
   mapEmbedUrl,
   canRegister,
   closedLabel,
@@ -66,7 +62,8 @@ export const EventLanding = ({
   onRegister,
   formProps,
 }: EventLandingProps) => {
-  const { hero, days, highlights, contact, presentedBy, earlyBirdPrice } = extras
+  const { hero, days, highlights, contact, presentedBy, payment } = extras
+  const earlyBird = activeEarlyBird(extras)
   const cur = currencySymbol(event.currency)
   const h2 = `${display.className} text-[32px] font-bold uppercase leading-none text-gray-950`
 
@@ -129,7 +126,15 @@ export const EventLanding = ({
               <div className="flex gap-2">
                 <dt className="w-14 shrink-0 font-semibold">Entry</dt>
                 <dd className="text-white/90">
-                  {cur}{event.price}{earlyBirdPrice ? `, early bird ${cur}${earlyBirdPrice}` : ''}
+                  {priceLine(event.price, event.currency, extras)}
+                  {payment && (
+                    <span className="block">
+                      Pay via{' '}
+                      <a href={payment.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">
+                        {payment.label}
+                      </a>
+                    </span>
+                  )}
                 </dd>
               </div>
             )}
@@ -274,7 +279,7 @@ export const EventLanding = ({
           <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
             <p className="text-sm leading-tight">
               <span className="font-semibold">{days?.find((d) => d.slug === slug)?.label ?? event.name}</span>
-              <span className="text-gray-500"> · {cur}{earlyBirdPrice ?? event.price}{earlyBirdPrice ? ' early bird' : ''}</span>
+              <span className="text-gray-500"> · {cur}{earlyBird ?? event.price}{earlyBird ? ' early bird' : ''}</span>
             </p>
             <button onClick={onRegister} className="rounded-md px-5 py-2.5 text-sm font-bold text-white" style={{ backgroundColor: accentColor }}>
               Register

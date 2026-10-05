@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getEventOverride } from '@/lib/event-overrides'
+import { getEventOverride, priceLine } from '@/lib/event-overrides'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -20,11 +20,13 @@ export async function POST(req: NextRequest) {
   const safeEventDate = escapeHtml(eventDate || '')
   const safeEventLocation = escapeHtml(eventLocation || '')
   const safeEventTime = escapeHtml(eventTime || '')
-  const safePrice = escapeHtml(String(price || ''))
 
-  const currencySymbol = currency === 'EUR' ? '€' : '$'
-  const earlyBird = extras.earlyBirdPrice ? ` (${currencySymbol}${extras.earlyBirdPrice} early bird)` : ''
-  const priceInfo = price ? `<p style="font-size:18px;font-weight:bold;color:#3B82F6;margin:16px 0">${currencySymbol}${safePrice}${earlyBird}. Payment due before the event.</p>` : ''
+  const payment = extras.payment
+  const priceText = price ? escapeHtml(priceLine(Number(price), currency, extras)) : ''
+  const payText = payment
+    ? `Pay via <a href="${escapeHtml(payment.url)}" style="color:#3B82F6">${escapeHtml(payment.label)}</a> before the event.`
+    : 'Payment due before the event.'
+  const priceInfo = price ? `<p style="font-size:16px;font-weight:bold;margin:16px 0 4px">Entry fee: ${priceText}</p><p style="margin:0 0 16px;color:#444">${payText}</p>` : ''
   const contact = extras.contact
   const contactInfo = contact
     ? `Questions? Reply to this email or contact ${escapeHtml(contact.name)}, ${escapeHtml(contact.role)}: ${escapeHtml(contact.email)}${contact.phone ? `, ${escapeHtml(contact.phone)}` : ''}`

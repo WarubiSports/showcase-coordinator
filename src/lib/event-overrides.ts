@@ -29,8 +29,16 @@ export interface EventContact {
   phone?: string
 }
 
+export interface EventPayment {
+  label: string
+  url: string
+}
+
 export interface EventOverride {
   earlyBirdPrice?: number
+  // ISO date (inclusive); early-bird price is shown until then
+  earlyBirdUntil?: string
+  payment?: EventPayment
   days?: EventDayLink[]
   highlights?: EventHighlight[]
   contact?: EventContact
@@ -39,7 +47,9 @@ export interface EventOverride {
 }
 
 const HAWAII_808_2026: EventOverride = {
-  earlyBirdPrice: 40,
+  earlyBirdPrice: 50,
+  earlyBirdUntil: '2026-10-31',
+  payment: { label: 'Venmo @Fabian-Rummel', url: 'https://venmo.com/u/Fabian-Rummel' },
   days: [
     { label: 'Boys', dateNum: '20', month: 'Dec', detail: 'Field 9 · 9 AM to 12 PM', slug: '808-showcase-boys' },
     { label: 'Girls', dateNum: '21', month: 'Dec', detail: 'Field 6 · 9 AM to 12 PM', slug: '808-showcase-girls' },
@@ -54,7 +64,7 @@ const HAWAII_808_2026: EventOverride = {
     ],
   },
   highlights: [
-    { title: 'College Coaches', desc: 'Play in front of college coaches from Hawaii Pacific, Chaminade and UH Hilo, with more to come' },
+    { title: 'College Coaches', desc: 'Play in front of college coaches, with more programs to be announced' },
     { title: '1.FC Köln ITP Scouts', desc: 'Direct exposure to scouts from the Bundesliga club’s International Talent Program' },
     { title: 'Playing Games', desc: 'Small-sided games, so coaches see you in real game situations' },
     { title: 'Performance Testing', desc: 'Athletic performance testing on site' },
@@ -74,3 +84,21 @@ const EVENT_OVERRIDES: Record<string, EventOverride> = {
 }
 
 export const getEventOverride = (slug: string): EventOverride => EVENT_OVERRIDES[slug] ?? {}
+
+// Early-bird price while it applies (no end date = always)
+export const activeEarlyBird = (extras: EventOverride, now = new Date()): number | undefined => {
+  if (!extras.earlyBirdPrice) return undefined
+  if (!extras.earlyBirdUntil) return extras.earlyBirdPrice
+  return now <= new Date(`${extras.earlyBirdUntil}T23:59:59-10:00`) ? extras.earlyBirdPrice : undefined
+}
+
+const formatUntil = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+// "$60, early bird $50 until Oct 31" style price line
+export const priceLine = (price: number, currency: string, extras: EventOverride, now = new Date()): string => {
+  const cur = currency === 'EUR' ? '€' : '$'
+  const eb = activeEarlyBird(extras, now)
+  if (!eb) return `${cur}${price}`
+  return `${cur}${price}, early bird ${cur}${eb}${extras.earlyBirdUntil ? ` until ${formatUntil(extras.earlyBirdUntil)}` : ''}`
+}

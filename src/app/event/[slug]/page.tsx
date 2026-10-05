@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout } from '@/types'
 import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap, Mail, Phone } from 'lucide-react'
 import { STORAGE_KEYS } from '@/lib/constants'
-import { getEventOverride } from '@/lib/event-overrides'
+import { getEventOverride, activeEarlyBird, priceLine } from '@/lib/event-overrides'
 import { RegistrationForm, type RegistrationFormState } from '@/components/events/registration-form'
 import { EventLanding, EventLandingSuccess } from '@/components/events/event-landing'
 import { toast } from 'sonner'
@@ -285,8 +285,9 @@ export default function EventRegistrationPage() {
     : isFull
       ? 'All spots for this event have been filled. Contact the organizer for waitlist options.'
       : 'The registration deadline for this event has passed.'
+  const earlyBird = activeEarlyBird(extras)
   const paymentNote = event.price
-    ? `Payment of ${event.currency === 'EUR' ? '€' : '$'}${event.price}${extras.earlyBirdPrice ? ` ($${extras.earlyBirdPrice} early bird)` : ''} is due before the event.`
+    ? `Entry fee: ${priceLine(event.price, event.currency, extras)}. ${extras.payment ? `Pay via ${extras.payment.label} (${extras.payment.url.replace('https://', '')}) before the event.` : 'Payment is due before the event.'}`
     : null
   const formProps = {
     form,
@@ -366,8 +367,6 @@ export default function EventRegistrationPage() {
         extras={{ ...extras, hero: extras.hero }}
         slug={slug}
         accentColor={accentColor}
-        dateDisplay={dateDisplay}
-        timeDisplay={timeDisplay}
         mapEmbedUrl={mapEmbedUrl}
         canRegister={canRegister}
         closedLabel={closedLabel}
@@ -513,13 +512,13 @@ export default function EventRegistrationPage() {
                 <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">/ player</span>
               </div>
             )}
-            {event.price && extras.earlyBirdPrice && (
+            {event.price && earlyBird && (
               <div
                 className="rounded-xl px-3 py-1.5 text-left leading-tight"
                 style={{ backgroundColor: `${accentColor}18`, border: `1px solid ${accentColor}40` }}
               >
                 <span className="block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: accentColor }}>Early Bird</span>
-                <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{extras.earlyBirdPrice}</span>
+                <span className="block text-xl font-black text-white">{event.currency === 'EUR' ? '€' : '$'}{earlyBird}</span>
               </div>
             )}
           </div>
@@ -770,7 +769,7 @@ export default function EventRegistrationPage() {
               <span>Register now</span>
               {event.price && (
                 <span className="text-sm font-bold normal-case tracking-normal text-white/85">
-                  {extras.earlyBirdPrice ? `Early bird ${event.currency === 'EUR' ? '€' : '$'}${extras.earlyBirdPrice}` : `${event.currency === 'EUR' ? '€' : '$'}${event.price}`}
+                  {earlyBird ? `Early bird ${event.currency === 'EUR' ? '€' : '$'}${earlyBird}` : `${event.currency === 'EUR' ? '€' : '$'}${event.price}`}
                 </span>
               )}
             </button>
