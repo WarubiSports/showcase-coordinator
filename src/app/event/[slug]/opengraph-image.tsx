@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { supabase } from '@/lib/supabase'
+import { getEventOverride, resolveEventSlug } from '@/lib/event-overrides'
 
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
@@ -41,7 +42,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ slu
   const { data: event } = await supabase
     .from('showcase_events')
     .select('name, host_name, host_logo_url, start_date, start_time, end_time, location, price, currency, accent_color')
-    .eq('slug', slug)
+    .eq('slug', resolveEventSlug(slug).dataSlug)
     .single()
 
   const accent = event?.accent_color || '#3B82F6'
@@ -50,7 +51,13 @@ export default async function OpengraphImage({ params }: { params: Promise<{ slu
     : null
   const start = formatTime(event?.start_time ?? null)
   const end = formatTime(event?.end_time ?? null)
-  const when = event ? [formatDay(event.start_date), start && end ? `${start} to ${end}` : start].filter(Boolean).join(' · ') : ''
+  const extras = getEventOverride(slug)
+  const isAlias = resolveEventSlug(slug).isAlias
+  const name = isAlias ? extras.hero?.title ?? event?.name : event?.name
+  const when = isAlias && extras.days
+    ? extras.days.map((d) => `${d.label} ${d.month} ${d.dateNum}`).join(' · ')
+    : event ? [formatDay(event.start_date), start && end ? `${start} to ${end}` : start].filter(Boolean).join(' · ') : ''
+  const where = isAlias ? event?.location.replace(/, Field \d+/, '') : event?.location
 
   return new ImageResponse(
     (
@@ -72,12 +79,12 @@ export default async function OpengraphImage({ params }: { params: Promise<{ slu
               {event?.host_name ? `Hosted by ${event.host_name}` : 'Registration open'}
             </div>
             <div style={{ fontSize: 76, fontWeight: 900, lineHeight: 1.02, marginTop: 20, textTransform: 'uppercase', display: 'flex', maxWidth: 760 }}>
-              {event?.name || 'Event registration'}
+              {name || 'Event registration'}
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: 30, color: '#d1d5db' }}>
             <div style={{ display: 'flex' }}>{when}</div>
-            <div style={{ display: 'flex', marginTop: 8 }}>{event?.location || ''}</div>
+            <div style={{ display: 'flex', marginTop: 8 }}>{where || ''}</div>
             <div style={{ display: 'flex', marginTop: 28 }}>
               <div style={{ display: 'flex', background: accent, color: 'white', padding: '14px 30px', borderRadius: 16, fontSize: 30, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase' }}>
                 Register now

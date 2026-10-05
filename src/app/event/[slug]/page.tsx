@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import type { ShowcaseEvent, EventScout } from '@/types'
 import { MapPin, Calendar, Clock, Users, ChevronDown, ChevronUp, Check, Loader2, AlertCircle, ArrowLeft, Timer, Star, Trophy, Video, Zap, Mail, Phone } from 'lucide-react'
 import { STORAGE_KEYS } from '@/lib/constants'
-import { getEventOverride, activeEarlyBird, priceLine } from '@/lib/event-overrides'
+import { getEventOverride, activeEarlyBird, priceLine, resolveEventSlug } from '@/lib/event-overrides'
 import { RegistrationForm, type RegistrationFormState } from '@/components/events/registration-form'
 import { EventLanding, EventLandingSuccess } from '@/components/events/event-landing'
 import { toast } from 'sonner'
@@ -60,6 +60,7 @@ export default function EventRegistrationPage() {
   const slug = params.slug as string
   const referredByScoutId = searchParams.get('ref') || null
   const extras = getEventOverride(slug)
+  const { dataSlug, isAlias } = resolveEventSlug(slug)
   const highlights = extras.highlights
     ? extras.highlights.map((h, i) => ({ ...h, icon: HIGHLIGHT_ICONS[i % HIGHLIGHT_ICONS.length] }))
     : DEFAULT_HIGHLIGHTS
@@ -79,7 +80,8 @@ export default function EventRegistrationPage() {
   const [referrerName, setReferrerName] = useState<string | null>(null)
 
   // Registration form
-  const [showForm, setShowForm] = useState(false)
+  // ?register=1 (from the shared multi-day link) opens the form straight away
+  const [showForm, setShowForm] = useState(() => searchParams.get('register') === '1' && !isAlias)
   const [showSticky, setShowSticky] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
@@ -99,6 +101,12 @@ export default function EventRegistrationPage() {
 
   const formRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (event && showForm) setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+    // only when the event first loads
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event])
+
   // Sticky register bar once the hero has scrolled away
   useEffect(() => {
     const onScroll = () => setShowSticky(window.scrollY > 700)
@@ -114,7 +122,7 @@ export default function EventRegistrationPage() {
   // Set document title when event loads
   useEffect(() => {
     if (event) {
-      document.title = `${event.name} | Registration`
+      document.title = `${isAlias ? extras.hero?.title ?? event.name : event.name} | Registration`
     }
     return () => {
       document.title = 'Showcase Coordinator'
@@ -132,7 +140,7 @@ export default function EventRegistrationPage() {
     const { data: eventData, error: eventError } = await supabase
       .from('showcase_events')
       .select('*')
-      .eq('slug', slug)
+      .eq('slug', dataSlug)
       .single()
 
     if (eventError || !eventData) {
@@ -372,6 +380,7 @@ export default function EventRegistrationPage() {
         closedLabel={closedLabel}
         showForm={showForm}
         showSticky={showSticky}
+        isAlias={isAlias}
         daysAway={getDaysUntil(event.start_date)}
         onRegister={openForm}
         formProps={formProps}

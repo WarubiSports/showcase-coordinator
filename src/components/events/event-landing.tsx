@@ -18,6 +18,8 @@ interface EventLandingProps {
   closedLabel: string
   showForm: boolean
   showSticky: boolean
+  // Shared multi-day link: no day selected yet, registering starts by picking one
+  isAlias: boolean
   daysAway: number
   onRegister: () => void
   formProps: Omit<RegistrationFormProps, 'variant' | 'accentColor'>
@@ -71,6 +73,27 @@ const HeroVideo = ({ video, accentColor }: { video: NonNullable<EventHero['video
   )
 }
 
+// Big "Boys · Dec 20" style buttons that take the visitor to that day's registration
+const DayButtons = ({ days, accentColor, hrefFor, dark }: {
+  days: NonNullable<EventOverride['days']>
+  accentColor: string
+  hrefFor: (slug: string) => string
+  dark?: boolean
+}) => (
+  <div className="grid grid-cols-2 gap-2">
+    {days.map((day) => (
+      <a
+        key={day.slug}
+        href={hrefFor(day.slug)}
+        className={`rounded-md px-4 py-3 text-center font-bold ${dark ? 'text-white' : 'bg-white'}`}
+        style={dark ? { backgroundColor: accentColor } : { color: accentColor }}
+      >
+        {day.label} · {day.month} {day.dateNum}
+      </a>
+    ))}
+  </div>
+)
+
 // Light, club-style landing page for partner events (enabled via a hero config in event-overrides)
 export const EventLanding = ({
   event,
@@ -83,6 +106,7 @@ export const EventLanding = ({
   closedLabel,
   showForm,
   showSticky,
+  isAlias,
   daysAway,
   onRegister,
   formProps,
@@ -92,6 +116,8 @@ export const EventLanding = ({
   const earlyBirdDays = earlyBirdDaysLeft(extras)
   const cur = currencySymbol(event.currency)
   const h2 = `${display.className} text-[32px] font-bold uppercase leading-none text-gray-950`
+  const dayHref = (daySlug: string) => `/event/${daySlug}${isAlias ? '?register=1' : ''}`
+  const location = isAlias ? event.location.replace(/, Field \d+/, '') : event.location
 
   return (
     <div className="min-h-screen bg-white text-gray-950">
@@ -129,18 +155,19 @@ export const EventLanding = ({
                 return (
                   <a
                     key={day.slug}
-                    href={`/event/${day.slug}`}
+                    href={dayHref(day.slug)}
                     role="tab"
                     aria-selected={isCurrent}
-                    className={`rounded-md px-4 py-3 ${isCurrent ? 'bg-white text-gray-950' : 'bg-black/15 text-white hover:bg-black/25'}`}
+                    className={`rounded-md px-4 py-3 ${isCurrent || isAlias ? 'bg-white text-gray-950 hover:bg-gray-100' : 'bg-black/15 text-white hover:bg-black/25'}`}
                   >
-                    <span className={`${display.className} block text-[22px] font-bold uppercase leading-none`} style={isCurrent ? { color: accentColor } : undefined}>
+                    <span className={`${display.className} block text-[22px] font-bold uppercase leading-none`} style={isCurrent || isAlias ? { color: accentColor } : undefined}>
                       {day.label}
                     </span>
                     <span className={`${display.className} mt-1 block text-[40px] font-extrabold uppercase leading-none`}>
                       {day.month} {day.dateNum}
                     </span>
-                    <span className={`mt-1.5 block text-xs font-medium ${isCurrent ? 'text-gray-500' : 'text-white/75'}`}>{day.detail}</span>
+                    <span className={`mt-1.5 block text-xs font-medium ${isCurrent || isAlias ? 'text-gray-500' : 'text-white/75'}`}>{day.detail}</span>
+                    {isAlias && <span className="mt-2 block text-sm font-bold" style={{ color: accentColor }}>Register →</span>}
                   </a>
                 )
               })}
@@ -150,7 +177,7 @@ export const EventLanding = ({
           <dl className="mt-6 space-y-1.5 text-[15px] leading-snug">
             <div className="flex gap-2">
               <dt className="w-14 shrink-0 font-semibold">Where</dt>
-              <dd className="text-white/90">{event.location}</dd>
+              <dd className="text-white/90">{location}</dd>
             </div>
             {event.price && (
               <div className="flex gap-2">
@@ -177,7 +204,13 @@ export const EventLanding = ({
             </p>
           )}
 
-          {canRegister && (
+          {canRegister && isAlias && (
+            <p className={`${display.className} ${earlyBirdDays > 0 ? 'mt-3' : 'mt-8'} text-[24px] font-bold uppercase leading-none`}>
+              Tap your day above to register
+            </p>
+          )}
+
+          {canRegister && !isAlias && (
             <button
               onClick={onRegister}
               className={`${display.className} ${earlyBirdDays > 0 ? 'mt-3' : 'mt-8'} w-full sm:w-auto rounded-md bg-white px-10 py-3 text-[26px] font-bold uppercase leading-none hover:bg-gray-100`}
@@ -268,6 +301,12 @@ export const EventLanding = ({
               <h2 className={h2}>Registration</h2>
               <p className="mt-4 text-gray-600">{closedLabel}</p>
             </>
+          ) : isAlias ? (
+            <>
+              <h2 className={h2}>Register</h2>
+              <p className="mt-4 mb-5 text-gray-600">Pick your day. You&apos;ll get a confirmation by email.</p>
+              {days && <DayButtons days={days} accentColor={accentColor} hrefFor={dayHref} dark />}
+            </>
           ) : showForm ? (
             <RegistrationForm variant="light" accentColor={accentColor} {...formProps} />
           ) : (
@@ -313,6 +352,9 @@ export const EventLanding = ({
         <div
           className={`fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur transition-transform duration-300 ${showSticky ? 'translate-y-0' : 'translate-y-full'}`}
         >
+          {isAlias ? (
+            <div className="max-w-3xl mx-auto">{days && <DayButtons days={days} accentColor={accentColor} hrefFor={dayHref} dark />}</div>
+          ) : (
           <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
             <p className="text-sm leading-tight">
               <span className="font-semibold">{days?.find((d) => d.slug === slug)?.label ?? event.name}</span>
@@ -322,6 +364,7 @@ export const EventLanding = ({
               Register
             </button>
           </div>
+          )}
         </div>
       )}
     </div>

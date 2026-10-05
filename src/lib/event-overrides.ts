@@ -86,9 +86,21 @@ const HAWAII_808_2026: EventOverride = {
 }
 
 const EVENT_OVERRIDES: Record<string, EventOverride> = {
+  '808-showcase': HAWAII_808_2026,
   '808-showcase-boys': HAWAII_808_2026,
   '808-showcase-girls': HAWAII_808_2026,
 }
+
+// Shared link for multi-day events: /event/<alias> shows every day and asks which one before
+// registering. Data (price, venue, coaches) comes from the mapped day event.
+const EVENT_ALIASES: Record<string, string> = {
+  '808-showcase': '808-showcase-boys',
+}
+
+export const resolveEventSlug = (slug: string) => ({
+  dataSlug: EVENT_ALIASES[slug] ?? slug,
+  isAlias: slug in EVENT_ALIASES,
+})
 
 export const getEventOverride = (slug: string): EventOverride => EVENT_OVERRIDES[slug] ?? {}
 
