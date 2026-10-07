@@ -71,7 +71,7 @@ const HAWAII_808_2026: EventOverride = {
     video: { src: '/events/808/hero-loop.mp4', poster: '/events/808/hero-poster.jpg' },
   },
   highlights: [
-    { title: 'College Coaches', desc: 'Play in front of college coaches, with more programs to be announced' },
+    { title: 'College Coaches', desc: 'Play in front of college coaches from Hawaii Pacific and Chaminade, with more programs to be announced' },
     { title: '1.FC Köln ITP Scouts', desc: 'Direct exposure to scouts from the Bundesliga club’s International Talent Program' },
     { title: 'Playing Games', desc: 'Small-sided games, so coaches see you in real game situations' },
     { title: 'Performance Testing', desc: 'Athletic performance testing on site' },
