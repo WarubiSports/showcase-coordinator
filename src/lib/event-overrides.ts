@@ -56,8 +56,9 @@ const HAWAII_808_2026: EventOverride = {
   payment: { label: 'Venmo @Fabian-Rummel', url: 'https://venmo.com/u/Fabian-Rummel' },
   utcOffset: '-10:00',
   days: [
-    { label: 'Boys', dateNum: '20', month: 'Dec', detail: 'Field 9 · 9 AM to 12 PM', slug: '808-showcase-boys' },
-    { label: 'Girls', dateNum: '21', month: 'Dec', detail: 'Field 6 · 9 AM to 12 PM', slug: '808-showcase-girls' },
+    // Permit (Fabian, 03.10): WPSP Field #05, Tue 12/29 + Wed 12/30/2026, 9:00 AM to 1:30 PM
+    { label: 'Boys', dateNum: '29', month: 'Dec', detail: 'Tue · Field 5 · 9 AM to 12 PM', slug: '808-showcase-boys' },
+    { label: 'Girls', dateNum: '30', month: 'Dec', detail: 'Wed · Field 5 · 9 AM to 12 PM', slug: '808-showcase-girls' },
   ],
   hero: {
     kicker: '808 Futbol Club · Waipahu, Hawaii',

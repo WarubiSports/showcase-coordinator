@@ -73,7 +73,7 @@ const HeroVideo = ({ video, accentColor }: { video: NonNullable<EventHero['video
   )
 }
 
-// Big "Boys · Dec 20" style buttons that take the visitor to that day's registration
+// Big "Boys · Dec 29" style buttons that take the visitor to that day's registration
 const DayButtons = ({ days, accentColor, hrefFor, dark }: {
   days: NonNullable<EventOverride['days']>
   accentColor: string
