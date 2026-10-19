@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import { resolveItpTarget, itpMoveProbe, ItpTargetUnusableError } from '../src/lib/itp-target.ts'
 import {
   SHOWCASE_DB_TABLES,
+  TABLE_ACTIONS,
   DbRequestError,
   isSameOriginJsonRequest,
   createDbProxy,
@@ -19,10 +20,12 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 // ---------- resolver: TODAY / SWITCHED / UNUSABLE ----------
 
 test('TODAY: unset or blank schema keeps URL, key and client options exactly', () => {
-  for (const schema of [undefined, '', ' \t ']) {
-    const target = resolveItpTarget(today, key, schema)
+  // Today's Production URL ends in a newline (seen in the live bundle 2026-10-19): it passes unchanged.
+  for (const [url, schema] of [[today, undefined], [today, ''], [today, ' \t '], [`${today}\n`, undefined], [`${today}/`, undefined]]) {
+    const target = resolveItpTarget(url, key, schema)
     assert.equal(target.schema, 'public')
-    assert.deepEqual([target.url, target.key, ...target.clientOptions], [today, key])
+    assert.equal(target.origin, today)
+    assert.deepEqual([target.url, target.key, ...target.clientOptions], [url, key])
     // The factories spread clientOptions[0]: undefined adds nothing to today's options object.
     assert.deepEqual({ auth: { storageKey: 'showcase-coordinator-auth' }, ...target.clientOptions[0] },
       { auth: { storageKey: 'showcase-coordinator-auth' } })
@@ -39,11 +42,19 @@ test('UNUSABLE: every bad mix refuses before any client or request exists', () =
   const unusable = [
     [core, undefined], [core, ''], [today, 'itp'], [today, 'public'], [core, 'ITP'],
     [core.replace('https:', 'http:'), 'itp'], [core + '.evil.example', 'itp'], ['not a URL', 'itp'], [undefined, undefined],
+    // Only the two canonical endpoints: no other host, no http, no credentials, path, query, fragment or port.
+    ['https://evil.example', undefined], ['https://elsewhere.supabase.co', ''], [today.replace('https:', 'http:'), undefined],
+    [core.replace('https://', 'https://user:pw@'), 'itp'], [today.replace('https://', 'https://user@'), undefined],
+    [`${core}/rest/v1`, 'itp'], [`${core}?x=1`, 'itp'], [`${core}#f`, 'itp'], [`${today}:8443`, undefined],
   ]
   for (const [url, schema] of unusable) {
-    assert.throws(() => resolveItpTarget(url, key, schema), ItpTargetUnusableError)
+    assert.throws(() => resolveItpTarget(url, key, schema), ItpTargetUnusableError, `${url} ${schema}`)
   }
-  assert.throws(() => resolveItpTarget(core, '', 'itp'), ItpTargetUnusableError)
+  for (const [url, schema] of [[core, 'itp'], [today, undefined]]) {
+    for (const badKey of [undefined, '', ' ', '\n']) {
+      assert.throws(() => resolveItpTarget(url, badKey, schema), ItpTargetUnusableError, JSON.stringify(badKey))
+    }
+  }
 })
 
 test('probe: no token = no I/O and no key; token = one move_phase read with the itp profile', async () => {
@@ -66,6 +77,21 @@ test('probe: no token = no I/O and no key; token = one move_phase read with the 
   assert.ok(!JSON.stringify(body).includes(key))
 })
 
+test('probe: every failed read says why, without echoing anything', async () => {
+  const probe = async (fetch, url = core, schema = 'itp') =>
+    (await (await itpMoveProbe({ authorized: true, url, key, schema, fetch })).json())
+  const urls = []
+  const missing = await probe(async (u) => { urls.push(u); return new Response('{"code":"PGRST202","message":"x"}', { status: 404 }) }, `${today}\n`, '')
+  assert.deepEqual(urls, [`${today}/rest/v1/rpc/move_phase`], 'parsed origin, not the raw env string')
+  assert.equal(missing.error, 'PGRST202')
+  assert.equal((await probe(async () => new Response('<html>bad gateway', { status: 502 }))).error, 'http_502')
+  assert.equal((await probe(async () => new Response('{}', { status: 200 }))).error, 'no_phase')
+  assert.equal((await probe(async () => { throw new TypeError('fetch failed') })).error, 'request_failed')
+  const timeout = Object.assign(new Error('t'), { name: 'TimeoutError' })
+  assert.equal((await probe(async () => { throw timeout })).error, 'timeout')
+  assert.equal((await probe(async () => { throw new Error('never called') }, 'https://evil.example', '')).error, 'target_unusable')
+})
+
 test('probe route: exact public path, token compared by digest, service key + schema env', () => {
   const route = read('src/app/api/itp-move-probe/route.ts')
   assert.match(route, /timingSafeEqual\(/)
@@ -80,7 +106,7 @@ test('probe route: exact public path, token compared by digest, service key + sc
 
 test('db HTTP gate refuses cross-site forms before their valid JSON reaches the parser', async () => {
   // A text/plain HTML form can add its '=' separator inside an ignored JSON field.
-  const form = '{"table":"showcase_tasks","action":"delete","filters":[{"op":"eq","column":"event_id","value":"fixture"}],"padding":"' + '=' + '"}\r\n'
+  const form = '{"table":"showcase_tasks","action":"delete","filters":[{"op":"eq","column":"id","value":"fixture"}],"padding":"' + '=' + '"}\r\n'
   const attack = new Request('https://coordinator.example/api/admin/db', {
     method: 'POST',
     headers: { origin: 'https://attacker.example', 'content-type': 'text/plain' },
@@ -144,6 +170,35 @@ test('db route refuses other tables, actions, filters, columns and unscoped chan
   refused({ table: 'showcase_tasks', action: 'delete', filters: [{ op: 'eq', column: 'id', value: 'x' }], single: true })
   refused(null)
   refused([])
+})
+
+test('db route: each table allows only what the screens do, and a change names its row by id', () => {
+  const byId = [{ op: 'eq', column: 'id', value: 'r1' }]
+  // Read-only categories, append-only activity log, materials, comments, milestones, feedback.
+  for (const action of ['insert', 'update', 'delete']) refused({ table: 'showcase_categories', action, values: action === 'delete' ? null : { name: 'x' }, filters: action === 'insert' ? [] : byId })
+  for (const action of ['select', 'update', 'delete']) refused({ table: 'showcase_activity', action, columns: '*', values: action === 'update' ? { actor: 'x' } : null, filters: action === 'select' ? [] : byId })
+  refused({ table: 'showcase_materials', action: 'delete', filters: byId })
+  refused({ table: 'showcase_comments', action: 'update', values: { content: 'x' }, filters: byId })
+  refused({ table: 'showcase_milestones', action: 'delete', filters: byId })
+  refused({ table: 'showcase_milestones', action: 'insert', values: { title: 'x' } })
+  refused({ table: 'showcase_feedback', action: 'delete', filters: byId })
+  refused({ table: 'showcase_day_groups', action: 'update', values: { name: 'x' }, filters: byId })
+  // No mass change through a non-id filter (e.g. every open event), no id rewrite, no non-string id.
+  refused({ table: 'showcase_events', action: 'delete', filters: [{ op: 'eq', column: 'registration_open', value: true }] })
+  refused({ table: 'showcase_tasks', action: 'update', values: { status: 'x' }, filters: [{ op: 'eq', column: 'event_id', value: 'e1' }] })
+  refused({ table: 'showcase_tasks', action: 'delete', filters: [{ op: 'eq', column: 'event_id', value: 'e1' }] })
+  refused({ table: 'showcase_tasks', action: 'delete', filters: [{ op: 'eq', column: 'id', value: true }] })
+  refused({ table: 'showcase_tasks', action: 'delete', filters: [{ op: 'eq', column: 'id', value: '' }] })
+  refused({ table: 'showcase_tasks', action: 'update', values: { id: 'other' }, filters: byId })
+  // The cloning exception is exactly one event-scoped day-group delete.
+  refused({ table: 'showcase_day_groups', action: 'delete', filters: [{ op: 'eq', column: 'event_id', value: 'e1' }, { op: 'ilike', column: 'name', value: '%' }] })
+  refused({ table: 'showcase_day_groups', action: 'delete', filters: [{ op: 'eq', column: 'sort_order', value: 1 }] })
+  refused({ table: 'showcase_matches', action: 'delete', filters: [{ op: 'eq', column: 'event_id', value: 'e1' }] })
+  // Embeds only of tables the screens may read.
+  refused({ table: 'showcase_tasks', action: 'select', columns: '*, showcase_activity(*)' })
+  ok({ table: 'showcase_activity', action: 'insert', values: { action: 'created' }, columns: null })
+  ok({ table: 'showcase_events', action: 'delete', filters: byId })
+  ok({ table: 'showcase_milestones', action: 'update', values: { completed: true }, filters: byId })
 })
 
 test('db route: basic auth checked first, then the parser; service client only', () => {
@@ -237,9 +292,10 @@ const PROXY_METHODS = new Set(['from', 'select', 'insert', 'update', 'delete', '
 const tableOf = (text) => text.match(/^supabase\s*\.\s*from\(\s*'([a-z_]+)'\s*\)/)?.[1]
 
 // Follows each `supabase.x(...).y(...)` chain (balanced parentheses, whitespace and newlines allowed).
-function chains(src) {
+// With another word it follows the chains continued on a local variable (`query = query.ilike(...)`).
+function chains(src, word = 'supabase') {
   const out = []
-  for (const m of src.matchAll(/\bsupabase\b/g)) {
+  for (const m of src.matchAll(new RegExp(`\\b${word}\\b`, 'g'))) {
     let i = m.index + m[0].length
     const names = []
     for (;;) {
@@ -267,6 +323,8 @@ function chains(src) {
 
 test('census: the 14 coordinator files use only the proxy methods and listed tables', () => {
   let count = 0
+  let variables = 0
+  const used = new Set()
   for (const file of ADMIN_FILES) {
     const src = read(file)
     assert.match(src, /^import \{ adminDb as supabase \} from '@\/lib\/admin-db'$/m, file)
@@ -283,11 +341,29 @@ test('census: the 14 coordinator files use only the proxy methods and listed tab
       const table = tableOf(text)
       assert.ok(SHOWCASE_DB_TABLES.includes(table), `${file}: table ${table} not on the db route list`)
       for (const sel of text.matchAll(/select\(\s*'([^']*)'/g)) {
-        for (const t of sel[1].matchAll(/([a-z_]+)\(\*\)/g)) assert.ok(SHOWCASE_DB_TABLES.includes(t[1]), `${file}: embed ${t[1]}`)
+        for (const t of sel[1].matchAll(/([a-z_]+)\(\*\)/g)) assert.ok(TABLE_ACTIONS[t[1]]?.includes('select'), `${file}: embed ${t[1]}`)
+      }
+      // The per-table rules must fit every screen call: allowed action, changes by id (or the clone clear).
+      const action = names.find((n) => ['insert', 'update', 'delete'].includes(n)) ?? 'select'
+      used.add(`${table}.${action}`)
+      assert.ok(TABLE_ACTIONS[table].includes(action), `${file}: ${action} on ${table} is refused by the route`)
+      if (action === 'update' || action === 'delete') {
+        const clone = table === 'showcase_day_groups' && action === 'delete' && /\.eq\(\s*'event_id'/.test(text) && names.filter((n) => n === 'eq').length === 1
+        assert.ok(/\.eq\(\s*'id'/.test(text) || clone, `${file}: ${action} on ${table} without an id`)
+      }
+    }
+    // Chains continued on a local variable use only proxy methods too.
+    for (const v of src.matchAll(/\b(?:let|const|var)\s+(\w+)\s*=\s*supabase\b/g)) {
+      variables++
+      for (const { names, text } of chains(src, v[1])) {
+        for (const name of names) assert.ok(PROXY_METHODS.has(name), `${file}: unsupported .${name} in ${text.slice(0, 80)}`)
       }
     }
   }
   assert.ok(count >= 50, `found ${count} chains`)
+  assert.equal(variables, 2, 'use-attendees and use-tasks build their list query on a variable')
+  // And the rules are no wider than the screens: every allowed action is one a screen uses.
+  assert.deepEqual([...used].sort(), Object.entries(TABLE_ACTIONS).flatMap(([t, as]) => as.map((a) => `${t}.${a}`)).sort())
 })
 
 test('census: every listed table is used, and the public files touch only public-on-Core objects', () => {

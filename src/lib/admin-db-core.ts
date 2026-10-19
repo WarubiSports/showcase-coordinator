@@ -6,27 +6,30 @@
 // auth, so once switched they send each table call to /api/admin/db, which replays it with the
 // service client. This module is dependency-free so node --test can load it directly.
 
-// Exactly the tables the coordinator screens call (census in tests/itp-move.test.mjs).
-// showcase_players has its own admin routes; scouts and every non-showcase table stay out.
-export const SHOWCASE_DB_TABLES = [
-  'showcase_activity',
-  'showcase_announcements',
-  'showcase_attendees',
-  'showcase_categories',
-  'showcase_comments',
-  'showcase_day_activities',
-  'showcase_day_groups',
-  'showcase_event_scouts',
-  'showcase_events',
-  'showcase_feedback',
-  'showcase_matches',
-  'showcase_materials',
-  'showcase_milestones',
-  'showcase_tasks',
-  'showcase_venue_zones',
-] as const
-
 export const DB_ACTIONS = ['select', 'insert', 'update', 'delete'] as const
+
+// Exactly the tables the coordinator screens call, and only what they do with each (census in
+// tests/itp-move.test.mjs): categories are read-only, the activity log is append-only, and so on.
+// showcase_players has its own admin routes; scouts and every non-showcase table stay out.
+export const TABLE_ACTIONS: Record<string, readonly Action[]> = {
+  showcase_activity: ['insert'],
+  showcase_announcements: ['select', 'insert', 'update', 'delete'],
+  showcase_attendees: ['select', 'insert', 'update', 'delete'],
+  showcase_categories: ['select'],
+  showcase_comments: ['select', 'insert'],
+  showcase_day_activities: ['select', 'insert', 'update', 'delete'],
+  showcase_day_groups: ['select', 'insert', 'delete'],
+  showcase_event_scouts: ['select', 'insert', 'update', 'delete'],
+  showcase_events: ['select', 'insert', 'update', 'delete'],
+  showcase_feedback: ['select', 'insert', 'update'],
+  showcase_matches: ['select', 'insert', 'update', 'delete'],
+  showcase_materials: ['select', 'insert'],
+  showcase_milestones: ['select', 'update'],
+  showcase_tasks: ['select', 'insert', 'update', 'delete'],
+  showcase_venue_zones: ['select', 'insert', 'update', 'delete'],
+}
+export const SHOWCASE_DB_TABLES = Object.keys(TABLE_ACTIONS)
+
 export const DB_FILTERS = ['eq', 'contains', 'ilike'] as const
 export const MAX_ROWS = 1000
 
@@ -93,7 +96,7 @@ function checkColumns(columns: unknown): string {
     const part = raw.trim()
     const embedded = part.match(EMBED)
     if (part === '*' || IDENT.test(part)) continue
-    if (embedded && isTable(embedded[1])) continue
+    if (embedded && isTable(embedded[1]) && TABLE_ACTIONS[embedded[1]].includes('select')) continue
     throw new DbRequestError(`column not allowed: ${part.slice(0, 60)}`)
   }
   return columns
@@ -107,6 +110,7 @@ export function parseDbRequest(body: unknown): DbRequest {
   if (!isTable(b.table)) throw new DbRequestError('table not allowed')
   if (!(DB_ACTIONS as readonly unknown[]).includes(b.action)) throw new DbRequestError('action not allowed')
   const action = b.action as Action
+  if (!TABLE_ACTIONS[b.table].includes(action)) throw new DbRequestError(`${action} not allowed on ${b.table}`)
 
   const filters = b.filters ?? []
   if (!Array.isArray(filters) || filters.length > 10) throw new DbRequestError('filters must be a short list')
@@ -144,6 +148,7 @@ export function parseDbRequest(body: unknown): DbRequest {
     values = b.values as Row | Row[]
   } else if (action === 'update') {
     if (!isPlainRow(b.values) || Object.keys(b.values).length === 0) throw new DbRequestError('update needs values')
+    if (Object.hasOwn(b.values, 'id')) throw new DbRequestError('update cannot change id')
     values = b.values
   } else if (b.values !== undefined && b.values !== null) {
     throw new DbRequestError(`${action} takes no values`)
@@ -152,9 +157,14 @@ export function parseDbRequest(body: unknown): DbRequest {
   if (action === 'select' && columns === null) throw new DbRequestError('select needs columns')
   if (action === 'insert' && parsedFilters.length > 0) throw new DbRequestError('insert takes no filters')
   if (action !== 'select' && parsedOrder.length > 0) throw new DbRequestError('order is for select only')
-  // A change always names its rows: no whole-table update or delete.
-  if ((action === 'update' || action === 'delete') && !parsedFilters.some((f) => f.op === 'eq')) {
-    throw new DbRequestError(`${action} needs an eq filter`)
+  // A change names its one row by id. The only exception is event cloning, which clears the target
+  // event's day groups (create-event-dialog.tsx) before copying the source event's groups.
+  if (action === 'update' || action === 'delete') {
+    const byId = parsedFilters.some((f) => f.op === 'eq' && f.column === 'id' && typeof f.value === 'string' && f.value !== '')
+    const cloneClear = b.table === 'showcase_day_groups' && action === 'delete' && parsedFilters.length === 1 &&
+      parsedFilters[0].op === 'eq' && parsedFilters[0].column === 'event_id' && typeof parsedFilters[0].value === 'string' &&
+      parsedFilters[0].value !== ''
+    if (!byId && !cloneClear) throw new DbRequestError(`${action} needs an id`)
   }
   if (single && columns === null) throw new DbRequestError('single needs columns')
 
