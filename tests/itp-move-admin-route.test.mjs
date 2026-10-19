@@ -59,6 +59,13 @@ test('actual admin database route rejects forged requests before the service cli
   const form = '{"table":"showcase_tasks","action":"delete","filters":[{"op":"eq","column":"event_id","value":"fixture"}],"padding":"="}\r\n'
   assert.equal((await call({ ...good, origin: 'https://attacker.example', 'content-type': 'text/plain' }, form)).status, 403)
   assert.equal((await call(good, '{invalid')).status, 400)
+  // A column the screen does not write: 400 naming it, before any client exists.
+  const moved = await call(good, JSON.stringify({
+    table: 'showcase_milestones', action: 'update', values: { completed: true, event_id: 'other-event' },
+    filters: [{ op: 'eq', column: 'id', value: 'm1' }],
+  }))
+  assert.equal(moved.status, 400)
+  assert.deepEqual(await moved.json(), { data: null, error: { message: 'column not writable on showcase_milestones: event_id' } })
   assert.equal(clients, 0)
   assert.equal(reads, 0)
 

@@ -5,6 +5,7 @@ import { resolveItpTarget, itpMoveProbe, ItpTargetUnusableError } from '../src/l
 import {
   SHOWCASE_DB_TABLES,
   TABLE_ACTIONS,
+  WRITE_COLUMNS,
   DbRequestError,
   isSameOriginJsonRequest,
   createDbProxy,
@@ -162,11 +163,12 @@ test('db route refuses other tables, actions, filters, columns and unscoped chan
   refused({ table: 'showcase_tasks', action: 'delete' })
   refused({ table: 'showcase_tasks', action: 'delete', filters: [{ op: 'contains', column: 'tags', value: [] }] })
   refused({ table: 'showcase_tasks', action: 'insert', values: [] })
-  refused({ table: 'showcase_tasks', action: 'insert', values: Array.from({ length: 1001 }, () => ({ a: 1 })) })
+  // Writable columns here, so each refusal below is its own rule (not the column lists).
+  refused({ table: 'showcase_tasks', action: 'insert', values: Array.from({ length: 1001 }, () => ({ title: 'x' })) })
   refused({ table: 'showcase_tasks', action: 'insert', values: { 'bad key': 1 } })
-  refused({ table: 'showcase_tasks', action: 'insert', values: { a: 1 }, filters: [{ op: 'eq', column: 'id', value: 'x' }] })
-  refused({ table: 'showcase_tasks', action: 'delete', values: { a: 1 }, filters: [{ op: 'eq', column: 'id', value: 'x' }] })
-  refused({ table: 'showcase_tasks', action: 'update', values: { a: 1 }, filters: [{ op: 'eq', column: 'id', value: 'x' }], order: [{ column: 'id', ascending: true }] })
+  refused({ table: 'showcase_tasks', action: 'insert', values: { title: 'x' }, filters: [{ op: 'eq', column: 'id', value: 'x' }] })
+  refused({ table: 'showcase_tasks', action: 'delete', values: { title: 'x' }, filters: [{ op: 'eq', column: 'id', value: 'x' }] })
+  refused({ table: 'showcase_tasks', action: 'update', values: { status: 'x' }, filters: [{ op: 'eq', column: 'id', value: 'x' }], order: [{ column: 'id', ascending: true }] })
   refused({ table: 'showcase_tasks', action: 'delete', filters: [{ op: 'eq', column: 'id', value: 'x' }], single: true })
   refused(null)
   refused([])
@@ -199,6 +201,45 @@ test('db route: each table allows only what the screens do, and a change names i
   ok({ table: 'showcase_activity', action: 'insert', values: { action: 'created' }, columns: null })
   ok({ table: 'showcase_events', action: 'delete', filters: byId })
   ok({ table: 'showcase_milestones', action: 'update', values: { completed: true }, filters: byId })
+})
+
+test('db route: a write naming any column its screens do not write is refused, naming the column', () => {
+  const byId = [{ op: 'eq', column: 'id', value: 'r1' }]
+  const refusedColumn = (body, column) => assert.throws(() => parseDbRequest(body),
+    (e) => e instanceof DbRequestError && e.message === `column not writable on ${body.table}: ${column}`, `${body.table} ${column}`)
+  // The three accepted-before requests from the Codex review of f5c0b79:
+  // ticking a milestone cannot move it to another event or rewrite its title/date,
+  for (const [column, value] of [['event_id', 'other-event'], ['title', 'x'], ['target_date', '2027-01-01']]) {
+    refusedColumn({ table: 'showcase_milestones', action: 'update', values: { completed: true, [column]: value }, filters: byId }, column)
+  }
+  // reviewing feedback cannot rewrite its content, submitter or creation time,
+  for (const column of ['description', 'details', 'submitted_by', 'created_at', 'event_id']) {
+    refusedColumn({ table: 'showcase_feedback', action: 'update', values: { status: 'done', [column]: 'x' }, filters: byId }, column)
+  }
+  // and pinning an announcement cannot rewrite its author or content.
+  for (const column of ['author', 'content', 'title', 'event_id', 'created_at']) {
+    refusedColumn({ table: 'showcase_announcements', action: 'update', values: { pinned: true, [column]: 'x' }, filters: byId }, column)
+  }
+  // Every table and write: no id, no created_at, no unknown column, and no update moves a row to another event.
+  let checked = 0
+  for (const [table, lists] of Object.entries(WRITE_COLUMNS)) {
+    for (const [action, columns] of Object.entries(lists)) {
+      for (const column of ['id', 'created_at', 'not_a_column', ...(action === 'update' ? ['event_id'] : [])]) {
+        assert.ok(!columns.includes(column), `${table}.${action} lists ${column}`)
+        const row = { [columns[0]]: null, [column]: 'x' }
+        refusedColumn({ table, action, values: action === 'insert' ? [row] : row, filters: action === 'update' ? byId : [] }, column)
+        checked++
+      }
+    }
+  }
+  assert.equal(checked, 3 * 13 + 4 * 10, '13 insert lists, 10 update lists')
+  // Each inserted row is checked, not just the first.
+  refusedColumn({ table: 'showcase_day_groups', action: 'insert', values: [{ name: 'A' }, { name: 'B', id: 'x' }] }, 'id')
+  refusedColumn({ table: 'showcase_tasks', action: 'insert', values: [{ title: 'A' }, { title: 'B', updated_by: 'x' }] }, 'updated_by')
+  // Inserts and updates are listed exactly where the table allows that action.
+  for (const [table, actions] of Object.entries(TABLE_ACTIONS)) {
+    assert.deepEqual(Object.keys(WRITE_COLUMNS[table] ?? {}).sort(), actions.filter((a) => a === 'insert' || a === 'update').sort(), table)
+  }
 })
 
 test('db route: basic auth checked first, then the parser; service client only', () => {
@@ -364,6 +405,102 @@ test('census: the 14 coordinator files use only the proxy methods and listed tab
   assert.equal(variables, 2, 'use-attendees and use-tasks build their list query on a variable')
   // And the rules are no wider than the screens: every allowed action is one a screen uses.
   assert.deepEqual([...used].sort(), Object.entries(TABLE_ACTIONS).flatMap(([t, as]) => as.map((a) => `${t}.${a}`)).sort())
+})
+
+// Reads the bracket opened at text[start]: its closing index and its own-level text
+// (strings and nested brackets left out).
+function bracket(text, start) {
+  let depth = 0
+  let quote = null
+  let flat = ''
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (quote) { if (c === '\\') i++; else if (c === quote) quote = null; continue }
+    if (c === "'" || c === '"' || c === '`') quote = c
+    else if ('([{'.includes(c)) depth++
+    else if (')]}'.includes(c)) { if (--depth === 0) return { end: i, flat } }
+    else if (depth === 1) flat += c
+  }
+  throw new Error(`unbalanced at ${start}`)
+}
+
+// The top-level keys of the row object passed to `call(...)` and the names it spreads in;
+// a plain variable argument comes back as a spread of that name.
+function rowKeys(text, call) {
+  const open = text.indexOf('(', text.search(new RegExp(`\\b${call}\\s*\\(`)))
+  const arg = text.slice(open + 1, bracket(text, open).end)
+  const brace = arg.indexOf('{')
+  if (brace < 0) return { keys: [], spreads: [arg.trim()] }
+  const keys = []
+  const spreads = []
+  for (const entry of bracket(arg, brace).flat.split(',').map((e) => e.trim()).filter(Boolean)) {
+    if (entry.startsWith('...')) spreads.push(entry.slice(3).trim())
+    else keys.push(entry.split(':')[0].trim())
+  }
+  return { keys, spreads }
+}
+
+const fieldsOf = (file, name) =>
+  [...read(file).match(new RegExp(`interface ${name} \\{([^}]*)\\}`))[1].matchAll(/^\s*(\w+)\??:/gm)].map((m) => m[1])
+
+test('census: every screen insert and update passes the column lists, and the lists are no wider', () => {
+  // What each spread (or variable) row carries at runtime, read from where it is built.
+  const TASK_FORM = fieldsOf('src/components/tasks/task-form.tsx', 'TaskFormData')
+  const ATTENDEE_FORM = fieldsOf('src/components/attendees/attendee-form.tsx', 'AttendeeFormData')
+  const dialog = read('src/components/events/create-event-dialog.tsx')
+  // Event cloning copies each source row's select list, plus the fields it resets or remaps.
+  const cloned = (select, ...extra) => {
+    assert.ok(dialog.includes(`.select('${select}')`), select)
+    return [...select.split(', '), ...extra]
+  }
+  const SPREADS = {
+    'src/app/announcements/page.tsx data': rowKeys(read('src/components/announcements/announcement-form.tsx'), 'await onSubmit').keys,
+    'src/app/tasks/[id]/page.tsx data': TASK_FORM,
+    'src/components/events/create-event-dialog.tsx task': cloned('title, description, category_id, priority, assignee, show_on_schedule, dependencies'),
+    'src/components/events/create-event-dialog.tsx clonedActivities': cloned('event_date, group_id, start_time, end_time, activity, responsible, todos, notes, sort_order', 'event_id'),
+    'src/components/events/create-event-dialog.tsx clonedMatches': cloned('event_date, match_number, start_time, team_a, team_b, field, referee, notes', 'event_id', 'score_a', 'score_b'),
+    'src/components/events/create-event-dialog.tsx m': cloned('item, category, responsible, notes, sort_order'),
+    'src/hooks/use-attendees.ts attendee': [...ATTENDEE_FORM, 'created_by'], // attendees/page.tsx: { ...data, created_by }
+    'src/hooks/use-attendees.ts updateData': [...ATTENDEE_FORM, 'updated_at'], // { ...updates (attendees/page.tsx: the form), updated_at }
+    'src/hooks/use-events.ts input': rowKeys(dialog, 'await createEvent').keys, // its one caller
+    'src/hooks/use-events.ts defaultGroups': ['name', 'color', 'sort_order', 'event_id'],
+    'src/hooks/use-events.ts updates': [], // updateEvent has no caller (asserted below)
+    'src/hooks/use-tasks.ts task': [...TASK_FORM, 'created_by'], // tasks/page.tsx: { ...data, created_by }
+    'src/hooks/use-tasks.ts updates': [...TASK_FORM, 'status'], // tasks/page.tsx: the form, or { status }
+  }
+  assert.equal(TASK_FORM.length, 9)
+  assert.equal(ATTENDEE_FORM.length, 6)
+  assert.equal(SPREADS['src/hooks/use-events.ts input'].length, 17)
+  const srcFiles = readdirSync(new URL('../src', import.meta.url), { recursive: true }).filter((f) => /\.(ts|tsx)$/.test(f))
+  assert.ok(srcFiles.every((f) => !/\bupdateEvent\s*\(/.test(read(`src/${f}`))), 'updateEvent gained a caller: resolve its spread')
+
+  const written = {}
+  const resolved = new Set()
+  let calls = 0
+  for (const file of ADMIN_FILES) {
+    for (const { names, text } of chains(read(file))) {
+      const action = names.find((n) => n === 'insert' || n === 'update')
+      if (!action) continue
+      calls++
+      const table = tableOf(text)
+      const { keys, spreads } = rowKeys(text, action)
+      const columns = [...keys, ...spreads.flatMap((s) => {
+        assert.ok(Object.hasOwn(SPREADS, `${file} ${s}`), `${file}: resolve what ${s} carries`)
+        resolved.add(`${file} ${s}`)
+        return SPREADS[`${file} ${s}`]
+      })]
+      assert.ok(columns.length > 0 && columns.every((c) => /^[a-z_][a-z0-9_]*$/.test(c)), `${file}: ${columns}`)
+      const row = Object.fromEntries(columns.map((c) => [c, null]))
+      ok({ table, action, values: action === 'insert' ? [row] : row, filters: action === 'update' ? [{ op: 'eq', column: 'id', value: 'r1' }] : [], columns: null })
+      for (const c of columns) (written[`${table}.${action}`] ??= new Set()).add(c)
+    }
+  }
+  assert.equal(calls, 40, 'the 40 insert/update calls of the write census')
+  assert.deepEqual([...resolved].sort(), Object.keys(SPREADS).sort(), 'every resolution is used')
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(written).map(([k, s]) => [k, [...s].sort()])),
+    Object.fromEntries(Object.entries(WRITE_COLUMNS).flatMap(([t, l]) => Object.entries(l).map(([a, cols]) => [`${t}.${a}`, [...cols].sort()]))),
+  )
 })
 
 test('census: every listed table is used, and the public files touch only public-on-Core objects', () => {
