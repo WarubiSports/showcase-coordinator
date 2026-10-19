@@ -64,6 +64,17 @@ export class DbRequestError extends Error {
   }
 }
 
+// Browsers can attach cached Basic credentials to a form submitted by another site.
+// Require the coordinator's own JSON request before parsing any database operation.
+export function isSameOriginJsonRequest(request: Pick<Request, 'url' | 'headers'>): boolean {
+  if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') return false
+  try {
+    return request.headers.get('origin') === new URL(request.url).origin
+  } catch {
+    return false
+  }
+}
+
 const IDENT = /^[a-z_][a-z0-9_]*$/
 const EMBED = /^([a-z_][a-z0-9_]*)\(\*\)$/
 

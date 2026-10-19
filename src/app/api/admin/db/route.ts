@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { adminAuthError } from '@/lib/admin-auth'
-import { DbRequestError, parseDbRequest, runDbRequest } from '@/lib/admin-db-core'
+import { DbRequestError, isSameOriginJsonRequest, parseDbRequest, runDbRequest } from '@/lib/admin-db-core'
 
 // The coordinator screens' table calls once switched to Core (see src/lib/admin-db.ts).
 // Protected by the admin basic auth in middleware and again here; only the listed showcase_*
@@ -12,6 +12,9 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   const denied = adminAuthError(req)
   if (denied) return denied
+  if (!isSameOriginJsonRequest(req)) {
+    return NextResponse.json({ data: null, error: { message: 'Same-origin JSON request required' } }, { status: 403 })
+  }
 
   let parsed
   try {

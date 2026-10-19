@@ -5,6 +5,7 @@ import { resolveItpTarget, itpMoveProbe, ItpTargetUnusableError } from '../src/l
 import {
   SHOWCASE_DB_TABLES,
   DbRequestError,
+  isSameOriginJsonRequest,
   createDbProxy,
   parseDbRequest,
   runDbRequest,
@@ -77,6 +78,33 @@ test('probe route: exact public path, token compared by digest, service key + sc
 
 // ---------- /api/admin/db request rules ----------
 
+test('db HTTP gate refuses cross-site forms before their valid JSON reaches the parser', async () => {
+  // A text/plain HTML form can add its '=' separator inside an ignored JSON field.
+  const form = '{"table":"showcase_tasks","action":"delete","filters":[{"op":"eq","column":"event_id","value":"fixture"}],"padding":"' + '=' + '"}\r\n'
+  const attack = new Request('https://coordinator.example/api/admin/db', {
+    method: 'POST',
+    headers: { origin: 'https://attacker.example', 'content-type': 'text/plain' },
+    body: form,
+  })
+  assert.equal(parseDbRequest(await attack.clone().json()).action, 'delete', 'the parser alone would accept the form')
+  assert.equal(isSameOriginJsonRequest(attack), false)
+
+  for (const [origin, contentType] of [
+    [null, 'application/json'], ['null', 'application/json'],
+    ['https://attacker.example', 'application/json'],
+    ['https://coordinator.example.evil', 'application/json'],
+    ['https://coordinator.example', 'text/plain'],
+    ['https://coordinator.example', 'application/json-other'],
+  ]) {
+    const headers = new Headers({ 'content-type': contentType })
+    if (origin !== null) headers.set('origin', origin)
+    assert.equal(isSameOriginJsonRequest(new Request(attack.url, { method: 'POST', headers, body: '{}' })), false)
+  }
+  assert.equal(isSameOriginJsonRequest(new Request(attack.url, {
+    method: 'POST', headers: { origin: 'https://coordinator.example', 'content-type': 'application/json; charset=utf-8' }, body: '{}',
+  })), true)
+})
+
 const ok = (body) => parseDbRequest(body)
 const refused = (body) => assert.throws(() => parseDbRequest(body), DbRequestError, JSON.stringify(body)?.slice(0, 200))
 
@@ -122,6 +150,8 @@ test('db route: basic auth checked first, then the parser; service client only',
   const route = read('src/app/api/admin/db/route.ts')
   const auth = route.indexOf('adminAuthError(req)')
   assert.ok(auth > 0 && auth < route.indexOf('parseDbRequest('), 'auth before parse')
+  assert.ok(route.indexOf('isSameOriginJsonRequest(req)') > auth, 'auth before origin check')
+  assert.ok(route.indexOf('isSameOriginJsonRequest(req)') < route.indexOf('await req.json()'), 'origin check before body parsing')
   assert.ok(route.indexOf('parseDbRequest(') < route.indexOf('createAdminClient()'), 'parse before any client')
   assert.ok(!/export async function (GET|PUT|PATCH|DELETE)/.test(route), 'POST only')
 })
