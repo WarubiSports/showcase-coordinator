@@ -14,6 +14,7 @@ function isPublicPath(pathname: string) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/registration-email') ||
     pathname.startsWith('/api/organizer/') ||
+    pathname === '/api/itp-move-probe' ||
     pathname === '/favicon.ico' ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml' ||

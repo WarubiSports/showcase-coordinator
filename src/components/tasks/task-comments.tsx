@@ -5,7 +5,7 @@ import { Send } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { supabase } from '@/lib/supabase'
+import { adminDb as supabase } from '@/lib/admin-db'
 import { useEvent } from '@/contexts/event-context'
 import type { Comment } from '@/types'
 

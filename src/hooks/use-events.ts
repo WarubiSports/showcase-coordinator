@@ -1,6 +1,6 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
+import { adminDb as supabase } from '@/lib/admin-db'
 import type { ShowcaseEvent, ShowcaseEventType } from '@/types'
 
 interface CreateEventInput {

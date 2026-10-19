@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Check, Circle, Calendar } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { adminDb as supabase } from '@/lib/admin-db'
 import { useEvent } from '@/contexts/event-context'
 import type { Milestone } from '@/types'
 
