@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { adminAuthError } from '@/lib/admin-auth'
 import { newInviteToken } from '@/lib/invite-token'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
+import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,8 @@ const clean = (v: unknown, max: number): string | null => (typeof v === 'string'
 export async function POST(req: NextRequest) {
   const denied = adminAuthError(req)
   if (denied) return denied
+  // Same gate as /api/admin/db: a cross-site form could replay cached Basic credentials
+  if (!isSameOriginJsonRequest(req)) return NextResponse.json({ error: 'Same-origin JSON request required' }, { status: 403 })
   const body = await req.json().catch(() => null)
   const eventId = clean(body?.eventId, 60)
   const rows: NewInvite[] = Array.isArray(body?.invites) ? body.invites : []

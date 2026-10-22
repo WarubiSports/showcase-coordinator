@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { adminAuthError } from '@/lib/admin-auth'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
+import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 
 // Edit or remove one invite. Staff can reset to invited or mark declined (a WhatsApp "kann nicht");
 // accepted only comes from the player's form, because that is where the consent lives.
 
 const clean = (v: unknown, max: number): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
 
+// Same gate as /api/admin/db: a cross-site form could replay cached Basic credentials
+const crossSite = (req: NextRequest) =>
+  isSameOriginJsonRequest(req) ? null : NextResponse.json({ error: 'Same-origin JSON request required' }, { status: 403 })
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req)
+  const denied = adminAuthError(req) ?? crossSite(req)
   if (denied) return denied
   const { id } = await params
   const body = await req.json().catch(() => ({}))
@@ -48,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req)
+  const denied = adminAuthError(req) ?? crossSite(req)
   if (denied) return denied
   const { id } = await params
   const { error } = await createAdminClient().from('showcase_invites').delete().eq('id', id)
