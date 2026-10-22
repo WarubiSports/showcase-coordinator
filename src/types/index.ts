@@ -292,9 +292,52 @@ export interface Player {
   payment_status: PaymentStatus
   registered_at: string | null
   confirmation_sent_at: string | null
+  // Selection sign-up fields (nullable until 20261022000001_selection_invites is applied)
+  school_type: SchoolType | null
+  grad_year: number | null
+  grades: string | null
+  english_level: string | null
+  video_url: string | null
+  jersey_number: number | null
+  consent_profile_at: string | null
+  consent_social_at: string | null
+  consent_parent_name: string | null
+  consent_ip: string | null
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+// Selection invites
+export type SchoolType = 'abitur' | 'fachabitur' | 'realschule' | 'other'
+export type InviteStatus = 'invited' | 'accepted' | 'declined'
+
+export interface Invite {
+  id: string
+  event_id: string
+  token: string
+  name: string
+  phone: string | null
+  invited_by: string
+  personal_line: string | null
+  status: InviteStatus
+  invited_at: string
+  responded_at: string | null
+  player_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Staff list row: invite plus the linked sign-up (null until accepted)
+export type InvitePlayer = Pick<
+  Player,
+  | 'id' | 'name' | 'position' | 'birth_year' | 'club' | 'phone' | 'email' | 'parent_name' | 'parent_phone'
+  | 'school_type' | 'grad_year' | 'grades' | 'english_level' | 'video_url' | 'jersey_number'
+  | 'consent_profile_at' | 'consent_social_at'
+>
+
+export interface InviteWithPlayer extends Invite {
+  player: InvitePlayer | null
 }
 
 export interface AttendeeAvailability {
