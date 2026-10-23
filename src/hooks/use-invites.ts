@@ -78,11 +78,18 @@ export function useInvites(eventId: string | undefined) {
     return updated
   }
 
+  // Pulls link, photo, club and position from the invite's Base athlete (invites linked to Base only)
+  const syncFromBase = async (id: string) => {
+    const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${id}/base-sync`, { method: 'POST', body: '{}' })
+    setInvites((prev) => prev.map((i) => (i.id === id ? updated : i)))
+    return updated
+  }
+
   // Shirt number lives on the sign-up row; the invite route writes it for the invite's own sign-up only
   const setJerseyNumber = async (inviteId: string, jersey_number: number | null) => {
     const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${inviteId}`, { method: 'PATCH', body: JSON.stringify({ jersey_number }) })
     setInvites((prev) => prev.map((i) => (i.id === inviteId ? updated : i)))
   }
 
-  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, setJerseyNumber }
+  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, syncFromBase, setJerseyNumber }
 }

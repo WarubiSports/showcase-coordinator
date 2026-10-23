@@ -5,6 +5,8 @@ import { newInviteToken } from '@/lib/invite-token'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
+import { fetchAthlete } from '@/lib/base-athletes'
+import { baseInviteFields, definedFields, type BaseInviteFields } from '@/lib/base-invite'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,13 +52,18 @@ export async function POST(req: NextRequest) {
   if (!eventId || rows.length === 0) return NextResponse.json({ error: 'eventId and invites required' }, { status: 400 })
   if (rows.length > 100) return NextResponse.json({ error: 'Max 100 invites per request' }, { status: 400 })
 
-  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; profile_url?: string; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null }[] = []
+  const db = createAdminClient()
+  const inserts: ({ event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null } & Partial<BaseInviteFields>)[] = []
   for (const r of rows) {
     const name = clean(r.name, 120)
     const invited_by = clean(r.invited_by, 80)
     if (!name || !invited_by) return NextResponse.json({ error: 'Each invite needs a name and an inviter' }, { status: 400 })
     const profile_url = cleanProfileUrl(r.profile_url)
     if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: `${name}: ${PROFILE_URL_ERROR}` }, { status: 400 })
+    // Linked to a Base athlete: link, photo, club and position come from Base so the page is personal from the start
+    const athleteId = typeof r.ausa_athlete_id === 'string' && UUID.test(r.ausa_athlete_id) ? r.ausa_athlete_id : null
+    const athlete = athleteId ? await fetchAthlete(db, athleteId).catch(() => null) : null
+    const base = athlete ? definedFields(baseInviteFields(athlete, profile_url)) : {}
     inserts.push({
       event_id: eventId,
       token: newInviteToken(),
@@ -66,14 +73,14 @@ export async function POST(req: NextRequest) {
       personal_line: clean(r.personal_line, 300),
       // optional columns are only sent when given, so plain invites still save before their migrations run
       ...(profile_url ? { profile_url } : {}),
-      ...(typeof r.ausa_athlete_id === 'string' && UUID.test(r.ausa_athlete_id) ? { ausa_athlete_id: r.ausa_athlete_id } : {}),
+      ...base,
+      ...(athleteId ? { ausa_athlete_id: athleteId } : {}),
       ...(r.category === 'signed' || r.category === 'new' ? { category: r.category } : {}),
       // who created it, from the Staff App login only; nothing the client sends for these is read
       ...(staff ? { invited_by_staff_id: staff.id, invited_by_email: staff.email } : {}),
     })
   }
 
-  const db = createAdminClient()
   let { data, error } = await db.from('showcase_invites').insert(inserts).select(INVITE_WITH_PLAYER_SELECT)
   if (error && staff && /'invited_by_(staff_id|email)' column/.test(error.message)) {
     // staff identity migration (20261023000004) not applied yet: save the invites without it

@@ -1,8 +1,8 @@
 import type { InvitePayload } from '@/components/invite/invite-types'
 
-// Player card above the event facts, from the FuPa data the server read for the invite. Rendered only when
-// the read succeeded and brought a photo or a club; otherwise the page shows nothing extra.
-export const hasPlayerCard = (invite: InvitePayload['invite']): boolean => !!invite.enriched_at && !!(invite.photo_url || invite.club)
+// Player card above the event facts: FuPa data the server read for the invite, or Base's photo, club and
+// position for a linked athlete until then. Rendered when there is a photo or a club; otherwise nothing extra.
+export const hasPlayerCard = (invite: InvitePayload['invite']): boolean => !!(invite.photo_url || invite.club)
 
 const initials = (name: string) =>
   name
@@ -36,7 +36,7 @@ export const PlayerCard = ({ invite }: { invite: InvitePayload['invite'] }) => {
           {invite.position && <span className="rounded-md bg-white/10 px-2 py-0.5 font-medium">{invite.position}</span>}
           {statsLine && <span className="text-gray-200">{statsLine}</span>}
         </div>
-        <p className="mt-2 text-[11px] text-gray-500">Daten von FuPa</p>
+        <p className="mt-2 text-[11px] text-gray-500">{invite.enriched_at ? 'Daten von FuPa' : 'Daten aus deinem Athletes USA Profil'}</p>
       </div>
     </div>
   )

@@ -28,10 +28,11 @@ interface InviteTableProps {
   onProfileUrl: (id: string, url: string | null) => void
   onCategory: (id: string, category: InviteCategory) => void
   onEnrich: (id: string) => void
+  onBaseSync: (id: string) => void
   onDelete: (id: string) => void
 }
 
-export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onCategory, onEnrich, onDelete }: InviteTableProps) => {
+export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onDelete }: InviteTableProps) => {
   const [sort, setSort] = useState<SortKey>('status')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const toggle = (id: string, on: boolean) =>
@@ -89,6 +90,7 @@ export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onPro
               onProfileUrl={(url) => onProfileUrl(invite.id, url)}
               onCategory={(c) => onCategory(invite.id, c)}
               onEnrich={() => onEnrich(invite.id)}
+              onBaseSync={() => onBaseSync(invite.id)}
               onDelete={() => onDelete(invite.id)}
             />
           )

@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Copy, ExternalLink, Link2, MessageCircle, MoreHorizontal } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, ExternalLink, Link2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { InviteRowMenu } from '@/components/invites/invite-row-menu'
 import { isCollegeEligible } from '@/components/invites/invite-stats'
 import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
 import { CATEGORY, SCHOOL, STATUS } from '@/components/invites/invite-badges'
@@ -31,10 +31,11 @@ interface InviteRowProps {
   onProfileUrl: (url: string | null) => void
   onCategory: (category: InviteCategory) => void
   onEnrich: () => void
+  onBaseSync: () => void
   onDelete: () => void
 }
 
-export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onEnrich, onDelete }: InviteRowProps) => {
+export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onDelete }: InviteRowProps) => {
   const [open, setOpen] = useState(false)
   const p = invite.player
   const status = STATUS[invite.status]
@@ -79,35 +80,20 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
               {/fupa\.net/i.test(invite.profile_url) ? 'FuPa profile' : 'Transfermarkt profile'}
             </a>
           )}
-          {invite.enriched_at && (
+          {(invite.enriched_at || invite.photo_url || invite.club || invite.position) && (
             <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               {invite.photo_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={invite.photo_url} alt="" className="h-7 w-7 rounded-full object-cover object-top" />
               )}
               <span className="truncate">
-                FuPa: {[invite.club, invite.league, invite.position].filter(Boolean).join(' · ')}
+                {invite.enriched_at ? 'FuPa' : 'Base'}: {[invite.club, invite.league, invite.position].filter(Boolean).join(' · ')}
                 {invite.stats ? ` · ${invite.stats.games} Sp. ${invite.stats.goals} T. ${invite.stats.assists} V.${invite.stats.season ? ` (${invite.stats.season})` : ''}` : ''}
               </span>
             </p>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="More"><MoreHorizontal className="h-4 w-4" /></Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {invite.status !== 'declined' && <DropdownMenuItem onClick={() => onStatus('declined')}>Mark declined (answered on WhatsApp)</DropdownMenuItem>}
-            {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Reset to no answer</DropdownMenuItem>}
-            <DropdownMenuItem onClick={editProfileUrl}>{invite.profile_url ? 'Edit profile link' : 'Add profile link'}</DropdownMenuItem>
-            {invite.profile_url && /fupa\.net/i.test(invite.profile_url) && <DropdownMenuItem onClick={onEnrich}>Reload FuPa data</DropdownMenuItem>}
-            <DropdownMenuItem onClick={() => onCategory(invite.category === 'signed' ? 'new' : 'signed')}>
-              {invite.category === 'signed' ? 'Mark as new' : 'Mark as signed (Athletes USA)'}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete invite</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <InviteRowMenu invite={invite} onStatus={onStatus} onEditProfileUrl={editProfileUrl} onCategory={onCategory} onEnrich={onEnrich} onBaseSync={onBaseSync} onDelete={onDelete} />
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
