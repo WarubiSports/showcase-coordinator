@@ -19,11 +19,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const db = createAdminClient()
   const { data: invite, error } = await db.from('showcase_invites').select('id, name, club, profile_url').eq('id', id).maybeSingle()
   if (error) return dbError(error.message)
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
-  if (typeof invite.profile_url === 'string' && invite.profile_url) return NextResponse.json({ error: 'Invite already has a profile link' }, { status: 400 })
+  if (!invite) return NextResponse.json({ error: 'Einladung nicht gefunden' }, { status: 404 })
+  if (typeof invite.profile_url === 'string' && invite.profile_url) return NextResponse.json({ error: 'Die Einladung hat schon einen Profil-Link' }, { status: 400 })
 
   const found = await searchFupaPlayers(String(invite.name ?? ''))
-  if (!found) return NextResponse.json({ error: 'FuPa search not reachable' }, { status: 502 })
+  if (!found) return NextResponse.json({ error: 'FuPa-Suche nicht erreichbar' }, { status: 502 })
   const pick = pickCandidate(found, typeof invite.club === 'string' ? invite.club : null)
   const now = new Date().toISOString()
   const values = pick ? { profile_url: candidateProfileUrl(pick), fupa_candidates: null, updated_at: now } : { fupa_candidates: found, updated_at: now }

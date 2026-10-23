@@ -1,5 +1,6 @@
 import type { FupaCandidate } from '@/types'
 import { readCapped } from '@/lib/fupa-fetch'
+import { normalizeName, normalizeClub } from '@/lib/name-normalize'
 
 export { candidateProfileUrl } from '@/lib/fupa-link'
 
@@ -11,17 +12,7 @@ const SEARCH = 'https://search.fupa.net/v2/query'
 const IMAGE_HOST = /^https:\/\/image\.fupa\.net\//
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36'
 
-// Names as Base's matcher compares them (case, spaces and hyphens ignored), plus German umlaut folding so
-// "Müller" and "Mueller" meet; other accents are stripped.
-export const normalizeName = (s: string | null | undefined): string =>
-  (s ?? '')
-    .toLowerCase()
-    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[\s\-'’.]+/g, '')
-
-// Club names: same folding, letters and digits only ("SSV Jan Wellem 05" and "Jan Wellem" meet as substrings)
-export const normalizeClub = (s: string | null | undefined): string => normalizeName(s).replace(/[^a-z0-9]/g, '')
+export { normalizeName, normalizeClub } from '@/lib/name-normalize'
 
 type Hit = Record<string, unknown>
 const obj = (v: unknown): Hit | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Hit) : null)

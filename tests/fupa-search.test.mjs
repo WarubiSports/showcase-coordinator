@@ -4,6 +4,7 @@ import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 import * as fupaLink from '../src/lib/fupa-link.ts'
+import * as normalize from '../src/lib/name-normalize.ts'
 
 // Runs the real search module without its fetch half: hits are fixtures, nothing goes to FuPa.
 function load(path, imports) {
@@ -13,7 +14,7 @@ function load(path, imports) {
   vm.runInNewContext(code, { exports, module: { exports }, URL, require(name) { if (!Object.hasOwn(imports, name)) throw new Error(`Unexpected dependency of ${path}: ${name}`); return imports[name] } }, { filename: path })
   return exports
 }
-const fs = load('../src/lib/fupa-search.ts', { '@/lib/fupa-fetch': { readCapped: async () => null }, '@/lib/fupa-link': fupaLink })
+const fs = load('../src/lib/fupa-search.ts', { '@/lib/fupa-fetch': { readCapped: async () => null }, '@/lib/fupa-link': fupaLink, '@/lib/name-normalize': normalize })
 const plain = (v) => JSON.parse(JSON.stringify(v))
 
 // Fake players only. Club names are real club shapes, the people are not.

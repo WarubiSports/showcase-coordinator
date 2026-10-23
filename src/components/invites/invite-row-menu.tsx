@@ -21,21 +21,21 @@ interface InviteRowMenuProps {
 export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onEditClub, onDelete }: InviteRowMenuProps) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="ghost" size="icon" aria-label="More"><MoreHorizontal className="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" aria-label="Mehr"><MoreHorizontal className="h-4 w-4" /></Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-      {invite.status !== 'declined' && <DropdownMenuItem onClick={() => onStatus('declined')}>Mark declined (answered on WhatsApp)</DropdownMenuItem>}
-      {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Reset to no answer</DropdownMenuItem>}
-      <DropdownMenuItem onClick={onEditProfileUrl}>{invite.profile_url ? 'Edit profile link' : 'Add profile link'}</DropdownMenuItem>
-      {invite.profile_url && /fupa\.net/i.test(invite.profile_url) && <DropdownMenuItem onClick={onEnrich}>Reload FuPa data</DropdownMenuItem>}
-      {!invite.profile_url && <DropdownMenuItem onClick={onFindFupa}>Find on FuPa</DropdownMenuItem>}
-      <DropdownMenuItem onClick={onEditClub}>{invite.club ? 'Edit club' : 'Add club'}</DropdownMenuItem>
-      {invite.ausa_athlete_id && <DropdownMenuItem onClick={onBaseSync}>Sync from Base</DropdownMenuItem>}
+      {invite.status !== 'declined' && <DropdownMenuItem onClick={() => onStatus('declined')}>Als abgesagt markieren (per WhatsApp geantwortet)</DropdownMenuItem>}
+      {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Zurück auf keine Antwort</DropdownMenuItem>}
+      <DropdownMenuItem onClick={onEditProfileUrl}>{invite.profile_url ? 'Profil-Link ändern' : 'Profil-Link hinzufügen'}</DropdownMenuItem>
+      {invite.profile_url && /fupa\.net/i.test(invite.profile_url) && <DropdownMenuItem onClick={onEnrich}>FuPa-Daten neu laden</DropdownMenuItem>}
+      {!invite.profile_url && <DropdownMenuItem onClick={onFindFupa}>Auf FuPa suchen</DropdownMenuItem>}
+      <DropdownMenuItem onClick={onEditClub}>{invite.club ? 'Verein ändern' : 'Verein hinzufügen'}</DropdownMenuItem>
+      {invite.ausa_athlete_id && <DropdownMenuItem onClick={onBaseSync}>Aus Base übernehmen</DropdownMenuItem>}
       <DropdownMenuItem onClick={() => onCategory(invite.category === 'signed' ? 'new' : 'signed')}>
-        {invite.category === 'signed' ? 'Mark as new' : 'Mark as signed (Athletes USA)'}
+        {invite.category === 'signed' ? 'Als Neu markieren' : 'Als Signed markieren (Athletes USA)'}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete invite</DropdownMenuItem>
+      <DropdownMenuItem className="text-destructive" onClick={onDelete}>Einladung löschen</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 )

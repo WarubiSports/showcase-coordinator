@@ -38,7 +38,7 @@ const JerseyInput = ({ value, taken, onSave }: { value: number | null; taken: bo
       onBlur={save}
       onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
       className={`h-9 w-16 text-center font-semibold ${taken ? 'border-destructive text-destructive' : ''}`}
-      aria-label="Shirt number"
+      aria-label="Trikotnummer"
     />
   )
 }
@@ -58,13 +58,13 @@ export const RosterTable = ({ invites, onJersey }: RosterTableProps) => {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold">{rows.length} accepted {rows.length === 1 ? 'player' : 'players'}</h2>
+        <h2 className="font-semibold">{rows.length} Spieler mit Zusage</h2>
         <Button variant="outline" size="sm" asChild>
-          <a href="/invites/roster" target="_blank" rel="noopener noreferrer"><Printer className="h-4 w-4" />Print roster</a>
+          <a href="/invites/roster" target="_blank" rel="noopener noreferrer"><Printer className="h-4 w-4" />Druckansicht</a>
         </Button>
       </div>
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">No accepted players yet.</div>
+        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Noch keine Zusagen.</div>
       ) : (
         <ul className="divide-y rounded-lg border bg-card">
           {rows.map((p) => (
@@ -73,8 +73,8 @@ export const RosterTable = ({ invites, onJersey }: RosterTableProps) => {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{p.name}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {[p.position, p.birth_year, p.club].filter(Boolean).join(' · ') || 'no details'}
-                  {p.consent_profile_at ? '' : ' · no clip consent'}
+                  {[p.position, p.birth_year, p.club].filter(Boolean).join(' · ') || 'keine Angaben'}
+                  {p.consent_profile_at ? '' : ' · kein Clip-Einverständnis'}
                 </p>
               </div>
               <span className="w-12 text-right text-sm font-semibold">{p.position ?? ''}</span>

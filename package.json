@@ -13,7 +13,8 @@
     "test:base-card": "node --test tests/base-card.test.mjs",
     "test:fupa-search": "node --test tests/fupa-search.test.mjs",
     "test:signed": "node --test tests/signed-confirm.test.mjs",
-    "test:event-facts": "node --test tests/event-facts.test.mjs"
+    "test:event-facts": "node --test tests/event-facts.test.mjs",
+    "test:add-panel": "node --test tests/add-panel.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { MessageSquarePlus } from 'lucide-react'
 import { FeedbackModal } from './feedback-modal'
 import { useUser } from '@/hooks/use-user'
@@ -8,6 +9,10 @@ import { useUser } from '@/hooks/use-user'
 export function FeedbackButton() {
   const [isOpen, setIsOpen] = useState(false)
   const { userName } = useUser()
+  const pathname = usePathname()
+
+  // The invite pages have their own actions bottom right; the floating button would sit on top of them
+  if (pathname === '/invites' || pathname.startsWith('/invites/')) return null
 
   return (
     <>

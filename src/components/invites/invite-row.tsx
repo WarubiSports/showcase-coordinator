@@ -15,9 +15,9 @@ import type { FupaCandidate, InviteCategory, InviteWithPlayer } from '@/types'
 const copy = async (text: string, what: string) => {
   try {
     await navigator.clipboard.writeText(text)
-    toast.success(`${what} copied`)
+    toast.success(`${what} kopiert`)
   } catch {
-    toast.error('Could not copy')
+    toast.error('Kopieren hat nicht geklappt')
   }
 }
 
@@ -44,7 +44,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
   const [open, setOpen] = useState(false)
   const p = invite.player
   const status = STATUS[invite.status]
-  const yesNo = (v: string | null) => (v ? 'yes' : 'no')
+  const yesNo = (v: string | null) => (v ? 'ja' : 'nein')
 
   // Edit the FuPa / Transfermarkt link in place; an empty value clears it
   const editProfileUrl = () => {
@@ -66,7 +66,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
           type="checkbox"
           checked={selected}
           onChange={(e) => onSelect(e.target.checked)}
-          aria-label={`Select ${invite.name} for the coach message`}
+          aria-label={`${invite.name} für die Coach-Nachricht auswählen`}
           className="mt-1 h-5 w-5 shrink-0 accent-primary"
         />
         <div className="min-w-0 flex-1">
@@ -78,15 +78,15 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
             {isCollegeEligible(p) && <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30">College-eligible</Badge>}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Invited by {invite.invited_by}
+            Eingeladen von {invite.invited_by}
             {invite.phone ? ` · ${invite.phone}` : ''}
-            {invite.responded_at ? ` · answered ${new Date(invite.responded_at).toLocaleDateString('de-DE')}` : ''}
-            {invite.ausa_athlete_id ? ' · linked to Base' : ''}
+            {invite.responded_at ? ` · geantwortet am ${new Date(invite.responded_at).toLocaleDateString('de-DE')}` : ''}
+            {invite.ausa_athlete_id ? ' · mit Base verknüpft' : ''}
           </p>
           {invite.profile_url && (
             <a href={invite.profile_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm text-blue-700 underline">
               <ExternalLink className="h-3.5 w-3.5" />
-              {/fupa\.net/i.test(invite.profile_url) ? 'FuPa profile' : 'Transfermarkt profile'}
+              {/fupa\.net/i.test(invite.profile_url) ? 'FuPa-Profil' : 'Transfermarkt-Profil'}
             </a>
           )}
           {!invite.profile_url && Array.isArray(invite.fupa_candidates) && <FupaPicker candidates={invite.fupa_candidates} onPick={onPickFupa} onDismiss={onDismissFupa} />}
@@ -108,11 +108,11 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => copy(link, 'Link')}><Link2 className="h-4 w-4" />Copy link</Button>
-        <Button variant="outline" size="sm" onClick={() => copy(message, 'WhatsApp text')}><Copy className="h-4 w-4" />Copy text</Button>
+        <Button variant="outline" size="sm" onClick={() => copy(link, 'Link')}><Link2 className="h-4 w-4" />Link kopieren</Button>
+        <Button variant="outline" size="sm" onClick={() => copy(message, 'WhatsApp-Text')}><Copy className="h-4 w-4" />Text kopieren</Button>
         {waUrl && (
           <Button variant="outline" size="sm" asChild>
-            <a href={waUrl} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" />Open in WhatsApp</a>
+            <a href={waUrl} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" />In WhatsApp öffnen</a>
           </Button>
         )}
       </div>
@@ -121,22 +121,22 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
         <>
           <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setOpen(!open)}>
             {open ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-            {open ? 'Hide details' : 'Details'}
+            {open ? 'Details ausblenden' : 'Details'}
           </Button>
           {open && (
-            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 border-t pt-3 text-sm sm:grid-cols-3">
-              <dt className="text-muted-foreground">Birth year</dt><dd>{p.birth_year ?? '-'}</dd>
-              <dt className="text-muted-foreground">Club</dt><dd>{p.club ?? '-'}</dd>
-              <dt className="text-muted-foreground">School</dt><dd>{p.school_type ? SCHOOL[p.school_type] : '-'}{p.grad_year ? ` ${p.grad_year}` : ''}</dd>
-              <dt className="text-muted-foreground">Grades</dt><dd>{p.grades ?? '-'}</dd>
-              <dt className="text-muted-foreground">English</dt><dd>{p.english_level ?? '-'}</dd>
+            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 border-t pt-3 text-sm sm:grid-cols-4">
+              <dt className="text-muted-foreground">Geburtsjahr</dt><dd>{p.birth_year ?? '-'}</dd>
+              <dt className="text-muted-foreground">Verein</dt><dd>{p.club ?? '-'}</dd>
+              <dt className="text-muted-foreground">Schulabschluss</dt><dd>{p.school_type ? SCHOOL[p.school_type] : '-'}{p.grad_year ? ` ${p.grad_year}` : ''}</dd>
+              <dt className="text-muted-foreground">Notenschnitt</dt><dd>{p.grades ?? '-'}</dd>
+              <dt className="text-muted-foreground">Englisch</dt><dd>{p.english_level ?? '-'}</dd>
               <dt className="text-muted-foreground">Video</dt>
-              <dd>{p.video_url ? <a href={p.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">link <ExternalLink className="h-3 w-3" /></a> : '-'}</dd>
-              <dt className="text-muted-foreground">Phone</dt><dd>{p.phone ?? '-'}</dd>
-              <dt className="text-muted-foreground">Email</dt><dd className="truncate">{p.email ?? '-'}</dd>
-              <dt className="text-muted-foreground">Parent</dt><dd>{p.parent_name ? `${p.parent_name}${p.parent_phone ? `, ${p.parent_phone}` : ''}` : '-'}</dd>
-              <dt className="text-muted-foreground">Consent</dt>
-              <dd className="col-span-1 sm:col-span-2">profile/college {yesNo(p.consent_profile_at)} · social {yesNo(p.consent_social_at)}</dd>
+              <dd>{p.video_url ? <a href={p.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">Link <ExternalLink className="h-3 w-3" /></a> : '-'}</dd>
+              <dt className="text-muted-foreground">Handynummer</dt><dd>{p.phone ?? '-'}</dd>
+              <dt className="text-muted-foreground">E-Mail</dt><dd className="truncate">{p.email ?? '-'}</dd>
+              <dt className="text-muted-foreground">Elternteil</dt><dd>{p.parent_name ? `${p.parent_name}${p.parent_phone ? `, ${p.parent_phone}` : ''}` : '-'}</dd>
+              <dt className="text-muted-foreground">Einverständnis</dt>
+              <dd className="col-span-1 sm:col-span-3">Profil/College {yesNo(p.consent_profile_at)} · Social Media {yesNo(p.consent_social_at)}</dd>
             </dl>
           )}
         </>

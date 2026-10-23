@@ -27,31 +27,31 @@ export const InviteStats = ({ invites }: { invites: InviteWithPlayer[] }) => {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Tile value={invites.length} label="Invited" color="text-primary" />
-        <Tile value={accepted.length} label="Accepted" color="text-green-600" />
-        <Tile value={open} label="No answer yet" color="text-yellow-600" />
-        <Tile value={declined} label="Declined" color="text-gray-500" />
+        <Tile value={invites.length} label="Eingeladen" color="text-primary" />
+        <Tile value={accepted.length} label="Zugesagt" color="text-green-600" />
+        <Tile value={open} label="Keine Antwort" color="text-yellow-600" />
+        <Tile value={declined} label="Abgesagt" color="text-gray-500" />
         <Tile value={eligible} label="College-eligible" color="text-blue-600" />
-        <Tile value={clips} label="Clip consent" color="text-purple-600" />
+        <Tile value={clips} label="Clip-Einverständnis" color="text-purple-600" />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Category:</span>
+        <span className="text-muted-foreground">Kategorie:</span>
         <span className="rounded-md border bg-card px-2 py-0.5 font-medium">Signed <span className="text-muted-foreground">{signedN}</span></span>
-        <span className="rounded-md border bg-card px-2 py-0.5 font-medium">New <span className="text-muted-foreground">{newN}</span></span>
+        <span className="rounded-md border bg-card px-2 py-0.5 font-medium">Neu <span className="text-muted-foreground">{newN}</span></span>
         {invites.length - signedN - newN > 0 && (
-          <span className="rounded-md border border-dashed px-2 py-0.5 text-muted-foreground">not set {invites.length - signedN - newN}</span>
+          <span className="rounded-md border border-dashed px-2 py-0.5 text-muted-foreground">nicht gesetzt {invites.length - signedN - newN}</span>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Accepted by position:</span>
-        {byPosition.length === 0 && noPosition === 0 && <span className="text-muted-foreground">none yet</span>}
+        <span className="text-muted-foreground">Zusagen nach Position:</span>
+        {byPosition.length === 0 && noPosition === 0 && <span className="text-muted-foreground">noch keine</span>}
         {byPosition.map(({ pos, n }) => (
           <span key={pos} className="rounded-md border bg-card px-2 py-0.5 font-medium">
             {pos} <span className="text-muted-foreground">{n}</span>
           </span>
         ))}
         {noPosition > 0 && (
-          <span className="rounded-md border border-dashed px-2 py-0.5 text-muted-foreground">no position {noPosition}</span>
+          <span className="rounded-md border border-dashed px-2 py-0.5 text-muted-foreground">ohne Position {noPosition}</span>
         )}
       </div>
     </div>

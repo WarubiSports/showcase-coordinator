@@ -20,11 +20,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const db = createAdminClient()
   const { data: invite, error } = await db.from('showcase_invites').select('id, ausa_athlete_id, profile_url').eq('id', id).maybeSingle()
   if (error) return dbError(error.message)
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
-  if (typeof invite.ausa_athlete_id !== 'string') return NextResponse.json({ error: 'Invite is not linked to a Base athlete' }, { status: 400 })
+  if (!invite) return NextResponse.json({ error: 'Einladung nicht gefunden' }, { status: 404 })
+  if (typeof invite.ausa_athlete_id !== 'string') return NextResponse.json({ error: 'Die Einladung ist nicht mit Base verknüpft' }, { status: 400 })
 
   const athlete = await fetchAthlete(db, invite.ausa_athlete_id)
-  if (!athlete) return NextResponse.json({ error: 'Base athlete not found' }, { status: 404 })
+  if (!athlete) return NextResponse.json({ error: 'Athlet in Base nicht gefunden' }, { status: 404 })
   const values = definedFields(baseInviteFields(athlete, typeof invite.profile_url === 'string' ? invite.profile_url : null))
 
   const { data, error: writeError } = await db

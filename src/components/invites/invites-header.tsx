@@ -15,25 +15,25 @@ interface InvitesHeaderProps {
 export const InvitesHeader = ({ eventName, isLoading, staff, onRefresh, onSignOut }: InvitesHeaderProps) => (
   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 className="text-2xl font-bold">Invites</h1>
+      <h1 className="text-2xl font-bold">Einladungen</h1>
       <p className="text-muted-foreground">
-        {eventName ? `${eventName}: personal links, WhatsApp texts and the live overview` : 'Select an event first'}
+        {eventName ? `${eventName}: persönliche Links, WhatsApp-Texte und die Übersicht` : 'Erst ein Event auswählen'}
       </p>
       {staff && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Signed in as {staff.full_name ?? staff.email} (Staff App login)
+          Angemeldet als {staff.full_name ?? staff.email} (Staff-App-Login)
         </p>
       )}
     </div>
     <div className="flex gap-2">
       <Button variant="outline" onClick={onRefresh} disabled={isLoading}>
         <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        Refresh
+        Aktualisieren
       </Button>
       {staff && (
         <Button variant="ghost" onClick={onSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          Sign out
+          Abmelden
         </Button>
       )}
     </div>

@@ -31,13 +31,13 @@ export default function InvitesPage() {
   const handleCreate = async (rows: NewInviteInput[]) => {
     try {
       const created = await createInvites(rows)
-      toast.success(created.length === 1 ? 'Invite created' : `${created.length} invites created`)
+      toast.success(created.length === 1 ? 'Einladung erstellt' : `${created.length} Einladungen erstellt`)
       const withLink = created.filter((i) => i.profile_url && /fupa\.net/i.test(i.profile_url))
       let loaded = 0
       for (const i of withLink) if (await handleEnrich(i.id, true)) loaded++
-      if (withLink.length) toast.message(`FuPa data loaded for ${loaded} of ${withLink.length}`)
+      if (withLink.length) toast.message(`FuPa-Daten geladen für ${loaded} von ${withLink.length}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not create invites')
+      toast.error(err instanceof Error ? err.message : 'Einladungen konnten nicht erstellt werden')
       throw err
     }
   }
@@ -45,38 +45,38 @@ export default function InvitesPage() {
   const handleStatus = async (id: string, status: 'invited' | 'declined') => {
     try {
       await updateInvite(id, { status })
-      toast.success(status === 'declined' ? 'Marked as declined' : 'Reset to no answer')
+      toast.success(status === 'declined' ? 'Als abgesagt markiert' : 'Zurück auf keine Antwort')
     } catch {
-      toast.error('Could not update invite')
+      toast.error('Einladung konnte nicht geändert werden')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this invite? The link stops working. A sign-up already made stays on the Players page.')) return
+    if (!confirm('Einladung löschen? Der Link funktioniert dann nicht mehr. Eine schon gemachte Zusage bleibt auf der Spieler-Seite.')) return
     try {
       await deleteInvite(id)
-      toast.success('Invite deleted')
+      toast.success('Einladung gelöscht')
     } catch {
-      toast.error('Could not delete invite')
+      toast.error('Einladung konnte nicht gelöscht werden')
     }
   }
 
   const handleProfileUrl = async (id: string, url: string | null) => {
     try {
       await updateInvite(id, { profile_url: url })
-      toast.success(url ? 'Profile link saved' : 'Profile link removed')
+      toast.success(url ? 'Profil-Link gespeichert' : 'Profil-Link entfernt')
       if (url && /fupa\.net/i.test(url)) await handleEnrich(id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save the link')
+      toast.error(err instanceof Error ? err.message : 'Link konnte nicht gespeichert werden')
     }
   }
 
   const handleCategory = async (id: string, category: 'signed' | 'new') => {
     try {
       await updateInvite(id, { category })
-      toast.success(category === 'signed' ? 'Marked as signed' : 'Marked as new')
+      toast.success(category === 'signed' ? 'Als Signed markiert' : 'Als Neu markiert')
     } catch {
-      toast.error('Could not update the category')
+      toast.error('Kategorie konnte nicht geändert werden')
     }
   }
 
@@ -84,10 +84,10 @@ export default function InvitesPage() {
   const handleBaseSync = async (id: string) => {
     try {
       const updated = await syncFromBase(id)
-      toast.success('Base data synced')
+      toast.success('Base-Daten übernommen')
       if (updated.profile_url && /fupa\.net/i.test(updated.profile_url)) await handleEnrich(id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not sync from Base')
+      toast.error(err instanceof Error ? err.message : 'Aus Base übernehmen hat nicht geklappt')
     }
   }
 
@@ -95,13 +95,13 @@ export default function InvitesPage() {
     try {
       await setJerseyNumber(inviteId, n)
     } catch {
-      toast.error('Could not save the number')
+      toast.error('Nummer konnte nicht gespeichert werden')
     }
   }
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <InvitesHeader eventName={currentEvent?.name ?? null} isLoading={isLoading} staff={staff} onRefresh={refetch} onSignOut={signOut} />
         <InvitesNotices templateEvent={!!currentEvent && isTemplateEvent(currentEvent)} migrationPending={migrationPending} error={error} />
 
@@ -109,11 +109,11 @@ export default function InvitesPage() {
 
         <Tabs defaultValue="invites">
           <TabsList>
-            <TabsTrigger value="invites">Invites</TabsTrigger>
-            <TabsTrigger value="roster">Roster</TabsTrigger>
+            <TabsTrigger value="invites">Einladungen</TabsTrigger>
+            <TabsTrigger value="roster">Kader</TabsTrigger>
           </TabsList>
           <TabsContent value="invites" className="space-y-6 pt-2">
-            <InviteForm key={defaultInviter} defaultInviter={defaultInviter} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
+            <InviteForm key={defaultInviter} defaultInviter={defaultInviter} staffName={staff ? staffFirstName || null : null} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
             <InviteTable
               invites={invites}
               event={currentEvent}
