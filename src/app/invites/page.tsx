@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/app-shell'
 import { InvitesHeader } from '@/components/invites/invites-header'
@@ -9,6 +10,7 @@ import { InviteForm } from '@/components/invites/invite-form'
 import { InviteStats } from '@/components/invites/invite-stats'
 import { InviteTable } from '@/components/invites/invite-table'
 import { RosterTable } from '@/components/invites/roster-table'
+import { TabFromUrl, type InvitesTab } from '@/components/invites/tab-from-url'
 import { useInvites, type NewInviteInput } from '@/hooks/use-invites'
 import { useUser } from '@/hooks/use-user'
 import { useStaff } from '@/hooks/use-staff'
@@ -20,6 +22,7 @@ import { useEvent } from '@/contexts/event-context'
 export default function InvitesPage() {
   const { currentEvent } = useEvent()
   const { userName } = useUser()
+  const [tab, setTab] = useState<InvitesTab>('invites')
   const { staff, firstName: staffFirstName, signOut } = useStaff()
   // With a Staff App login the inviter defaults to that first name; under basic auth to the welcome-dialog name
   const defaultInviter = staffFirstName || userName || ''
@@ -107,7 +110,8 @@ export default function InvitesPage() {
 
         <InviteStats invites={invites} />
 
-        <Tabs defaultValue="invites">
+        <TabFromUrl onTab={setTab} />
+        <Tabs value={tab} onValueChange={(v) => setTab(v as InvitesTab)}>
           <TabsList>
             <TabsTrigger value="invites">Einladungen</TabsTrigger>
             <TabsTrigger value="roster">Kader</TabsTrigger>

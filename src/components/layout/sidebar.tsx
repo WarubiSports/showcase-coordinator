@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import type { Category } from '@/types'
 import type { UserRole } from '@/lib/constants'
+import { StaffNav } from '@/components/layout/staff-nav'
 
 interface SidebarProps {
   categories: Category[]
@@ -17,7 +18,7 @@ interface SidebarProps {
   isOpen: boolean
   onClose: () => void
   userRole: UserRole
-  // A Staff App login (invite area) sees the Invites entry whatever the stored role; nothing else changes for it
+  // A Staff App login sees only the invite area: Einladungen and Kader, whatever the stored role
   staffSession?: boolean
 }
 
@@ -35,7 +36,8 @@ const navigation: { name: string; href: string; icon: typeof LayoutDashboard; ad
 
 export function Sidebar({ categories, selectedCategory, onCategorySelect, isOpen, onClose, userRole, staffSession = false }: SidebarProps) {
   const pathname = usePathname()
-  const filteredNav = navigation.filter((item) => !item.adminOnly || userRole === 'admin' || (staffSession && item.href === '/invites'))
+  const filteredNav = navigation.filter((item) => !item.adminOnly || userRole === 'admin')
+  const showCategories = userRole === 'admin' && !staffSession
 
   return (
     <>
@@ -65,7 +67,10 @@ export function Sidebar({ categories, selectedCategory, onCategorySelect, isOpen
           <ScrollArea className="flex-1 px-3 py-2">
             {/* Navigation */}
             <div className="space-y-1">
-              {filteredNav.map((item) => {
+              {staffSession && (
+                <StaffNav onClick={onClose} itemClass="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors" activeClass="bg-primary text-primary-foreground" idleClass="text-muted-foreground hover:bg-accent hover:text-accent-foreground" iconClass="h-4 w-4" />
+              )}
+              {!staffSession && filteredNav.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <Link
@@ -86,10 +91,10 @@ export function Sidebar({ categories, selectedCategory, onCategorySelect, isOpen
               })}
             </div>
 
-            {userRole === 'admin' && <Separator className="my-4" />}
+            {showCategories && <Separator className="my-4" />}
 
-            {/* Categories filter (admin only) */}
-            <div className="space-y-1" style={{ display: userRole === 'admin' ? undefined : 'none' }}>
+            {/* Categories filter (admin only; a staff session has no access to the db proxy behind it) */}
+            <div className="space-y-1" style={{ display: showCategories ? undefined : 'none' }}>
               <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground">
                 Categories
               </h3>
