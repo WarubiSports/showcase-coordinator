@@ -19,7 +19,7 @@ function load(path, imports) {
   }, { filename: path })
   return exports
 }
-const { parseFupaHtml, isFupaUrl } = load('../src/lib/fupa.ts', { '@/lib/profile-url': profileUrl })
+const { parseFupaHtml, isFupaUrl, careerTotals } = load('../src/lib/fupa.ts', { '@/lib/profile-url': profileUrl })
 const plain = (v) => JSON.parse(JSON.stringify(v))
 
 // Fixtures use fake players only. Club names are real club shapes because the bug is about how FuPa nests them.
@@ -81,6 +81,23 @@ test('newest season older than the current team (transfer, no games yet): the cu
   assert.equal(p.club, 'FC Neuclub')
   assert.equal(p.league, 'Landesliga')
   assert.equal(p.stats.season, '25/26')
+})
+
+test('career totals: every season with numbers is summed, a season without numbers is skipped, none means no career', () => {
+  const current = teamOf('sv-beispielhausen-m1-2026-27', 'SV Beispielhausen', 'Kreisliga A', '26/27')
+  const noNumbers = { id: 'x', team: teamOf('sv-beispielhausen-m1-2023-24', 'SV Beispielhausen', 'Kreisliga B', '23/24'), statistics: { yellowCard: 1 } }
+  const p = plain(parseFupaHtml(page({ currentTeam: current, seasons: [
+    season('sv-beispielhausen-m1-2024-25', '24/25', 28, 12, 3, 'SV Beispielhausen', 'Kreisliga B'),
+    noNumbers,
+    season('sv-beispielhausen-m1-2025-26', '25/26', 30, 11, 2, 'SV Beispielhausen', 'Kreisliga B'),
+    season('sv-beispielhausen-m1-2026-27', '26/27', 7, 3, 1, 'SV Beispielhausen', 'Kreisliga A'),
+  ] })))
+  assert.deepEqual(p.stats.career, { games: 65, goals: 26, assists: 6, seasons: 3 })
+  assert.equal(p.stats.games, 7, 'the season line still shows the newest season only')
+  const one = plain(parseFupaHtml(page({ currentTeam: current, seasons: [season('sv-beispielhausen-m1-2026-27', '26/27', 1, 0, 0, 'SV Beispielhausen', 'Kreisliga A')] })))
+  assert.deepEqual(one.stats.career, { games: 1, goals: 0, assists: 0, seasons: 1 })
+  assert.equal(parseFupaHtml(page({ currentTeam: current, seasons: [] })).stats, null, 'no season with numbers: no stats, no career')
+  assert.equal(plain(careerTotals([noNumbers])), null)
 })
 
 test('photos: only https on fupa.net, image path as fallback, no data means null', () => {

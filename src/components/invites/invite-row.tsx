@@ -99,6 +99,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
               <span className="truncate">
                 {invite.enriched_at ? 'FuPa' : 'Base'}: {[invite.club, invite.league, invite.position].filter(Boolean).join(' · ')}
                 {invite.stats ? ` · ${invite.stats.games} Sp. ${invite.stats.goals} T. ${invite.stats.assists} V.${invite.stats.season ? ` (${invite.stats.season})` : ''}` : ''}
+                {invite.stats?.career && invite.stats.career.games > 0 ? ` · Karriere ${invite.stats.career.games} Sp. ${invite.stats.career.goals} T.` : ''}
               </span>
             </p>
           )}

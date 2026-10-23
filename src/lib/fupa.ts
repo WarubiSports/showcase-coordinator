@@ -5,6 +5,14 @@ import { isProfileUrl } from '@/lib/profile-url'
 // the seasons. Nothing is guessed: a page without the data yields null and nothing is shown.
 // The fetching half (direct fetch, Firecrawl fallback) is in fupa-fetch.ts.
 
+// Totals over every season on the page (seasons = those with a games number); null when no season has numbers
+export interface FupaCareer {
+  games: number
+  goals: number
+  assists: number
+  seasons: number
+}
+
 export interface FupaStats {
   season: string | null
   games: number
@@ -12,6 +20,7 @@ export interface FupaStats {
   assists: number
   team: string | null
   league: string | null
+  career: FupaCareer | null
 }
 
 export interface FupaProfile {
@@ -103,6 +112,21 @@ const teamFacts = (team: Obj | null) => {
   }
 }
 
+// Every season with a games number counts; a season without numbers is skipped
+export const careerTotals = (seasons: Obj[]): FupaCareer | null => {
+  const totals = { games: 0, goals: 0, assists: 0, seasons: 0 }
+  for (const season of seasons) {
+    const st = obj(season.statistics)
+    const g = int(st?.matches)
+    if (g === null) continue
+    totals.games += g
+    totals.goals += int(st?.goals) ?? 0
+    totals.assists += int(st?.assists) ?? 0
+    totals.seasons += 1
+  }
+  return totals.seasons > 0 ? totals : null
+}
+
 // Pure: the page HTML to the profile facts. null when the page carries no player data at all.
 export const parseFupaHtml = (html: string): FupaProfile | null => {
   if (typeof html !== 'string') return null
@@ -129,7 +153,9 @@ export const parseFupaHtml = (html: string): FupaProfile | null => {
   const statistics = obj(newest?.statistics)
   const games = int(statistics?.matches)
   const stats: FupaStats | null =
-    newest && games !== null ? { season: played.season, games, goals: int(statistics?.goals) ?? 0, assists: int(statistics?.assists) ?? 0, team: played.club, league: played.league } : null
+    newest && games !== null
+      ? { season: played.season, games, goals: int(statistics?.goals) ?? 0, assists: int(statistics?.assists) ?? 0, team: played.club, league: played.league, career: careerTotals(seasons) }
+      : null
   // The club's first team (currentTeam) can sit in a higher league than the team the player actually plays
   // for (a reserve side, say). The newest season's team and league are what the card and the staff line show;
   // the club's competition is only the fallback when that season carries no league or is older than the current team.

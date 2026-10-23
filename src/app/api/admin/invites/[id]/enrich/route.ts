@@ -5,6 +5,7 @@ import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { fetchFupaProfile } from '@/lib/fupa-fetch'
 import { enrichUpdate, type CurrentCardFields } from '@/lib/invite-enrich'
+import { fetchAthlete, mapPosition } from '@/lib/base-athletes'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,14 +19,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
 
   const db = createAdminClient()
-  const { data: invite, error } = await db.from('showcase_invites').select('id, profile_url, photo_url, club, position').eq('id', id).maybeSingle()
+  const { data: invite, error } = await db.from('showcase_invites').select('id, profile_url, photo_url, club, position, ausa_athlete_id').eq('id', id).maybeSingle()
   if (error) return dbError(error.message)
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
   const url = typeof invite.profile_url === 'string' ? invite.profile_url : null
   if (!url) return NextResponse.json({ error: 'No profile link on this invite' }, { status: 400 })
 
   const result = await fetchFupaProfile(url)
-  const values = enrichUpdate(result, invite as CurrentCardFields, new Date().toISOString())
+  // A Base-linked player keeps Base's position (Max, 23.10: a mapped "RW" must not become FuPa's "Mittelfeld")
+  const athlete = typeof invite.ausa_athlete_id === 'string' ? await fetchAthlete(db, invite.ausa_athlete_id).catch(() => null) : null
+  const basePosition = athlete ? (mapPosition(athlete.position_primary) ?? mapPosition(athlete.position_soccer?.[0])) : null
+  const values = enrichUpdate(result, invite as CurrentCardFields, new Date().toISOString(), basePosition)
   const query = values ? db.from('showcase_invites').update(values).eq('id', id) : db.from('showcase_invites')
   const { data, error: readError } = await query.select(INVITE_WITH_PLAYER_SELECT).eq('id', id).maybeSingle()
   if (readError) return dbError(readError.message)

@@ -19,7 +19,7 @@ export interface InvitePayload {
     club: string | null
     league: string | null
     position: string | null
-    stats: { season: string | null; games: number; goals: number; assists: number; team: string | null; league: string | null } | null
+    stats: { season: string | null; games: number; goals: number; assists: number; team: string | null; league: string | null; career?: { games: number; goals: number; assists: number; seasons: number } | null } | null
     enriched_at: string | null
   }
   event: {

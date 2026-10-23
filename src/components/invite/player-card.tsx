@@ -14,11 +14,11 @@ const initials = (name: string) =>
 
 export const PlayerCard = ({ invite }: { invite: InvitePayload['invite'] }) => {
   const s = invite.stats
-  const statsLine = s
-    ? [s.season ? `Saison ${s.season}` : null, `${s.games} ${s.games === 1 ? 'Spiel' : 'Spiele'}`, `${s.goals} ${s.goals === 1 ? 'Tor' : 'Tore'}`, `${s.assists} ${s.assists === 1 ? 'Vorlage' : 'Vorlagen'}`]
-        .filter(Boolean)
-        .join(' · ')
-    : null
+  const counts = (n: { games: number; goals: number; assists: number }) =>
+    [`${n.games} ${n.games === 1 ? 'Spiel' : 'Spiele'}`, `${n.goals} ${n.goals === 1 ? 'Tor' : 'Tore'}`, `${n.assists} ${n.assists === 1 ? 'Vorlage' : 'Vorlagen'}`].join(' · ')
+  const statsLine = s ? [s.season ? `Saison ${s.season}` : null, counts(s)].filter(Boolean).join(' · ') : null
+  // Totals over every season on the FuPa page; nothing when no season carries numbers
+  const careerLine = s?.career && s.career.games > 0 ? `Karriere: ${counts(s.career)}` : null
   return (
     <div className="flex gap-4 rounded-xl border border-ausa-ink-200 bg-ausa-paper p-4 text-ausa-ink-900 shadow-[0_1px_0_rgba(11,15,23,0.04)]">
       {invite.photo_url ? (
@@ -36,6 +36,7 @@ export const PlayerCard = ({ invite }: { invite: InvitePayload['invite'] }) => {
           {invite.position && <span className="rounded-md bg-ausa-ink-100 px-2 py-0.5 font-medium text-ausa-ink-900">{invite.position}</span>}
           {statsLine && <span className="font-ausa-mono text-xs text-ausa-ink-700">{statsLine}</span>}
         </div>
+        {careerLine && <p className="mt-1 font-ausa-mono text-xs text-ausa-ink-700">{careerLine}</p>}
         <p className="mt-2 text-[11px] text-ausa-ink-400">{invite.enriched_at ? 'Daten von FuPa' : 'Daten aus deinem Athletes USA Profil'}</p>
       </div>
     </div>
