@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:itp-move": "node --test tests/itp-move*.test.mjs",
-    "test:fupa": "node --test tests/fupa-parser.test.mjs"
+    "test:fupa": "node --test tests/fupa-parser.test.mjs",
+    "test:events": "node --test tests/default-event.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

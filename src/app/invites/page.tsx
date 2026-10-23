@@ -11,6 +11,7 @@ import { RosterTable } from '@/components/invites/roster-table'
 import { useInvites, type NewInviteInput } from '@/hooks/use-invites'
 import { useUser } from '@/hooks/use-user'
 import { useStaff } from '@/hooks/use-staff'
+import { isTemplateEvent } from '@/lib/default-event'
 import { useEvent } from '@/contexts/event-context'
 
 // Staff side of the selection invites: add invites, copy the WhatsApp text, watch the answers, set shirt numbers
@@ -102,6 +103,11 @@ export default function InvitesPage() {
     <AppShell>
       <div className="space-y-6">
         <InvitesHeader eventName={currentEvent?.name ?? null} isLoading={isLoading} staff={staff} onRefresh={refetch} onSignOut={signOut} />
+        {currentEvent && isTemplateEvent(currentEvent) && (
+          <div className="rounded-lg border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+            This is the template event, switch to the real event before inviting.
+          </div>
+        )}
 
         {migrationPending && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
