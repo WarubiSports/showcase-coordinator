@@ -4,7 +4,7 @@ import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { newInviteToken } from '@/lib/invite-token'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
-import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
+import { PROFILE_LINK_HINT, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
 import { fetchAthlete } from '@/lib/base-athletes'
 import { baseInviteFields, definedFields, type BaseInviteFields } from '@/lib/base-invite'
 import { candidateProfileUrl, pickCandidate, searchFupaPlayers } from '@/lib/fupa-search'
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const invited_by = clean(r.invited_by, 80)
     if (!name || !invited_by) return NextResponse.json({ error: 'Each invite needs a name and an inviter' }, { status: 400 })
     const profile_url = cleanProfileUrl(r.profile_url)
-    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: `${name}: ${PROFILE_URL_ERROR}` }, { status: 400 })
+    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: `${name}: ${PROFILE_LINK_HINT}` }, { status: 400 })
     // Linked to a Base athlete: link, photo, club and position come from Base so the page is personal from the start
     const athleteId = typeof r.ausa_athlete_id === 'string' && UUID.test(r.ausa_athlete_id) ? r.ausa_athlete_id : null
     const athlete = athleteId ? await fetchAthlete(db, athleteId).catch(() => null) : null

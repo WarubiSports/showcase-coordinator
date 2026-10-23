@@ -101,7 +101,7 @@ export default function InvitesPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24">
         <InvitesHeader eventName={currentEvent?.name ?? null} isLoading={isLoading} staff={staff} onRefresh={refetch} onSignOut={signOut} />
         <InvitesNotices templateEvent={!!currentEvent && isTemplateEvent(currentEvent)} migrationPending={migrationPending} error={error} />
 
@@ -113,7 +113,7 @@ export default function InvitesPage() {
             <TabsTrigger value="roster">Roster</TabsTrigger>
           </TabsList>
           <TabsContent value="invites" className="space-y-6 pt-2">
-            <InviteForm key={defaultInviter} defaultInviter={defaultInviter} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
+            <InviteForm key={defaultInviter} defaultInviter={defaultInviter} staffName={staff ? staffFirstName || null : null} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
             <InviteTable
               invites={invites}
               event={currentEvent}

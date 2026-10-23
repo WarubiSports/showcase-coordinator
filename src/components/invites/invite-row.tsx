@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { InviteRowMenu } from '@/components/invites/invite-row-menu'
 import { FupaPicker } from '@/components/invites/fupa-picker'
 import { isCollegeEligible } from '@/components/invites/invite-stats'
-import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
+import { PROFILE_LINK_HINT, isProfileUrl } from '@/lib/profile-url'
 import { CATEGORY, SCHOOL, STATUS } from '@/components/invites/invite-badges'
 import type { FupaCandidate, InviteCategory, InviteWithPlayer } from '@/types'
 
@@ -48,14 +48,14 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
 
   // Edit the FuPa / Transfermarkt link in place; an empty value clears it
   const editProfileUrl = () => {
-    const v = window.prompt('Profil-Link (FuPa oder Transfermarkt)', invite.profile_url ?? '')
+    const v = window.prompt('Profile link (FuPa or Transfermarkt)', invite.profile_url ?? '')
     if (v === null) return
     const url = v.trim()
-    if (url && !isProfileUrl(url)) { toast.error(PROFILE_URL_ERROR); return }
+    if (url && !isProfileUrl(url)) { toast.error(PROFILE_LINK_HINT); return }
     onProfileUrl(url || null)
   }
   const editClub = () => {
-    const v = window.prompt('Verein', invite.club ?? '')
+    const v = window.prompt('Club', invite.club ?? '')
     if (v !== null) onClub(v.trim() || null)
   }
 

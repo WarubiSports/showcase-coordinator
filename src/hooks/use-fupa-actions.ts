@@ -36,7 +36,7 @@ export const useFupaActions = ({ enrichInvite, findOnFupa, updateInvite }: FupaA
         toast.success('FuPa profile linked')
         await enrich(id, true)
       } else {
-        toast.message(updated.fupa?.hits ? `FuPa: ${updated.fupa.hits} Treffer, bitte in der Zeile auswählen` : 'FuPa: kein Treffer')
+        toast.message(updated.fupa?.hits ? `FuPa: ${updated.fupa.hits} hits, pick one in the row` : 'FuPa: no hit')
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'FuPa search failed')

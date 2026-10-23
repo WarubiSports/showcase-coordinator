@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
-import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
+import { PROFILE_LINK_HINT, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
 
 // Edit or remove one invite. Staff can reset to invited or mark declined (a WhatsApp "kann nicht");
 // accepted only comes from the player's form, because that is where the consent lives.
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   let linkChanged = false
   if ('profile_url' in body) {
     const profile_url = cleanProfileUrl(body.profile_url)
-    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_URL_ERROR }, { status: 400 })
+    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_LINK_HINT }, { status: 400 })
     updates.profile_url = profile_url
     linkChanged = true
     if (profile_url) updates.fupa_candidates = null

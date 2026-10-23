@@ -38,6 +38,7 @@ function isInviteArea(pathname: string) {
     pathname.startsWith('/invites/') ||
     pathname.startsWith('/api/admin/invites') ||
     pathname.startsWith('/api/admin/athletes') ||
+    pathname.startsWith('/api/admin/fupa-search') ||
     pathname === '/api/admin/me'
   )
 }
