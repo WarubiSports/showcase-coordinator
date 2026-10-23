@@ -50,6 +50,9 @@ const Tick = ({
 
 export const ConsentBlock = ({ form, minor, onChange }: ConsentBlockProps) => {
   const [showFull, setShowFull] = useState(false)
+  // One tap sets every applicable box; nothing is pre-ticked, the tap is the active act (Max, 23.10)
+  const allTicked = form.consent_profile && form.consent_social && (!minor || form.consent_parent)
+  const acceptAll = () => onChange({ consent_profile: true, consent_social: true, ...(minor ? { consent_parent: true } : {}) })
 
   return (
     <section className="space-y-3">
@@ -72,6 +75,16 @@ export const ConsentBlock = ({ form, minor, onChange }: ConsentBlockProps) => {
           ))}
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={acceptAll}
+        disabled={allTicked}
+        className="w-full rounded-xl border-2 border-emerald-600 bg-white py-3 font-semibold text-emerald-700 active:scale-[0.98] disabled:border-gray-200 disabled:text-gray-500"
+      >
+        {allTicked ? 'Alles akzeptiert' : 'Alles akzeptieren'}
+      </button>
+      <p className="px-1 text-xs text-gray-500">Setzt alle Häkchen unten mit einem Tipp. Einzelne kannst du danach wieder abwählen.</p>
 
       <Tick checked={form.consent_profile} onChange={(v) => onChange({ consent_profile: v })} label={CONSENT_PROFILE_LABEL} hint={CONSENT_PROFILE_HINT} text={CONSENT_PROFILE_TEXT} />
       {!form.consent_profile && (
