@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import * as cardLines from '../src/lib/card-lines.ts'
 import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 import { test } from 'node:test'
@@ -99,4 +100,15 @@ test('FuPa read: a failure writes nothing; a success keeps the Base photo when F
   assert.equal(u.position, 'Sturm')
   assert.equal(u.league, 'Kreisliga A')
   assert.equal(u.enriched_at, '2026-10-23T12:00:00Z')
+})
+
+test('card lines: a count of 0 is left out, no games means no line', () => {
+  // Benjamin's live card read "3 Spiele · 2 Tore · 0 Vorlagen"; the zero goes
+  assert.equal(cardLines.seasonLine({ season: '26/27', games: 3, goals: 2, assists: 0 }), 'Saison 26/27 · 3 Spiele · 2 Tore')
+  assert.equal(cardLines.seasonLine({ season: '26/27', games: 1, goals: 0, assists: 1 }), 'Saison 26/27 · 1 Spiel · 1 Vorlage')
+  assert.equal(cardLines.seasonLine({ season: '26/27', games: 0, goals: 0, assists: 0 }), null, 'no games, no season line')
+  assert.equal(cardLines.seasonLine(null), null)
+  assert.equal(cardLines.careerLine({ games: 95, goals: 30, assists: 0 }), 'Karriere: 95 Spiele · 30 Tore')
+  assert.equal(cardLines.careerLine({ games: 0, goals: 0, assists: 0 }), null)
+  assert.equal(cardLines.careerLine(undefined), null)
 })
