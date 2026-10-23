@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { isCollegeEligible } from '@/components/invites/invite-stats'
+import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
 import type { InviteStatus, InviteWithPlayer, SchoolType } from '@/types'
 
 const STATUS: Record<InviteStatus, { label: string; cls: string }> = {
@@ -31,20 +32,39 @@ interface InviteRowProps {
   link: string
   message: string
   waUrl: string | null
+  selected: boolean
+  onSelect: (selected: boolean) => void
   onStatus: (status: 'invited' | 'declined') => void
+  onProfileUrl: (url: string | null) => void
   onDelete: () => void
 }
 
-export const InviteRow = ({ invite, link, message, waUrl, onStatus, onDelete }: InviteRowProps) => {
+export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onDelete }: InviteRowProps) => {
   const [open, setOpen] = useState(false)
   const p = invite.player
   const status = STATUS[invite.status]
   const yesNo = (v: string | null) => (v ? 'yes' : 'no')
 
+  // Edit the FuPa / Transfermarkt link in place; an empty value clears it
+  const editProfileUrl = () => {
+    const v = window.prompt('Profil-Link (FuPa oder Transfermarkt)', invite.profile_url ?? '')
+    if (v === null) return
+    const url = v.trim()
+    if (url && !isProfileUrl(url)) { toast.error(PROFILE_URL_ERROR); return }
+    onProfileUrl(url || null)
+  }
+
   return (
-    <li className="rounded-lg border bg-card p-4">
+    <li className={`rounded-lg border bg-card p-4 ${selected ? 'border-primary/50 bg-primary/5' : ''}`}>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(e) => onSelect(e.target.checked)}
+          aria-label={`Select ${invite.name} for the coach message`}
+          className="mt-1 h-5 w-5 shrink-0 accent-primary"
+        />
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold">{p?.name ?? invite.name}</h3>
             <Badge className={status.cls}>{status.label}</Badge>
@@ -56,6 +76,12 @@ export const InviteRow = ({ invite, link, message, waUrl, onStatus, onDelete }: 
             {invite.phone ? ` · ${invite.phone}` : ''}
             {invite.responded_at ? ` · answered ${new Date(invite.responded_at).toLocaleDateString('de-DE')}` : ''}
           </p>
+          {invite.profile_url && (
+            <a href={invite.profile_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm text-blue-700 underline">
+              <ExternalLink className="h-3.5 w-3.5" />
+              {/fupa\.net/i.test(invite.profile_url) ? 'FuPa profile' : 'Transfermarkt profile'}
+            </a>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -64,6 +90,7 @@ export const InviteRow = ({ invite, link, message, waUrl, onStatus, onDelete }: 
           <DropdownMenuContent align="end">
             {invite.status !== 'declined' && <DropdownMenuItem onClick={() => onStatus('declined')}>Mark declined (answered on WhatsApp)</DropdownMenuItem>}
             {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Reset to no answer</DropdownMenuItem>}
+            <DropdownMenuItem onClick={editProfileUrl}>{invite.profile_url ? 'Edit profile link' : 'Add profile link'}</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete invite</DropdownMenuItem>
           </DropdownMenuContent>

@@ -298,6 +298,7 @@ export interface Player {
   grades: string | null
   english_level: string | null
   video_url: string | null
+  profile_url: string | null
   jersey_number: number | null
   consent_profile_at: string | null
   consent_social_at: string | null
@@ -320,6 +321,7 @@ export interface Invite {
   phone: string | null
   invited_by: string
   personal_line: string | null
+  profile_url: string | null
   status: InviteStatus
   invited_at: string
   responded_at: string | null
@@ -332,7 +334,7 @@ export interface Invite {
 export type InvitePlayer = Pick<
   Player,
   | 'id' | 'name' | 'position' | 'birth_year' | 'club' | 'phone' | 'email' | 'parent_name' | 'parent_phone'
-  | 'school_type' | 'grad_year' | 'grades' | 'english_level' | 'video_url' | 'jersey_number'
+  | 'school_type' | 'grad_year' | 'grades' | 'english_level' | 'video_url' | 'profile_url' | 'jersey_number'
   | 'consent_profile_at' | 'consent_social_at'
 >
 

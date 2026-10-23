@@ -48,6 +48,15 @@ export default function InvitesPage() {
     }
   }
 
+  const handleProfileUrl = async (id: string, url: string | null) => {
+    try {
+      await updateInvite(id, { profile_url: url })
+      toast.success(url ? 'Profile link saved' : 'Profile link removed')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the link')
+    }
+  }
+
   const handleJersey = async (playerId: string, n: number | null) => {
     try {
       await setJerseyNumber(playerId, n)
@@ -88,7 +97,15 @@ export default function InvitesPage() {
           </TabsList>
           <TabsContent value="invites" className="space-y-6 pt-2">
             <InviteForm defaultInviter={userName ?? ''} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
-            <InviteTable invites={invites} event={currentEvent} isLoading={isLoading} onStatus={handleStatus} onDelete={handleDelete} />
+            <InviteTable
+              invites={invites}
+              event={currentEvent}
+              sender={userName ?? ''}
+              isLoading={isLoading}
+              onStatus={handleStatus}
+              onProfileUrl={handleProfileUrl}
+              onDelete={handleDelete}
+            />
           </TabsContent>
           <TabsContent value="roster" className="pt-2">
             <RosterTable invites={invites} onJersey={handleJersey} />

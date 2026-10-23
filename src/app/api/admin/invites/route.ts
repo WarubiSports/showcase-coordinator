@@ -4,6 +4,7 @@ import { adminAuthError } from '@/lib/admin-auth'
 import { newInviteToken } from '@/lib/invite-token'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
+import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,7 @@ interface NewInvite {
   phone?: unknown
   invited_by?: unknown
   personal_line?: unknown
+  profile_url?: unknown
 }
 
 const clean = (v: unknown, max: number): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
@@ -44,11 +46,13 @@ export async function POST(req: NextRequest) {
   if (!eventId || rows.length === 0) return NextResponse.json({ error: 'eventId and invites required' }, { status: 400 })
   if (rows.length > 100) return NextResponse.json({ error: 'Max 100 invites per request' }, { status: 400 })
 
-  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null }[] = []
+  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; profile_url?: string }[] = []
   for (const r of rows) {
     const name = clean(r.name, 120)
     const invited_by = clean(r.invited_by, 80)
     if (!name || !invited_by) return NextResponse.json({ error: 'Each invite needs a name and an inviter' }, { status: 400 })
+    const profile_url = cleanProfileUrl(r.profile_url)
+    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: `${name}: ${PROFILE_URL_ERROR}` }, { status: 400 })
     inserts.push({
       event_id: eventId,
       token: newInviteToken(),
@@ -56,6 +60,8 @@ export async function POST(req: NextRequest) {
       phone: clean(r.phone, 40),
       invited_by,
       personal_line: clean(r.personal_line, 300),
+      // only sent when given, so invites without a link still save before the profile_url migration runs
+      ...(profile_url ? { profile_url } : {}),
     })
   }
 
