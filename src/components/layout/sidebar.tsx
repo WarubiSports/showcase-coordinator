@@ -17,6 +17,8 @@ interface SidebarProps {
   isOpen: boolean
   onClose: () => void
   userRole: UserRole
+  // A Staff App login (invite area) sees the Invites entry whatever the stored role; nothing else changes for it
+  staffSession?: boolean
 }
 
 const navigation: { name: string; href: string; icon: typeof LayoutDashboard; adminOnly?: boolean }[] = [
@@ -31,9 +33,9 @@ const navigation: { name: string; href: string; icon: typeof LayoutDashboard; ad
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
-export function Sidebar({ categories, selectedCategory, onCategorySelect, isOpen, onClose, userRole }: SidebarProps) {
+export function Sidebar({ categories, selectedCategory, onCategorySelect, isOpen, onClose, userRole, staffSession = false }: SidebarProps) {
   const pathname = usePathname()
-  const filteredNav = navigation.filter((item) => !item.adminOnly || userRole === 'admin')
+  const filteredNav = navigation.filter((item) => !item.adminOnly || userRole === 'admin' || (staffSession && item.href === '/invites'))
 
   return (
     <>
