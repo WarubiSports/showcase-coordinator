@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@/hooks/use-user'
 import { useStaff } from '@/hooks/use-staff'
+import { shouldAskForName } from '@/lib/staff-state'
 import { useCategories } from '@/hooks/use-categories'
 import { NameEntryDialog } from './name-entry-dialog'
 import { Header } from './layout/header'
@@ -18,7 +19,7 @@ interface AppShellProps {
 
 export function AppShell({ children, selectedCategory, onCategorySelect }: AppShellProps) {
   const { userName, setUserName, clearUserName, userRole, setUserRole, isLoading, hasUser } = useUser()
-  const { staff, loaded: staffLoaded, firstName: staffFirstName } = useStaff()
+  const { staff, loaded: staffLoaded, failed: staffFailed, staffCookie, firstName: staffFirstName } = useStaff()
   const { categories } = useCategories()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [localCategory, setLocalCategory] = useState<string | null>(null)
@@ -27,12 +28,12 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
   const activeCategory = selectedCategory !== undefined ? selectedCategory : localCategory
 
   // A Staff App login already says who this is: the stored name is seeded from the staff profile (first name,
-  // the same value the invite form's "Invited by" uses) and the name dialog never opens. Basic-auth visitors
-  // keep the dialog as before; it only waits until the staff check has answered.
+  // the same value the invite form's "Eingeladen von" uses). The name dialog is for the basic-auth login only:
+  // never with a staff session or its cookie, never while the staff check is open or has failed.
   useEffect(() => {
     if (!isLoading && !hasUser && staff && staffFirstName) setUserName(staffFirstName)
   }, [isLoading, hasUser, staff, staffFirstName, setUserName])
-  const askForName = !hasUser && staffLoaded && !(staff && staffFirstName)
+  const askForName = shouldAskForName({ hasUser, check: { staff, loaded: staffLoaded, failed: staffFailed }, staffCookie })
 
   if (isLoading) {
     return (
