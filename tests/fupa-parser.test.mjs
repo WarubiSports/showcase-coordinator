@@ -48,7 +48,7 @@ test('same team for club and newest season: club, league, position, photo and ne
   assert.equal(p.club, 'SV Beispielhausen')
   assert.equal(p.league, 'Kreisliga A')
   assert.equal(p.position, 'Sturm')
-  assert.deepEqual(p.stats, { season: '26/27', games: 7, goals: 3, assists: 1, team: 'SV Beispielhausen', league: 'Kreisliga A' })
+  assert.deepEqual(p.stats, { season: '26/27', games: 7, goals: 3, assists: 1, team: 'SV Beispielhausen', league: 'Kreisliga A', career: { games: 27, goals: 12, assists: 5, seasons: 2 } })
 })
 
 test('club first team in a higher league than the team the player plays for: the newest season wins', () => {
@@ -60,7 +60,7 @@ test('club first team in a higher league than the team the player plays for: the
   })))
   assert.equal(p.club, 'Hamburger SV II')
   assert.equal(p.league, 'Regionalliga Nord')
-  assert.deepEqual(p.stats, { season: '26/27', games: 2, goals: 0, assists: 1, team: 'Hamburger SV II', league: 'Regionalliga Nord' })
+  assert.deepEqual(p.stats, { season: '26/27', games: 2, goals: 0, assists: 1, team: 'Hamburger SV II', league: 'Regionalliga Nord', career: { games: 2, goals: 0, assists: 1, seasons: 1 } })
 })
 
 test('newest season without a league: the club competition is the fallback', () => {
@@ -70,7 +70,7 @@ test('newest season without a league: the club competition is the fallback', () 
   })))
   assert.equal(p.club, 'SV Beispielhausen')
   assert.equal(p.league, 'Kreisliga A')
-  assert.deepEqual(p.stats, { season: null, games: 3, goals: 1, assists: 0, team: 'SV Beispielhausen II', league: null })
+  assert.deepEqual(p.stats, { season: null, games: 3, goals: 1, assists: 0, team: 'SV Beispielhausen II', league: null, career: { games: 3, goals: 1, assists: 0, seasons: 1 } })
 })
 
 test('newest season older than the current team (transfer, no games yet): the current team is shown', () => {
