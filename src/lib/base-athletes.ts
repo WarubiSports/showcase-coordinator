@@ -98,6 +98,13 @@ const yearOf = (iso: string | null | undefined): number | null => {
   return m ? Number(m[0]) : null
 }
 
+// Base's teams field sometimes holds a stats URL instead of a club name; that is not a club
+const cleanClub = (v: string | null | undefined): string | null => {
+  const t = v?.trim()
+  if (!t || /^https?:\/\//i.test(t) || t.includes('/') || t.length > 60) return null
+  return t
+}
+
 const firstValid = (...urls: (string | null | undefined)[]): string | null =>
   urls.find((u): u is string => !!u && isProfileUrl(u)) ?? null
 
@@ -105,7 +112,7 @@ export const toPrefill = (a: BaseAthleteRow): BasePrefill => ({
   name: a.full_name?.trim() || [a.first_name, a.last_name].filter(Boolean).join(' ').trim() || null,
   birth_year: yearOf(a.date_of_birth),
   position: mapPosition(a.position_primary) ?? mapPosition(a.position_soccer?.[0]),
-  club: a.teams?.trim() || null,
+  club: cleanClub(a.teams),
   school_type: mapSchoolType(a.schulabschluss_typ),
   grad_year: a.abitur_year ?? yearOf(a.schulabschluss_datum) ?? yearOf(a.graduation_date),
   grades: a.gpa_overall != null ? String(a.gpa_overall).replace('.', ',') : null,

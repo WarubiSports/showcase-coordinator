@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { rosterRows } from '@/components/invites/roster-table'
+import { MatchLockup } from '@/components/invite/match-lockup'
 import { useInvites } from '@/hooks/use-invites'
 import { useEvent } from '@/contexts/event-context'
 import { germanTime, weekdayDate } from '@/lib/german-date'
@@ -25,6 +26,7 @@ export default function RosterPrintPage() {
         <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
       ) : (
         <>
+          <MatchLockup size="lg" className="mb-4 justify-start" />
           <h1 className="text-2xl font-bold">{currentEvent.name}</h1>
           <p className="mt-1 text-gray-600">
             {[weekdayDate(currentEvent.start_date), germanTime(currentEvent.start_time), currentEvent.location].filter(Boolean).join(' · ')}

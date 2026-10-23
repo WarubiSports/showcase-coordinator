@@ -106,6 +106,7 @@ export default function InvitePage() {
         ) : view === 'confirm' && form ? (
           <SignedConfirm
             form={form}
+            photo={data.invite.photo_url ?? data.base?.photo_url ?? null}
             eventYear={new Date(data.event.start_date + 'T00:00:00').getFullYear()}
             isSubmitting={isSubmitting}
             error={formError}

@@ -25,7 +25,7 @@ export const buildWhatsAppMessage = ({ name, personalLine, sender, link, event }
   [
     `Hi ${firstName(name)},`,
     personalLine?.trim() || null,
-    `Am ${weekdayDayMonth(event.start_date)}, spielt die Athletes USA Selection gegen das 1. FC Köln International Talent Program (ITP). ` +
+    `Am ${weekdayDayMonth(event.start_date)}, spielt die Athletes USA Auswahl gegen das 1. FC Köln International Talent Program (ITP). ` +
       'Das komplette Spiel wird mit Veo aufgenommen, danach bekommst du deine eigenen Szenen. ' +
       `Hier sind die Eckdaten und deine Zusage, dauert zwei Minuten: ${link}. ` +
       `Sag mir bitte bis ${weekdayDayMonth(replyByDate(event))}, Bescheid. ${sender}, Athletes USA`,
@@ -66,7 +66,7 @@ export const buildCoachMessage = ({ coach, sender, event, players }: CoachMessag
   const kickoff = event.start_time ? event.start_time.slice(0, 5) : null
   const treff = treffpunktLine(event.description)
   const head =
-    `Hi${coach?.trim() ? ` ${coach.trim()}` : ''}, wie besprochen die Einladungen zum Auswahlspiel Athletes USA Selection gegen das 1. FC Köln ITP ` +
+    `Hi${coach?.trim() ? ` ${coach.trim()}` : ''}, wie besprochen die Einladungen zum Auswahlspiel Athletes USA Auswahl gegen das 1. FC Köln ITP ` +
     `am ${weekdayDate(event.start_date)}${kickoff ? `, ${kickoff} Uhr` : ''}, ${event.location}.${treff ? ` ${treff}.` : ''} ` +
     'Jeder Spieler hat seinen eigenen Link, bitte einfach weiterleiten:'
   const tail = `Zusage bis ${weekdayDayMonth(replyByDate(event))} direkt über den Link. Danke dir! ${sender}, Athletes USA`
