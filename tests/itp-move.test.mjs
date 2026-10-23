@@ -100,7 +100,13 @@ test('probe route: exact public path, token compared by digest, service key + sc
   assert.match(route, /schema: process\.env\.NEXT_PUBLIC_SUPABASE_DB_SCHEMA/)
   const mw = read('src/middleware.ts')
   assert.match(mw, /pathname === '\/api\/itp-move-probe' \|\|/)
-  assert.ok(!/\/api\/admin/.test(mw), 'no admin path is public')
+  // The public list never names an admin path. The invite area (selection invites, 23.10) opens admin paths
+  // to a Staff App login as a second gate, but never /api/admin/db, which stays basic-auth only.
+  const publicList = mw.slice(mw.indexOf('function isPublicPath'), mw.indexOf('function isInviteArea'))
+  assert.ok(publicList.length > 0 && !/\/api\/admin/.test(publicList), 'no admin path is public')
+  const inviteArea = mw.slice(mw.indexOf('function isInviteArea'), mw.indexOf('function unauthorized'))
+  assert.ok(inviteArea.length > 0 && !/\/api\/admin\/db/.test(inviteArea), '/api/admin/db stays basic-auth only')
+  assert.ok(/isInviteArea\(pathname\)/.test(mw.slice(mw.indexOf('basicAuthOk(req, username, password)'))), 'staff gate runs only after basic auth failed')
 })
 
 // ---------- /api/admin/db request rules ----------

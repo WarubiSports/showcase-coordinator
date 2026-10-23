@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminAuthError } from '@/lib/admin-auth'
+import { adminOrStaffAuth } from '@/lib/staff-auth'
 
 // Admin player update + delete. Protected by the admin basic auth in middleware.
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   const { id } = await params
   const updates = await req.json()
@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   const { id } = await params
   const { error } = await createAdminClient().from('showcase_players').delete().eq('id', id)

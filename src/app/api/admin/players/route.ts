@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminAuthError } from '@/lib/admin-auth'
+import { adminOrStaffAuth } from '@/lib/staff-auth'
 
 // Admin player list + create. Protected by the admin basic auth in middleware.
 
 export async function GET(req: NextRequest) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   const { searchParams } = req.nextUrl
   const eventId = searchParams.get('event_id')
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   const { eventId, player } = await req.json()
   if (!eventId || !player?.name) return NextResponse.json({ error: 'eventId and player.name required' }, { status: 400 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminAuthError } from '@/lib/admin-auth'
+import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
@@ -15,7 +15,8 @@ const crossSite = (req: NextRequest) =>
   isSameOriginJsonRequest(req) ? null : NextResponse.json({ error: 'Same-origin JSON request required' }, { status: 403 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req) ?? crossSite(req)
+  const { denied: authDenied } = await adminOrStaffAuth(req)
+  const denied = authDenied ?? crossSite(req)
   if (denied) return denied
   const { id } = await params
   const body = await req.json().catch(() => ({}))
@@ -75,7 +76,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req) ?? crossSite(req)
+  const { denied: authDenied } = await adminOrStaffAuth(req)
+  const denied = authDenied ?? crossSite(req)
   if (denied) return denied
   const { id } = await params
   const { error } = await createAdminClient().from('showcase_invites').delete().eq('id', id)

@@ -1,9 +1,8 @@
 'use client'
 
-import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/app-shell'
-import { Button } from '@/components/ui/button'
+import { InvitesHeader } from '@/components/invites/invites-header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { InviteForm } from '@/components/invites/invite-form'
 import { InviteStats } from '@/components/invites/invite-stats'
@@ -11,12 +10,16 @@ import { InviteTable } from '@/components/invites/invite-table'
 import { RosterTable } from '@/components/invites/roster-table'
 import { useInvites, type NewInviteInput } from '@/hooks/use-invites'
 import { useUser } from '@/hooks/use-user'
+import { useStaff } from '@/hooks/use-staff'
 import { useEvent } from '@/contexts/event-context'
 
 // Staff side of the selection invites: add invites, copy the WhatsApp text, watch the answers, set shirt numbers
 export default function InvitesPage() {
   const { currentEvent } = useEvent()
   const { userName } = useUser()
+  const { staff, firstName: staffFirstName, signOut } = useStaff()
+  // With a Staff App login the inviter defaults to that first name; under basic auth to the welcome-dialog name
+  const defaultInviter = staffFirstName || userName || ''
   const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, setJerseyNumber } = useInvites(currentEvent?.id)
 
   // FuPa read for one invite; a failure only means the card stays hidden
@@ -98,18 +101,7 @@ export default function InvitesPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Invites</h1>
-            <p className="text-muted-foreground">
-              {currentEvent ? `${currentEvent.name}: personal links, WhatsApp texts and the live overview` : 'Select an event first'}
-            </p>
-          </div>
-          <Button variant="outline" onClick={refetch} disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
+        <InvitesHeader eventName={currentEvent?.name ?? null} isLoading={isLoading} staff={staff} onRefresh={refetch} onSignOut={signOut} />
 
         {migrationPending && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -126,11 +118,11 @@ export default function InvitesPage() {
             <TabsTrigger value="roster">Roster</TabsTrigger>
           </TabsList>
           <TabsContent value="invites" className="space-y-6 pt-2">
-            <InviteForm defaultInviter={userName ?? ''} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
+            <InviteForm key={defaultInviter} defaultInviter={defaultInviter} disabled={migrationPending || !currentEvent} onCreate={handleCreate} />
             <InviteTable
               invites={invites}
               event={currentEvent}
-              sender={userName ?? ''}
+              sender={defaultInviter}
               isLoading={isLoading}
               onStatus={handleStatus}
               onProfileUrl={handleProfileUrl}

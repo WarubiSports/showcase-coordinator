@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminAuthError } from '@/lib/admin-auth'
+import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { ATHLETE_COLUMNS, signedDates, toPrefill, type BaseAthleteRow } from '@/lib/base-athletes'
 
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Name lookup in Base (public.athletes, same project) for the staff invite form. Admin basic auth,
 // service role, read only, at most 8 rows, never the anon key.
 export async function GET(req: NextRequest) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim().replace(/[%_,]/g, ' ')
   if (q.length < 2) return NextResponse.json([])
