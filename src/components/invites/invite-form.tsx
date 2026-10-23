@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { NewInviteInput } from '@/hooks/use-invites'
 import { parseInviteLines } from '@/lib/invite-lines'
-import { PROFILE_LINK_HINT, isProfileUrl } from '@/lib/profile-url'
+import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
 import type { LookupResult } from '@/lib/lookup-resolve'
 import { LookupChip } from '@/components/invites/lookup-chip'
 import { InviterField } from '@/components/invites/inviter-field'
@@ -66,8 +66,8 @@ export const InviteForm = ({ defaultInviter, staffName, disabled, onCreate }: In
   return (
     <form onSubmit={submit} className="rounded-lg border bg-card p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold">Add invites</h2>
-        <button type="button" onClick={() => setBulk(!bulk)} className="text-sm text-muted-foreground underline">{bulk ? 'One player' : 'Add several at once'}</button>
+        <h2 className="font-semibold">Spieler hinzufügen</h2>
+        <button type="button" onClick={() => setBulk(!bulk)} className="text-sm text-muted-foreground underline">{bulk ? 'Ein Spieler' : 'Mehrere auf einmal'}</button>
       </div>
 
       {bulk ? (
@@ -76,20 +76,20 @@ export const InviteForm = ({ defaultInviter, staffName, disabled, onCreate }: In
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="inv-name">Player name *</Label>
-              <Input id="inv-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="First and last name" autoComplete="off" disabled={disabled} />
+              <Label htmlFor="inv-name">Name des Spielers *</Label>
+              <Input id="inv-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Vorname Nachname" autoComplete="off" disabled={disabled} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="inv-phone">Phone (optional)</Label>
+              <Label htmlFor="inv-phone">Handynummer (optional)</Label>
               <Input id="inv-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0151 2345678" disabled={disabled} />
             </div>
           </div>
           <LookupChip name={name} onResolve={(r) => setSingle(r)} />
           {single.category === 'new' && !single.profile_url && !single.ausa_athlete_id && name.trim().length >= 3 && (
             <div className="space-y-1.5">
-              <Label htmlFor="inv-link">Profile link (FuPa or Transfermarkt, optional)</Label>
+              <Label htmlFor="inv-link">Profil-Link (FuPa oder Transfermarkt, optional)</Label>
               <Input id="inv-link" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.fupa.net/player/..." disabled={disabled} />
-              {badLink && <p className="text-xs text-destructive">{PROFILE_LINK_HINT}</p>}
+              {badLink && <p className="text-xs text-destructive">{PROFILE_URL_ERROR}</p>}
             </div>
           )}
         </div>
@@ -98,15 +98,15 @@ export const InviteForm = ({ defaultInviter, staffName, disabled, onCreate }: In
       <div className="grid gap-3 sm:grid-cols-2">
         <InviterField value={inviter} onChange={setInviter} staffName={staffName} disabled={disabled} />
         <div className="space-y-1.5">
-          <Label htmlFor="inv-line">Personal line (optional)</Label>
-          <Input id="inv-line" value={personalLine} onChange={(e) => setPersonalLine(e.target.value)} placeholder="Goes into the WhatsApp text" disabled={disabled} />
+          <Label htmlFor="inv-line">Persönlicher Satz (optional)</Label>
+          <Input id="inv-line" value={personalLine} onChange={(e) => setPersonalLine(e.target.value)} placeholder="Kommt in den WhatsApp-Text" disabled={disabled} />
         </div>
       </div>
 
       <div className="flex justify-end">
         <Button type="submit" disabled={!canSubmit}>
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-          {rows.length > 1 ? `Create ${rows.length} invites` : 'Create invite'}
+          {rows.length > 1 ? `${rows.length} Einladungen erstellen` : 'Einladung erstellen'}
         </Button>
       </div>
     </form>

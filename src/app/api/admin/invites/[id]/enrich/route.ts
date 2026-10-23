@@ -21,9 +21,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const db = createAdminClient()
   const { data: invite, error } = await db.from('showcase_invites').select('id, profile_url, photo_url, club, position, ausa_athlete_id').eq('id', id).maybeSingle()
   if (error) return dbError(error.message)
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
+  if (!invite) return NextResponse.json({ error: 'Einladung nicht gefunden' }, { status: 404 })
   const url = typeof invite.profile_url === 'string' ? invite.profile_url : null
-  if (!url) return NextResponse.json({ error: 'No profile link on this invite' }, { status: 400 })
+  if (!url) return NextResponse.json({ error: 'Kein Profil-Link an dieser Einladung' }, { status: 400 })
 
   const result = await fetchFupaProfile(url)
   // A Base-linked player keeps Base's position (Max, 23.10: a mapped "RW" must not become FuPa's "Mittelfeld")

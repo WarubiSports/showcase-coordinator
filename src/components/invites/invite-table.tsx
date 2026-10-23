@@ -53,7 +53,7 @@ export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onPro
     return <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div>
   }
   if (invites.length === 0) {
-    return <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">No invites yet for this event.</div>
+    return <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Noch keine Einladungen für dieses Event.</div>
   }
 
   const forCoach = invites.filter((i) => selected.has(i.id)).map((i) => ({ name: i.name, link: inviteLink(origin, i.token) }))
@@ -62,15 +62,15 @@ export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onPro
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">{invites.length} {invites.length === 1 ? 'invite' : 'invites'}</h2>
-          <p className="text-xs text-muted-foreground">Tick players to build one message for their club coach.</p>
+          <h2 className="font-semibold">{invites.length} {invites.length === 1 ? 'Einladung' : 'Einladungen'}</h2>
+          <p className="text-xs text-muted-foreground">Spieler anhaken, um eine Nachricht für ihren Vereinstrainer zu bauen.</p>
         </div>
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="status">Sort by status</SelectItem>
-            <SelectItem value="name">Sort by name</SelectItem>
-            <SelectItem value="inviter">Sort by inviter</SelectItem>
+            <SelectItem value="status">Nach Status</SelectItem>
+            <SelectItem value="name">Nach Name</SelectItem>
+            <SelectItem value="inviter">Nach Einlader</SelectItem>
           </SelectContent>
         </Select>
       </div>

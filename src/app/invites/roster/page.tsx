@@ -17,8 +17,8 @@ export default function RosterPrintPage() {
     <div className="min-h-screen bg-white p-8 text-gray-950 print:p-0">
       <style>{`@media print { .no-print { display: none !important } @page { margin: 14mm } }`}</style>
       <div className="no-print mb-6 flex items-center gap-3 text-sm">
-        <button onClick={() => window.print()} className="rounded-md bg-gray-950 px-4 py-2 font-semibold text-white">Print</button>
-        <Link href="/invites" className="text-gray-600 underline">Back to invites</Link>
+        <button onClick={() => window.print()} className="rounded-md bg-gray-950 px-4 py-2 font-semibold text-white">Drucken</button>
+        <Link href="/invites" className="text-gray-600 underline">Zurück zu den Einladungen</Link>
       </div>
 
       {!currentEvent || isLoading ? (
@@ -47,9 +47,9 @@ export default function RosterPrintPage() {
               ))}
             </tbody>
           </table>
-          {rows.length === 0 && <p className="mt-4 text-gray-500">No accepted players yet.</p>}
+          {rows.length === 0 && <p className="mt-4 text-gray-500">Noch keine Zusagen.</p>}
           <p className="mt-6 text-xs text-gray-500">
-            {rows.length} {rows.length === 1 ? 'player' : 'players'} · printed {new Date().toLocaleDateString('de-DE')}
+            {rows.length} Spieler · gedruckt am {new Date().toLocaleDateString('de-DE')}
           </p>
         </>
       )}

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
-import { PROFILE_LINK_HINT, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
+import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
 
 // Edit or remove one invite. Staff can reset to invited or mark declined (a WhatsApp "kann nicht");
 // accepted only comes from the player's form, because that is where the consent lives.
@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if ('name' in body) {
     const name = clean(body.name, 120)
-    if (!name) return NextResponse.json({ error: 'name cannot be empty' }, { status: 400 })
+    if (!name) return NextResponse.json({ error: 'Der Name darf nicht leer sein' }, { status: 400 })
     updates.name = name
   }
   if ('phone' in body) updates.phone = clean(body.phone, 40)
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   let linkChanged = false
   if ('profile_url' in body) {
     const profile_url = cleanProfileUrl(body.profile_url)
-    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_LINK_HINT }, { status: 400 })
+    if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_URL_ERROR }, { status: 400 })
     updates.profile_url = profile_url
     linkChanged = true
     if (profile_url) updates.fupa_candidates = null
@@ -92,10 +92,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ;({ data, error } = await db.from('showcase_invites').update(updates).eq('id', id).select(INVITE_WITH_PLAYER_SELECT).maybeSingle())
   }
   if (error) return dbError(error.message)
-  if (!data) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
+  if (!data) return NextResponse.json({ error: 'Einladung nicht gefunden' }, { status: 404 })
   if (jersey === undefined) return NextResponse.json(data)
   const row = data as { player_id: string | null; player: Record<string, unknown> | null }
-  if (!row.player_id) return NextResponse.json({ error: 'Invite has no sign-up yet' }, { status: 400 })
+  if (!row.player_id) return NextResponse.json({ error: 'Für diese Einladung gibt es noch keine Zusage' }, { status: 400 })
   const { error: jerseyError } = await db.from('showcase_players').update({ jersey_number: jersey, updated_at: now }).eq('id', row.player_id)
   if (jerseyError) return dbError(jerseyError.message)
   return NextResponse.json({ ...data, player: row.player ? { ...row.player, jersey_number: jersey } : null })

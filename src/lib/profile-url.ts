@@ -3,8 +3,6 @@
 const HOSTS = [/(^|\.)fupa\.net$/i, /(^|\.)transfermarkt\.[a-z]{2,}(\.[a-z]{2,})?$/i]
 
 export const PROFILE_URL_ERROR = 'Der Profil-Link muss zu fupa.net oder transfermarkt führen und mit https:// beginnen.'
-// Staff side (English), same rule
-export const PROFILE_LINK_HINT = 'Only FuPa or Transfermarkt links work, starting with https://'
 
 export const isProfileUrl = (value: string): boolean => {
   try {

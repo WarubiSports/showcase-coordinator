@@ -18,7 +18,7 @@ interface InviteBulkProps {
 export const InviteBulk = ({ text, onText, rows, onResolve, disabled }: InviteBulkProps) => (
   <div className="space-y-3">
     <div className="space-y-1.5">
-      <Label htmlFor="inv-bulk">One player per line, phone optional after a comma</Label>
+      <Label htmlFor="inv-bulk">Ein Spieler pro Zeile, Handynummer optional nach dem Komma</Label>
       <Textarea id="inv-bulk" value={text} onChange={(e) => onText(e.target.value)} rows={4} placeholder={'Timo Testspieler, 0151 2345678\nJonas Probekick'} disabled={disabled} />
     </div>
     {rows.length > 0 && (

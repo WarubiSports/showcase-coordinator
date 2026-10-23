@@ -23,14 +23,14 @@ export const LookupChip = ({ name, onResolve }: LookupChipProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
 
-  if (busy) return <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Looking up Base and FuPa</p>
+  if (busy) return <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Suche in Base und FuPa</p>
   if (state.kind === 'idle') return null
   if (state.kind === 'base') {
     return (
       <p className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge className={state.match.signed ? 'bg-purple-500/15 text-purple-700 border-purple-500/30' : 'bg-gray-500/10 text-gray-600 border-gray-400/30'}>{state.match.signed ? 'Signed' : 'New'}</Badge>
+        <Badge className={state.match.signed ? 'bg-purple-500/15 text-purple-700 border-purple-500/30' : 'bg-gray-500/10 text-gray-600 border-gray-400/30'}>{state.match.signed ? 'Signed' : 'Neu'}</Badge>
         <span className="text-muted-foreground">In Base: {state.match.name}{state.match.club ? ` · ${state.match.club}` : ''}{state.match.birth_year ? ` · ${state.match.birth_year}` : ''}</span>
-        <button type="button" onClick={notInBase} aria-label="Not this player" className="rounded p-0.5 text-muted-foreground hover:bg-accent"><X className="h-3.5 w-3.5" /></button>
+        <button type="button" onClick={notInBase} aria-label="Nicht dieser Spieler" className="rounded p-0.5 text-muted-foreground hover:bg-accent"><X className="h-3.5 w-3.5" /></button>
       </p>
     )
   }
@@ -38,12 +38,12 @@ export const LookupChip = ({ name, onResolve }: LookupChipProps) => {
     const c = state.candidate
     return (
       <p className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge className="bg-gray-500/10 text-gray-600 border-gray-400/30">New</Badge>
-        <span className="text-muted-foreground">FuPa: {[c.club ?? 'no club', c.region, c.birth_year ? `born ${c.birth_year}` : null].filter(Boolean).join(' · ')}</span>
-        <button type="button" onClick={() => pick({ kind: 'none' })} aria-label="Not this player" className="rounded p-0.5 text-muted-foreground hover:bg-accent"><X className="h-3.5 w-3.5" /></button>
+        <Badge className="bg-gray-500/10 text-gray-600 border-gray-400/30">Neu</Badge>
+        <span className="text-muted-foreground">FuPa: {[c.club ?? 'ohne Verein', c.region, c.birth_year ? `Jg. ${c.birth_year}` : null].filter(Boolean).join(' · ')}</span>
+        <button type="button" onClick={() => pick({ kind: 'none' })} aria-label="Nicht dieser Spieler" className="rounded p-0.5 text-muted-foreground hover:bg-accent"><X className="h-3.5 w-3.5" /></button>
       </p>
     )
   }
   if (state.kind === 'base-pick' || state.kind === 'fupa-pick') return <LookupPickList state={state} onPick={pick} onNone={state.kind === 'base-pick' ? notInBase : () => pick({ kind: 'none' })} />
-  return <p className="text-sm text-muted-foreground">Not found, you can paste a FuPa or Transfermarkt link</p>
+  return <p className="text-sm text-muted-foreground">Nicht gefunden. Du kannst einen FuPa- oder Transfermarkt-Link einfügen</p>
 }

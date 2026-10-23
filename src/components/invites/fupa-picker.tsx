@@ -13,8 +13,8 @@ interface FupaPickerProps {
 export const FupaPicker = ({ candidates, onPick, onDismiss }: FupaPickerProps) => (
   <div className="mt-2 rounded-md border border-dashed p-2 text-sm">
     <div className="flex items-center justify-between gap-2">
-      <span className="font-medium">FuPa: {candidates.length} {candidates.length === 1 ? 'hit' : 'hits'}</span>
-      <Button variant="ghost" size="sm" onClick={onDismiss}>Not on FuPa</Button>
+      <span className="font-medium">FuPa: {candidates.length} Treffer</span>
+      <Button variant="ghost" size="sm" onClick={onDismiss}>Nicht auf FuPa</Button>
     </div>
     {candidates.length > 0 && (
       <ul className="mt-1 space-y-1">
@@ -27,9 +27,9 @@ export const FupaPicker = ({ candidates, onPick, onDismiss }: FupaPickerProps) =
                 <img src={c.club_image ?? c.image ?? ''} alt="" className="h-7 w-7 shrink-0 rounded object-cover" />
               )}
               <span className="min-w-0 flex-1 truncate">
-                <span className="font-medium">{c.club ?? 'no club'}</span>
+                <span className="font-medium">{c.club ?? 'ohne Verein'}</span>
                 <span className="text-muted-foreground">
-                  {[c.region, c.district, c.position, c.birth_year ? `born ${c.birth_year}` : null].filter(Boolean).map((x) => ` · ${x}`).join('')}
+                  {[c.region, c.district, c.position, c.birth_year ? `Jg. ${c.birth_year}` : null].filter(Boolean).map((x) => ` · ${x}`).join('')}
                 </span>
               </span>
             </button>

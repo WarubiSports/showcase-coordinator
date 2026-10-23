@@ -18,15 +18,15 @@ export const InviterField = ({ value, onChange, staffName, disabled }: InviterFi
   if (staffName && !editing) {
     return (
       <p className="text-sm">
-        Invited by <span className="font-medium">{value || staffName}</span>{' '}
-        <button type="button" onClick={() => setEditing(true)} className="text-xs text-muted-foreground underline">change</button>
+        Eingeladen von <span className="font-medium">{value || staffName}</span>{' '}
+        <button type="button" onClick={() => setEditing(true)} className="text-xs text-muted-foreground underline">ändern</button>
       </p>
     )
   }
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="inv-by">Invited by *</Label>
-      <Input id="inv-by" value={value} onChange={(e) => onChange(e.target.value)} placeholder="Your first name" disabled={disabled} />
+      <Label htmlFor="inv-by">Eingeladen von *</Label>
+      <Input id="inv-by" value={value} onChange={(e) => onChange(e.target.value)} placeholder="Dein Vorname" disabled={disabled} />
     </div>
   )
 }

@@ -12,6 +12,6 @@ export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim()
   if (q.length < 3) return NextResponse.json([])
   const found = await searchFupaPlayers(q)
-  if (!found) return NextResponse.json({ error: 'FuPa search not reachable' }, { status: 502 })
+  if (!found) return NextResponse.json({ error: 'FuPa-Suche nicht erreichbar' }, { status: 502 })
   return NextResponse.json(found, { headers: { 'Cache-Control': 'no-store' } })
 }
