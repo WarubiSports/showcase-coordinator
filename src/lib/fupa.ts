@@ -124,17 +124,21 @@ export const parseFupaHtml = (html: string): FupaProfile | null => {
   const newest = [...seasons].sort((a, b) => seasonYear(obj(b.team)) - seasonYear(obj(a.team)))[0] ?? null
   const currentTeam = obj(data?.currentTeam) ?? obj(obj(data?.currentRole)?.team) ?? obj(newest?.team)
   const current = teamFacts(currentTeam)
+  const newestTeam = obj(newest?.team)
+  const played = teamFacts(newestTeam)
   const statistics = obj(newest?.statistics)
   const games = int(statistics?.matches)
   const stats: FupaStats | null =
-    newest && games !== null
-      ? { season: teamFacts(obj(newest.team)).season, games, goals: int(statistics?.goals) ?? 0, assists: int(statistics?.assists) ?? 0, ...(({ club, league }) => ({ team: club, league }))(teamFacts(obj(newest.team))) }
-      : null
+    newest && games !== null ? { season: played.season, games, goals: int(statistics?.goals) ?? 0, assists: int(statistics?.assists) ?? 0, team: played.club, league: played.league } : null
+  // The club's first team (currentTeam) can sit in a higher league than the team the player actually plays
+  // for (a reserve side, say). The newest season's team and league are what the card and the staff line show;
+  // the club's competition is only the fallback when that season carries no league or is older than the current team.
+  const seasonIsCurrent = !!played.league && (seasonYear(newestTeam) >= seasonYear(currentTeam) || seasonYear(currentTeam) === 0)
   const imagePath = str(obj(data?.image)?.path)
   return {
     photo_url: safePhotoUrl(og?.[1] ?? null) ?? (imagePath ? safePhotoUrl(`https://image.fupa.net/${imagePath.replace(/^\//, '')}/960x1200.jpeg`) : null),
-    club: current.club,
-    league: current.league,
+    club: seasonIsCurrent ? (played.club ?? current.club) : current.club,
+    league: seasonIsCurrent ? played.league : current.league,
     position: str(obj(data?.currentRole)?.position) ?? str(data?.position),
     stats,
   }
