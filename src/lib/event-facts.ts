@@ -1,4 +1,6 @@
 import { treffpunktLine } from '@/lib/invite-message'
+import { germanTime, weekdayDate } from '@/lib/german-date'
+import { descriptionWithoutVideo } from '@/lib/event-page'
 
 interface EventPlace {
   location: string
@@ -25,4 +27,29 @@ export const mapsUrl = (event: EventPlace): string | null => {
   }
   const address = event.location?.trim()
   return address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null
+}
+
+interface EventFactsInput {
+  name: string
+  start_date: string
+  start_time: string | null
+  end_time: string | null
+  description: string | null
+}
+
+// The rows of the facts card. Under the hero (which already shows the match and the date) the title and the
+// date row stay out, so nothing is said twice; on its own the card keeps both.
+export const eventFactsModel = (event: EventFactsInput, { hero = false }: { hero?: boolean } = {}) => {
+  // The meeting point comes before kick-off: with a Treffpunkt the time row says so, the plain range otherwise
+  const treffpunkt = treffpunktLine(event.description)
+  const start = germanTime(event.start_time)
+  const end = event.end_time ? germanTime(event.end_time) : null
+  const time = treffpunkt ? [start ? `Anpfiff ${start}` : null, end ? `Ende ${end}` : null].filter(Boolean).join(' · ') : [start, end ? `bis ${end}` : null].filter(Boolean).join(' ')
+  return {
+    title: hero ? null : event.name,
+    date: hero ? null : weekdayDate(event.start_date),
+    time: time || null,
+    treffpunkt,
+    description: descriptionWithoutTreffpunkt(descriptionWithoutVideo(event.description)),
+  }
 }

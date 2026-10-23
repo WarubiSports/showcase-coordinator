@@ -12,8 +12,11 @@ function load(path, imports) {
   vm.runInNewContext(code, { exports, module: { exports }, URL, encodeURIComponent, require(name) { if (!Object.hasOwn(imports, name)) throw new Error(`Unexpected dependency of ${path}: ${name}`); return imports[name] } }, { filename: path })
   return exports
 }
-const message = load('../src/lib/invite-message.ts', { '@/lib/german-date': load('../src/lib/german-date.ts', {}) })
-const facts = load('../src/lib/event-facts.ts', { '@/lib/invite-message': message })
+const germanDate = load('../src/lib/german-date.ts', {})
+const message = load('../src/lib/invite-message.ts', { '@/lib/german-date': germanDate })
+const og = load('../src/lib/invite-og.ts', { '@/lib/german-date': germanDate })
+const eventPage = load('../src/lib/event-page.ts', { '@/lib/german-date': germanDate, '@/lib/invite-og': og })
+const facts = load('../src/lib/event-facts.ts', { '@/lib/invite-message': message, '@/lib/german-date': germanDate, '@/lib/event-page': eventPage })
 const description = 'Auswahlspiel der Athletes USA Selection gegen das ITP. Treffpunkt 10:30 Uhr an der LöWi Arena, Anpfiff 12:00 Uhr.'
 
 test('Treffpunkt: its own row, and the description loses that sentence', () => {
