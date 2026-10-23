@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Calendar, Clock, ExternalLink, Flag, MapPin, Video } from 'lucide-react'
 import { germanTime, weekdayDate } from '@/lib/german-date'
 import { descriptionWithoutTreffpunkt, mapsUrl, treffpunktLine } from '@/lib/event-facts'
+import { MatchLockup } from '@/components/invite/match-lockup'
 import type { InvitePayload } from '@/components/invite/invite-types'
 import { PlayerCard, hasPlayerCard } from '@/components/invite/player-card'
 
@@ -24,6 +25,7 @@ export const EventFacts = ({ event }: { event: InvitePayload['event'] }) => {
   return (
     <div className="rounded-xl border border-ausa-ink-200 bg-ausa-paper p-4 space-y-2">
       <p className="font-ausa-display font-semibold text-ausa-ink-900">{event.name}</p>
+      <MatchLockup className="py-1" />
       {treffpunkt && (
         <p className="flex items-center gap-2 rounded-lg bg-ausa-ink-900 px-3 py-2 text-sm font-semibold text-white">
           <Flag className="h-4 w-4 shrink-0 text-ausa-accent" />
