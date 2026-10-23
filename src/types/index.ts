@@ -324,6 +324,8 @@ export interface FupaInviteStats {
   assists: number
   team: string | null
   league: string | null
+  // totals over every season on the FuPa page; absent on rows enriched before 23.10
+  career?: { games: number; goals: number; assists: number; seasons: number } | null
 }
 
 // One hit of FuPa's player search, kept on the invite until staff picks one or dismisses the list

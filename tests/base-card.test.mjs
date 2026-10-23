@@ -68,6 +68,14 @@ test('invite fields from Base: staff link wins, Base link otherwise; only known 
   assert.deepEqual(sparse, { club: 'SV Beispielhausen' })
 })
 
+test('position precedence: Base position stays over the FuPa read; FuPa fills only a gap', () => {
+  const current = { photo_url: null, club: 'SV Beispielhausen', position: 'RW' }
+  const profile = { photo_url: null, club: 'SV Beispielhausen', league: 'Kreisliga A', position: 'Mittelfeld', stats: null }
+  assert.equal(enrichUpdate({ ok: true, profile, source: 'direct' }, current, '2026-10-23T12:00:00Z', 'RW').position, 'RW', 'Base-linked with a Base position: Base wins')
+  assert.equal(enrichUpdate({ ok: true, profile, source: 'direct' }, current, '2026-10-23T12:00:00Z', null).position, 'Mittelfeld', 'no Base position: FuPa fills it')
+  assert.equal(enrichUpdate({ ok: true, profile: { ...profile, position: null }, source: 'direct' }, current, '2026-10-23T12:00:00Z', null).position, 'RW', 'FuPa has none: the stored value stays')
+})
+
 test('FuPa read: a failure writes nothing; a success keeps the Base photo when FuPa has none', () => {
   const current = { photo_url: 'https://core-fixture.supabase.co/a.jpg', club: 'SV Beispielhausen', position: 'RW' }
   assert.equal(enrichUpdate({ ok: false, reason: 'unreachable' }, current, '2026-10-23T12:00:00Z'), null)
