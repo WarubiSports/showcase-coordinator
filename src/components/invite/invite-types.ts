@@ -31,6 +31,8 @@ export interface InvitePayload {
     end_time: string | null
     location: string
     description: string | null
+    venue_lat?: number | string | null
+    venue_lng?: number | string | null
   }
   player: {
     name: string

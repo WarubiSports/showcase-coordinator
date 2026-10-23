@@ -12,7 +12,8 @@
     "test:events": "node --test tests/default-event.test.mjs",
     "test:base-card": "node --test tests/base-card.test.mjs",
     "test:fupa-search": "node --test tests/fupa-search.test.mjs",
-    "test:signed": "node --test tests/signed-confirm.test.mjs"
+    "test:signed": "node --test tests/signed-confirm.test.mjs",
+    "test:event-facts": "node --test tests/event-facts.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

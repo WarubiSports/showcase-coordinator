@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Clock, ExternalLink, MapPin, Video } from 'lucide-react'
+import { Calendar, Clock, ExternalLink, Flag, MapPin, Video } from 'lucide-react'
 import { germanTime, weekdayDate } from '@/lib/german-date'
+import { descriptionWithoutTreffpunkt, mapsUrl, treffpunktLine } from '@/lib/event-facts'
 import type { InvitePayload } from '@/components/invite/invite-types'
 import { PlayerCard, hasPlayerCard } from '@/components/invite/player-card'
 
@@ -13,14 +14,33 @@ interface InviteLandingProps {
 }
 
 export const EventFacts = ({ event }: { event: InvitePayload['event'] }) => {
-  const time = [germanTime(event.start_time), event.end_time ? `bis ${germanTime(event.end_time)}` : null].filter(Boolean).join(' ')
+  // The meeting point comes before kick-off: with a Treffpunkt the time row says so, the plain range otherwise
+  const treffpunkt = treffpunktLine(event.description)
+  const start = germanTime(event.start_time)
+  const end = event.end_time ? germanTime(event.end_time) : null
+  const time = treffpunkt ? [start ? `Anpfiff ${start}` : null, end ? `Ende ${end}` : null].filter(Boolean).join(' · ') : [start, end ? `bis ${end}` : null].filter(Boolean).join(' ')
+  const description = descriptionWithoutTreffpunkt(event.description)
+  const maps = mapsUrl(event)
   return (
     <div className="rounded-xl border border-ausa-ink-200 bg-ausa-paper p-4 space-y-2">
       <p className="font-ausa-display font-semibold text-ausa-ink-900">{event.name}</p>
+      {treffpunkt && (
+        <p className="flex items-center gap-2 rounded-lg bg-ausa-ink-900 px-3 py-2 text-sm font-semibold text-white">
+          <Flag className="h-4 w-4 shrink-0 text-ausa-accent" />
+          {treffpunkt}
+        </p>
+      )}
       <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><Calendar className="h-4 w-4 shrink-0 text-ausa-ink-400" />{weekdayDate(event.start_date)}</p>
       {time && <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><Clock className="h-4 w-4 shrink-0 text-ausa-ink-400" />{time}</p>}
-      <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><MapPin className="h-4 w-4 shrink-0 text-ausa-ink-400" />{event.location}</p>
-      {event.description && <p className="pt-1 text-sm text-ausa-ink-500">{event.description}</p>}
+      <p className="flex items-start gap-2 text-sm text-ausa-ink-700">
+        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ausa-ink-400" />
+        {maps ? (
+          <a href={maps} target="_blank" rel="noopener noreferrer" className="font-medium text-ausa-ink-900 underline decoration-ausa-ink-300 underline-offset-2">{event.location}</a>
+        ) : (
+          event.location
+        )}
+      </p>
+      {description && <p className="pt-1 text-sm text-ausa-ink-500">{description}</p>}
     </div>
   )
 }
