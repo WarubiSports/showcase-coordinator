@@ -41,16 +41,24 @@ export const publicImage = async (p: string): Promise<string> => {
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png'])
 
 // The player's photo from an allowed host only (image.fupa.net, own storage, athletesusa.org), same 3 MB cap as
-// the FuPa read, 8 s; anything else or any failure means initials instead
+// the FuPa read, 8 s per hop. Redirects are followed by hand so that every hop stays on an allowed host over
+// https; anything else or any failure means initials instead.
 export const fetchPhotoDataUrl = async (url: string | null | undefined): Promise<string | null> => {
-  const safe = safeBasePhotoUrl(url)
-  if (!safe) return null
+  let current = safeBasePhotoUrl(url)
   try {
-    const res = await fetch(safe, { signal: AbortSignal.timeout(8000), cache: 'no-store' })
-    const type = res.headers.get('content-type')?.split(';')[0].trim() ?? ''
-    if (!res.ok || !PHOTO_TYPES.has(type)) return null
-    const bytes = await readCappedBytes(res)
-    return bytes ? `data:${type};base64,${bytes.toString('base64')}` : null
+    for (let hop = 0; current && hop < 4; hop++) {
+      const res = await fetch(current, { signal: AbortSignal.timeout(8000), cache: 'no-store', redirect: 'manual' })
+      if (res.status >= 300 && res.status < 400) {
+        const next = res.headers.get('location')
+        current = next ? safeBasePhotoUrl(new URL(next, current).toString()) : null
+        continue
+      }
+      const type = res.headers.get('content-type')?.split(';')[0].trim() ?? ''
+      if (!res.ok || !PHOTO_TYPES.has(type)) return null
+      const bytes = await readCappedBytes(res)
+      return bytes ? `data:${type};base64,${bytes.toString('base64')}` : null
+    }
+    return null
   } catch {
     return null
   }
