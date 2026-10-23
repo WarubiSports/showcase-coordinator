@@ -12,11 +12,13 @@ interface InviteRowMenuProps {
   onCategory: (category: InviteCategory) => void
   onEnrich: () => void
   onBaseSync: () => void
+  onFindFupa: () => void
+  onEditClub: () => void
   onDelete: () => void
 }
 
 // The row's "More" menu: answers, profile link, FuPa and Base reads, category, delete
-export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, onEnrich, onBaseSync, onDelete }: InviteRowMenuProps) => (
+export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onEditClub, onDelete }: InviteRowMenuProps) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="ghost" size="icon" aria-label="More"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -26,6 +28,8 @@ export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, 
       {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Reset to no answer</DropdownMenuItem>}
       <DropdownMenuItem onClick={onEditProfileUrl}>{invite.profile_url ? 'Edit profile link' : 'Add profile link'}</DropdownMenuItem>
       {invite.profile_url && /fupa\.net/i.test(invite.profile_url) && <DropdownMenuItem onClick={onEnrich}>Reload FuPa data</DropdownMenuItem>}
+      {!invite.profile_url && <DropdownMenuItem onClick={onFindFupa}>Find on FuPa</DropdownMenuItem>}
+      <DropdownMenuItem onClick={onEditClub}>{invite.club ? 'Edit club' : 'Add club'}</DropdownMenuItem>
       {invite.ausa_athlete_id && <DropdownMenuItem onClick={onBaseSync}>Sync from Base</DropdownMenuItem>}
       <DropdownMenuItem onClick={() => onCategory(invite.category === 'signed' ? 'new' : 'signed')}>
         {invite.category === 'signed' ? 'Mark as new' : 'Mark as signed (Athletes USA)'}
