@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminAuthError } from '@/lib/admin-auth'
+import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { fetchFupaProfile } from '@/lib/fupa-fetch'
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 // photo, club, league, position and this season's games, goals and assists on the invite. A failed read
 // clears the stored data, so the player page shows nothing rather than something stale or wrong.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   if (!isSameOriginJsonRequest(req)) return NextResponse.json({ error: 'Same-origin JSON request required' }, { status: 403 })
   const { id } = await params

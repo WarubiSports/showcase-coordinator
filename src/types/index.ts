@@ -333,6 +333,9 @@ export interface Invite {
   name: string
   phone: string | null
   invited_by: string
+  // set when a Staff App login created the invite; null under the basic-auth login
+  invited_by_staff_id: string | null
+  invited_by_email: string | null
   personal_line: string | null
   profile_url: string | null
   ausa_athlete_id: string | null

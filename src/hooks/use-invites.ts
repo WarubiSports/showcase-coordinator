@@ -78,10 +78,10 @@ export function useInvites(eventId: string | undefined) {
     return updated
   }
 
-  // Shirt number lives on the player row (existing admin players route)
-  const setJerseyNumber = async (playerId: string, jersey_number: number | null) => {
-    await adminFetch(`/api/admin/players/${playerId}`, { method: 'PATCH', body: JSON.stringify({ jersey_number }) })
-    setInvites((prev) => prev.map((i) => (i.player && i.player.id === playerId ? { ...i, player: { ...i.player, jersey_number } } : i)))
+  // Shirt number lives on the sign-up row; the invite route writes it for the invite's own sign-up only
+  const setJerseyNumber = async (inviteId: string, jersey_number: number | null) => {
+    const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${inviteId}`, { method: 'PATCH', body: JSON.stringify({ jersey_number }) })
+    setInvites((prev) => prev.map((i) => (i.id === inviteId ? updated : i)))
   }
 
   return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, setJerseyNumber }

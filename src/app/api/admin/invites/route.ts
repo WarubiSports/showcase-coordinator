@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminAuthError } from '@/lib/admin-auth'
+import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { newInviteToken } from '@/lib/invite-token'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
@@ -8,10 +8,10 @@ import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-
 
 export const dynamic = 'force-dynamic'
 
-// Selection invites for one event: list + create. Admin basic auth (middleware + here).
+// Selection invites for one event: list + create. Admin basic auth or a Staff App login (middleware + here).
 
 export async function GET(req: NextRequest) {
-  const denied = adminAuthError(req)
+  const { denied } = await adminOrStaffAuth(req)
   if (denied) return denied
   const eventId = req.nextUrl.searchParams.get('event_id')
   if (!eventId) return NextResponse.json({ error: 'event_id required' }, { status: 400 })
@@ -40,7 +40,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const clean = (v: unknown, max: number): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
 
 export async function POST(req: NextRequest) {
-  const denied = adminAuthError(req)
+  const { denied, staff } = await adminOrStaffAuth(req)
   if (denied) return denied
   // Same gate as /api/admin/db: a cross-site form could replay cached Basic credentials
   if (!isSameOriginJsonRequest(req)) return NextResponse.json({ error: 'Same-origin JSON request required' }, { status: 403 })
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   if (!eventId || rows.length === 0) return NextResponse.json({ error: 'eventId and invites required' }, { status: 400 })
   if (rows.length > 100) return NextResponse.json({ error: 'Max 100 invites per request' }, { status: 400 })
 
-  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; profile_url?: string; ausa_athlete_id?: string; category?: string }[] = []
+  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; profile_url?: string; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null }[] = []
   for (const r of rows) {
     const name = clean(r.name, 120)
     const invited_by = clean(r.invited_by, 80)
@@ -68,10 +68,23 @@ export async function POST(req: NextRequest) {
       ...(profile_url ? { profile_url } : {}),
       ...(typeof r.ausa_athlete_id === 'string' && UUID.test(r.ausa_athlete_id) ? { ausa_athlete_id: r.ausa_athlete_id } : {}),
       ...(r.category === 'signed' || r.category === 'new' ? { category: r.category } : {}),
+      // who created it, from the Staff App login only; nothing the client sends for these is read
+      ...(staff ? { invited_by_staff_id: staff.id, invited_by_email: staff.email } : {}),
     })
   }
 
-  const { data, error } = await createAdminClient().from('showcase_invites').insert(inserts).select(INVITE_WITH_PLAYER_SELECT)
+  const db = createAdminClient()
+  let { data, error } = await db.from('showcase_invites').insert(inserts).select(INVITE_WITH_PLAYER_SELECT)
+  if (error && staff && /'invited_by_(staff_id|email)' column/.test(error.message)) {
+    // staff identity migration (20261023000004) not applied yet: save the invites without it
+    const plain = inserts.map((row) => {
+      const copy = { ...row }
+      delete copy.invited_by_staff_id
+      delete copy.invited_by_email
+      return copy
+    })
+    ;({ data, error } = await db.from('showcase_invites').insert(plain).select(INVITE_WITH_PLAYER_SELECT))
+  }
   if (error) return dbError(error.message)
   return NextResponse.json(data)
 }
