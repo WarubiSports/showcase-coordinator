@@ -13,7 +13,7 @@ interface FupaPickerProps {
 export const FupaPicker = ({ candidates, onPick, onDismiss }: FupaPickerProps) => (
   <div className="mt-2 rounded-md border border-dashed p-2 text-sm">
     <div className="flex items-center justify-between gap-2">
-      <span className="font-medium">FuPa: {candidates.length} {candidates.length === 1 ? 'Treffer' : 'Treffer'}</span>
+      <span className="font-medium">FuPa: {candidates.length} Treffer</span>
       <Button variant="ghost" size="sm" onClick={onDismiss}>Nicht auf FuPa</Button>
     </div>
     {candidates.length > 0 && (
