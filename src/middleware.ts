@@ -31,14 +31,13 @@ function isPublicPath(pathname: string) {
 }
 
 // The invite area opens to the admin basic auth OR a Staff App login (staff session). Everything else
-// (dashboard, Hawaii showcases, the admin db proxy route) keeps basic auth as its only gate.
+// (dashboard, Hawaii showcases, the admin db proxy and player routes) keeps basic auth as its only gate.
 function isInviteArea(pathname: string) {
   return (
     pathname === '/invites' ||
     pathname.startsWith('/invites/') ||
     pathname.startsWith('/api/admin/invites') ||
     pathname.startsWith('/api/admin/athletes') ||
-    pathname.startsWith('/api/admin/players') ||
     pathname === '/api/admin/me'
   )
 }

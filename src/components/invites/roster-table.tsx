@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/input'
 import type { InvitePlayer, InviteWithPlayer } from '@/types'
 
 // Accepted players, shirt numbers first (lowest to highest), then the ones without a number by name
-export const rosterRows = (invites: InviteWithPlayer[]): InvitePlayer[] =>
+export type RosterRow = InvitePlayer & { inviteId: string }
+
+export const rosterRows = (invites: InviteWithPlayer[]): RosterRow[] =>
   invites
     .filter((i) => i.status === 'accepted' && i.player)
-    .map((i) => i.player as InvitePlayer)
+    .map((i) => ({ ...(i.player as InvitePlayer), inviteId: i.id }))
     .sort((a, b) => {
       if (a.jersey_number != null && b.jersey_number != null) return a.jersey_number - b.jersey_number
       if (a.jersey_number != null) return -1
@@ -43,7 +45,7 @@ const JerseyInput = ({ value, taken, onSave }: { value: number | null; taken: bo
 
 interface RosterTableProps {
   invites: InviteWithPlayer[]
-  onJersey: (playerId: string, n: number | null) => void
+  onJersey: (inviteId: string, n: number | null) => void
 }
 
 export const RosterTable = ({ invites, onJersey }: RosterTableProps) => {
@@ -67,7 +69,7 @@ export const RosterTable = ({ invites, onJersey }: RosterTableProps) => {
         <ul className="divide-y rounded-lg border bg-card">
           {rows.map((p) => (
             <li key={p.id} className="flex items-center gap-3 px-3 py-2">
-              <JerseyInput value={p.jersey_number} taken={p.jersey_number != null && counts[p.jersey_number] > 1} onSave={(n) => onJersey(p.id, n)} />
+              <JerseyInput value={p.jersey_number} taken={p.jersey_number != null && counts[p.jersey_number] > 1} onSave={(n) => onJersey(p.inviteId, n)} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{p.name}</p>
                 <p className="truncate text-xs text-muted-foreground">

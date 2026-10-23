@@ -90,9 +90,9 @@ export default function InvitesPage() {
     }
   }
 
-  const handleJersey = async (playerId: string, n: number | null) => {
+  const handleJersey = async (inviteId: string, n: number | null) => {
     try {
-      await setJerseyNumber(playerId, n)
+      await setJerseyNumber(inviteId, n)
     } catch {
       toast.error('Could not save the number')
     }

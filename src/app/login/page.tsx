@@ -9,12 +9,20 @@ const INPUT = 'w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 tex
 const FAILED = 'Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen.'
 const NOT_STAFF = 'Kein Staff-Zugang für dieses Konto.'
 
-// Only paths inside this app; anything else goes to the invite area
-const safeNext = (value: string | null) => (value && value.startsWith('/') && !value.startsWith('//') ? value : '/invites')
+// Only a path inside this app; anything else (other host, protocol-relative, backslash tricks) goes to the invite area
+const safeNext = (value: string | null): string => {
+  if (!value || !value.startsWith('/') || /[\\\s]/.test(value)) return '/invites'
+  try {
+    const url = new URL(value, window.location.origin)
+    return url.origin === window.location.origin ? url.pathname + url.search : '/invites'
+  } catch {
+    return '/invites'
+  }
+}
 
 const LoginForm = () => {
   const router = useRouter()
-  const next = safeNext(useSearchParams().get('next'))
+  const nextParam = useSearchParams().get('next')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +47,7 @@ const LoginForm = () => {
       setBusy(false)
       return
     }
-    router.replace(next)
+    router.replace(safeNext(nextParam))
   }
 
   return (
