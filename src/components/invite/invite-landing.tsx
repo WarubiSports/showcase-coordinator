@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { Calendar, Clock, ExternalLink, Flag, MapPin, Video } from 'lucide-react'
-import { germanTime, weekdayDate } from '@/lib/german-date'
-import { descriptionWithoutTreffpunkt, mapsUrl, treffpunktLine } from '@/lib/event-facts'
+import { eventFactsModel, mapsUrl } from '@/lib/event-facts'
+import { videoLink } from '@/lib/event-page'
 import { MatchLockup } from '@/components/invite/match-lockup'
+import { EventHero } from '@/components/invite/event-hero'
+import { EventReasons } from '@/components/invite/event-reasons'
 import type { InvitePayload } from '@/components/invite/invite-types'
 import { PlayerCard, hasPlayerCard } from '@/components/invite/player-card'
 
@@ -14,26 +16,22 @@ interface InviteLandingProps {
   onDecline: () => Promise<void>
 }
 
-export const EventFacts = ({ event }: { event: InvitePayload['event'] }) => {
-  // The meeting point comes before kick-off: with a Treffpunkt the time row says so, the plain range otherwise
-  const treffpunkt = treffpunktLine(event.description)
-  const start = germanTime(event.start_time)
-  const end = event.end_time ? germanTime(event.end_time) : null
-  const time = treffpunkt ? [start ? `Anpfiff ${start}` : null, end ? `Ende ${end}` : null].filter(Boolean).join(' · ') : [start, end ? `bis ${end}` : null].filter(Boolean).join(' ')
-  const description = descriptionWithoutTreffpunkt(event.description)
+// The facts card. Under the hero (compact) the match line and the date are not repeated.
+export const EventFacts = ({ event, compact = false }: { event: InvitePayload['event']; compact?: boolean }) => {
+  const f = eventFactsModel(event, { hero: compact })
   const maps = mapsUrl(event)
   return (
     <div className="rounded-xl border border-ausa-ink-200 bg-ausa-paper p-4 space-y-2">
-      <p className="font-ausa-display font-semibold text-ausa-ink-900">{event.name}</p>
-      <MatchLockup className="py-1" />
-      {treffpunkt && (
+      {f.title && <p className="font-ausa-display font-semibold text-ausa-ink-900">{f.title}</p>}
+      {!compact && <MatchLockup className="py-1" />}
+      {f.treffpunkt && (
         <p className="flex items-center gap-2 rounded-lg bg-ausa-ink-900 px-3 py-2 text-sm font-semibold text-white">
           <Flag className="h-4 w-4 shrink-0 text-ausa-accent" />
-          {treffpunkt}
+          {f.treffpunkt}
         </p>
       )}
-      <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><Calendar className="h-4 w-4 shrink-0 text-ausa-ink-400" />{weekdayDate(event.start_date)}</p>
-      {time && <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><Clock className="h-4 w-4 shrink-0 text-ausa-ink-400" />{time}</p>}
+      {f.date && <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><Calendar className="h-4 w-4 shrink-0 text-ausa-ink-400" />{f.date}</p>}
+      {f.time && <p className="flex items-center gap-2 text-sm text-ausa-ink-700"><Clock className="h-4 w-4 shrink-0 text-ausa-ink-400" />{f.time}</p>}
       <p className="flex items-start gap-2 text-sm text-ausa-ink-700">
         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ausa-ink-400" />
         {maps ? (
@@ -42,7 +40,7 @@ export const EventFacts = ({ event }: { event: InvitePayload['event'] }) => {
           event.location
         )}
       </p>
-      {description && <p className="pt-1 text-sm text-ausa-ink-500">{description}</p>}
+      {f.description && <p className="pt-1 text-sm text-ausa-ink-500">{f.description}</p>}
     </div>
   )
 }
@@ -61,8 +59,12 @@ export const InviteLanding = ({ data, onAccept, onDecline }: InviteLandingProps)
     }
   }
 
+  // The event first (Naveed, approved by Max 23.10): hero, the reasons, then the personal block and the facts
   return (
     <div className="space-y-5">
+      <EventHero event={data.event} />
+      <EventReasons videoUrl={videoLink(data.event.description)} />
+
       <div>
         <h1 className="font-ausa-display text-3xl font-semibold text-ausa-ink-900">Hi {data.invite.first_name},</h1>
         <p className="mt-1 text-ausa-ink-500">{data.invite.invited_by} hat dich eingeladen.</p>
@@ -76,7 +78,7 @@ export const InviteLanding = ({ data, onAccept, onDecline }: InviteLandingProps)
 
       {hasPlayerCard(data.invite) && <PlayerCard invite={data.invite} />}
 
-      <EventFacts event={data.event} />
+      <EventFacts event={data.event} compact />
 
       <div className="flex gap-3 rounded-xl bg-ausa-ink-100 p-4 text-sm text-ausa-ink-700">
         <Video className="mt-0.5 h-5 w-5 shrink-0 text-ausa-ink-400" />

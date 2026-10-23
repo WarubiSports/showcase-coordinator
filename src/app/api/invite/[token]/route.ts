@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { firstName } from '@/lib/german-date'
 import { fetchAthlete, toPrefill, type BasePrefill } from '@/lib/base-athletes'
+import { heroUrlFor } from '@/lib/event-page'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +44,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   if (error) return NextResponse.json({ error: 'unavailable', detail: error.message }, { status: 503 })
   if (!data) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
-  const { event, player, ...row } = data
+  const { event: eventRow, player, ...row } = data
+  // The hero photo is a file drop: public/events/<slug>/hero.jpg (traced into the function, see next.config.ts)
+  const eventRecord = eventRow as { slug?: string } | null
+  const event = eventRecord ? { ...eventRecord, hero_url: heroUrlFor(eventRecord.slug, (p) => existsSync(path.join(process.cwd(), 'public', p))) } : eventRow
   const invite = pick(row, INVITE_FIELDS) as Record<string, unknown> & { name: string }
 
   // Linked to a Base athlete: the form opens prefilled from there (read only). Base unreachable = no prefill, page still works.

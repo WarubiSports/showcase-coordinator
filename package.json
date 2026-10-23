@@ -16,7 +16,8 @@
     "test:event-facts": "node --test tests/event-facts.test.mjs",
     "test:add-panel": "node --test tests/add-panel.test.mjs",
     "test:invite-og": "node --test tests/invite-og.test.mjs",
-    "test:request-origin": "node --test tests/request-origin.test.mjs"
+    "test:request-origin": "node --test tests/request-origin.test.mjs",
+    "test:event-page": "node --test tests/event-page.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

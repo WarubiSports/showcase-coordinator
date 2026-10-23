@@ -33,6 +33,7 @@ export interface InvitePayload {
     description: string | null
     venue_lat?: number | string | null
     venue_lng?: number | string | null
+    hero_url?: string | null
   }
   player: {
     name: string
