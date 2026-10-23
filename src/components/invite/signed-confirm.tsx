@@ -46,34 +46,34 @@ export const SignedConfirm = ({ form, eventYear, isSubmitting, error, onChange, 
   return (
     <form onSubmit={submit} className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-950">Deine Daten</h1>
-        <p className="mt-1 text-sm text-gray-600">Das wissen wir schon aus deinem Athletes USA Profil. Stimmt es noch?</p>
+        <h1 className="font-ausa-display text-2xl font-semibold text-ausa-ink-900">Deine Daten</h1>
+        <p className="mt-1 text-sm text-ausa-ink-500">Das wissen wir schon aus deinem Athletes USA Profil. Stimmt es noch?</p>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <dl className="divide-y divide-gray-100">
+      <div className="rounded-xl border border-ausa-ink-200 bg-ausa-paper p-4">
+        <dl className="divide-y divide-ausa-ink-100">
           {known.map(([label, value]) => (
             <div key={label} className="flex justify-between gap-4 py-2 text-sm">
-              <dt className="text-gray-500">{label}</dt>
-              <dd className="text-right font-medium text-gray-950">{value}</dd>
+              <dt className="text-ausa-ink-400">{label}</dt>
+              <dd className="text-right font-medium text-ausa-ink-900">{value}</dd>
             </div>
           ))}
         </dl>
-        <button type="button" onClick={onEdit} className="mt-2 text-sm font-medium text-gray-700 underline">Ändern</button>
+        <button type="button" onClick={onEdit} className="mt-2 text-sm font-medium text-ausa-ink-700 underline">Ändern</button>
       </div>
 
       {missing.length > 0 && <SignedMissingFields form={form} missing={missing} onChange={onChange} />}
 
       <ConsentBlock form={form} minor={minor} onChange={onChange} />
 
-      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+      {error && <p className="rounded-xl bg-ausa-accent-soft px-4 py-3 text-sm text-ausa-accent-ink">{error}</p>}
 
       <div className="space-y-3">
-        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-emerald-600 py-4 text-lg font-bold text-white disabled:opacity-50">
+        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-ausa-accent py-4 text-lg font-bold text-white hover:bg-ausa-accent-hover disabled:opacity-50">
           {isSubmitting ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Wird gesendet...</span> : 'Stimmt so'}
         </button>
-        <p className="text-center text-xs text-gray-500">{CONSENT_SUBMIT_NOTE}</p>
-        <button type="button" onClick={onBack} className="w-full py-2 text-sm font-medium text-gray-600 underline">Zurück</button>
+        <p className="text-center text-xs text-ausa-ink-400">{CONSENT_SUBMIT_NOTE}</p>
+        <button type="button" onClick={onBack} className="w-full py-2 text-sm font-medium text-ausa-ink-500 underline">Zurück</button>
       </div>
     </form>
   )

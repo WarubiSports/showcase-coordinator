@@ -38,12 +38,12 @@ const Tick = ({
   hint?: string
   text: string
 }) => (
-  <label className="flex gap-3 rounded-xl border border-gray-200 bg-white p-3">
-    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-emerald-600" />
+  <label className="flex gap-3 rounded-xl border border-ausa-ink-200 bg-ausa-paper p-3">
+    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-ausa-ink-900" />
     <span className="text-sm">
-      <span className="font-semibold text-gray-950">{label}</span>
-      {hint && <span className="text-gray-500"> ({hint})</span>}
-      <span className="mt-1 block text-gray-700">{text}</span>
+      <span className="font-semibold text-ausa-ink-900">{label}</span>
+      {hint && <span className="text-ausa-ink-400"> ({hint})</span>}
+      <span className="mt-1 block text-ausa-ink-700">{text}</span>
     </span>
   </label>
 )
@@ -56,20 +56,20 @@ export const ConsentBlock = ({ form, minor, onChange }: ConsentBlockProps) => {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-bold text-gray-950">Einverständnis</h2>
-      <p className="text-sm text-gray-700">
+      <h2 className="font-ausa-display text-lg font-semibold text-ausa-ink-900">Einverständnis</h2>
+      <p className="text-sm text-ausa-ink-700">
         Kurz zusammengefasst: Du spielst auf eigene Verantwortung, das Spiel wird gefilmt, und du entscheidest, wofür wir die Aufnahmen nutzen dürfen.
       </p>
-      <button type="button" onClick={() => setShowFull(!showFull)} className="flex items-center gap-1 text-sm font-semibold text-gray-950 underline">
+      <button type="button" onClick={() => setShowFull(!showFull)} className="flex items-center gap-1 text-sm font-semibold text-ausa-ink-900 underline">
         {showFull ? 'Erklärung einklappen' : 'Vollständige Erklärung lesen'}
         {showFull ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {showFull && (
-        <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
-          <p className="text-xs text-gray-500">{CONSENT_ORGANIZER}<br />{CONSENT_CONTROLLER}</p>
+        <div className="space-y-3 rounded-xl border border-ausa-ink-200 bg-ausa-paper p-4 text-sm text-ausa-ink-700">
+          <p className="text-xs text-ausa-ink-400">{CONSENT_ORGANIZER}<br />{CONSENT_CONTROLLER}</p>
           {CONSENT_SECTIONS.map((s) => (
             <div key={s.title}>
-              <h3 className="font-semibold text-gray-950">{s.title}</h3>
+              <h3 className="font-semibold text-ausa-ink-900">{s.title}</h3>
               {s.paragraphs.map((p, i) => <p key={i} className="mt-1">{p}</p>)}
             </div>
           ))}
@@ -80,15 +80,15 @@ export const ConsentBlock = ({ form, minor, onChange }: ConsentBlockProps) => {
         type="button"
         onClick={acceptAll}
         disabled={allTicked}
-        className="w-full rounded-xl border-2 border-emerald-600 bg-white py-3 font-semibold text-emerald-700 active:scale-[0.98] disabled:border-gray-200 disabled:text-gray-500"
+        className="w-full rounded-xl border-2 border-ausa-ink-900 bg-ausa-paper py-3 font-semibold text-ausa-ink-900 active:scale-[0.98] disabled:border-ausa-ink-200 disabled:text-ausa-ink-400"
       >
         {allTicked ? 'Alles akzeptiert' : 'Alles akzeptieren'}
       </button>
-      <p className="px-1 text-xs text-gray-500">Setzt alle Häkchen unten mit einem Tipp. Einzelne kannst du danach wieder abwählen.</p>
+      <p className="px-1 text-xs text-ausa-ink-400">Setzt alle Häkchen unten mit einem Tipp. Einzelne kannst du danach wieder abwählen.</p>
 
       <Tick checked={form.consent_profile} onChange={(v) => onChange({ consent_profile: v })} label={CONSENT_PROFILE_LABEL} hint={CONSENT_PROFILE_HINT} text={CONSENT_PROFILE_TEXT} />
       {!form.consent_profile && (
-        <p className="px-1 text-xs text-amber-700">Ohne dieses Häkchen kannst du mitspielen, bekommst aber keine Szenen.</p>
+        <p className="px-1 text-xs text-ausa-warn">Ohne dieses Häkchen kannst du mitspielen, bekommst aber keine Szenen.</p>
       )}
       <Tick checked={form.consent_social} onChange={(v) => onChange({ consent_social: v })} label={CONSENT_SOCIAL_LABEL} hint={CONSENT_SOCIAL_HINT} text={CONSENT_SOCIAL_TEXT} />
       {minor && (

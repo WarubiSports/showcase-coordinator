@@ -106,8 +106,8 @@ export const initialAcceptForm = (data: InvitePayload): AcceptFormState => {
 
 // Shared input styling: 16px text so iOS does not zoom
 export const INPUT_CLASS =
-  'w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-950 focus:border-transparent'
-export const LABEL_CLASS = 'block text-sm font-medium text-gray-700 mb-1'
+  'w-full rounded-md border border-ausa-ink-300 bg-ausa-paper px-3 py-2.5 text-base text-ausa-ink-900 placeholder-ausa-ink-400 focus:outline-none focus:ring-2 focus:ring-ausa-ink-900 focus:border-transparent'
+export const LABEL_CLASS = 'block text-sm font-medium text-ausa-ink-700 mb-1'
 
 // Option lists for the accept form (German labels, stored values match the database)
 export const POSITIONS: { value: PlayerPosition; label: string }[] = [

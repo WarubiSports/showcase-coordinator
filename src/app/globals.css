@@ -123,3 +123,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Athletes USA portal look for the player pages (/invite/...): the v2 tokens of athlete.athletesusa.org
+   (src/index.css :root in the ausa-portal repo, 23.10.2026). Fonts come from next/font in the invite layout. */
+@theme {
+  --color-ausa-ink-900: #1a2744;
+  --color-ausa-ink-800: #22345c;
+  --color-ausa-ink-700: #2e3d63;
+  --color-ausa-ink-500: #4a5670;
+  --color-ausa-ink-400: #8b93a8;
+  --color-ausa-ink-300: #b6bdd0;
+  --color-ausa-ink-200: #d8d2c2;
+  --color-ausa-ink-100: #ede8dc;
+  --color-ausa-ink-50: #f5f2ea;
+  --color-ausa-paper: #fffdf7;
+  --color-ausa-accent: #c1272d;
+  --color-ausa-accent-hover: #c40e0e;
+  --color-ausa-accent-soft: #f8e8e8;
+  --color-ausa-accent-ink: #7a1a1e;
+  --color-ausa-good: #2e7d4f;
+  --color-ausa-good-soft: #eef6f0;
+  --color-ausa-warn: #b45309;
+}
+
+/* Inline so the utilities carry the var() themselves: the next/font variables are set on the invite layout's
+   wrapper, not on :root, and a plain @theme value would be resolved (and fail) at :root. */
+@theme inline {
+  --font-ausa-sans: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-ausa-display: var(--font-kanit), 'Kanit', 'Inter', system-ui, sans-serif;
+  --font-ausa-mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}

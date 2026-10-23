@@ -33,8 +33,8 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
   return (
     <form onSubmit={submit} className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-950">Kurz deine Angaben</h1>
-        <p className="mt-1 text-sm text-gray-600">Felder mit * brauchen wir, der Rest hilft beim Zuordnen deiner Szenen.</p>
+        <h1 className="font-ausa-display text-2xl font-semibold text-ausa-ink-900">Kurz deine Angaben</h1>
+        <p className="mt-1 text-sm text-ausa-ink-500">Felder mit * brauchen wir, der Rest hilft beim Zuordnen deiner Szenen.</p>
       </div>
 
       <div className="space-y-4">
@@ -56,12 +56,12 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
           </div>
         </div>
         {askAdult && (
-          <fieldset className="rounded-xl border border-gray-200 bg-white p-3">
-            <legend className="px-1 text-sm font-medium text-gray-700">Bist du am Spieltag schon 18? *</legend>
+          <fieldset className="rounded-xl border border-ausa-ink-200 bg-ausa-paper p-3">
+            <legend className="px-1 text-sm font-medium text-ausa-ink-700">Bist du am Spieltag schon 18? *</legend>
             <div className="flex gap-4 pt-1">
               {(['ja', 'nein'] as const).map((v) => (
                 <label key={v} className="flex items-center gap-2 text-base">
-                  <input type="radio" name="is_adult" value={v} checked={form.is_adult === v} onChange={() => onChange({ is_adult: v })} className="h-5 w-5 accent-emerald-600" />
+                  <input type="radio" name="is_adult" value={v} checked={form.is_adult === v} onChange={() => onChange({ is_adult: v })} className="h-5 w-5 accent-ausa-ink-900" />
                   {v === 'ja' ? 'Ja' : 'Nein'}
                 </label>
               ))}
@@ -105,7 +105,7 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
         <div>
           <label className={LABEL_CLASS} htmlFor="profile_url">FuPa- oder Transfermarkt-Profil (optional)</label>
           <input id="profile_url" type="url" inputMode="url" value={form.profile_url} onChange={(e) => onChange({ profile_url: e.target.value })} className={INPUT_CLASS} placeholder="https://www.fupa.net/player/..." />
-          {form.profile_url.trim() && !isProfileUrl(form.profile_url) ? <p className="mt-1 text-xs text-red-700">{PROFILE_URL_ERROR}</p> : null}
+          {form.profile_url.trim() && !isProfileUrl(form.profile_url) ? <p className="mt-1 text-xs text-ausa-accent-ink">{PROFILE_URL_ERROR}</p> : null}
         </div>
         <div>
           <label className={LABEL_CLASS} htmlFor="phone">Handynummer *</label>
@@ -116,8 +116,8 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
           <input id="email" type="email" value={form.email} onChange={(e) => onChange({ email: e.target.value })} className={INPUT_CLASS} />
         </div>
         {minor && (
-          <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-3">
-            <p className="text-sm font-medium text-gray-950">Du bist unter 18, deshalb brauchen wir ein Elternteil.</p>
+          <div className="space-y-3 rounded-xl border border-ausa-ink-200 bg-ausa-paper p-3">
+            <p className="text-sm font-medium text-ausa-ink-900">Du bist unter 18, deshalb brauchen wir ein Elternteil.</p>
             <div>
               <label className={LABEL_CLASS} htmlFor="parent_name">Name Elternteil *</label>
               <input id="parent_name" type="text" required value={form.parent_name} onChange={(e) => onChange({ parent_name: e.target.value })} className={INPUT_CLASS} />
@@ -132,14 +132,14 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
 
       <ConsentBlock form={form} minor={minor} onChange={onChange} />
 
-      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+      {error && <p className="rounded-xl bg-ausa-accent-soft px-4 py-3 text-sm text-ausa-accent-ink">{error}</p>}
 
       <div className="space-y-3">
-        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-emerald-600 py-4 text-lg font-bold text-white disabled:opacity-50">
+        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-ausa-accent py-4 text-lg font-bold text-white hover:bg-ausa-accent-hover disabled:opacity-50">
           {isSubmitting ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Wird gesendet...</span> : 'Zusage abschicken'}
         </button>
-        <p className="text-center text-xs text-gray-500">{CONSENT_SUBMIT_NOTE}</p>
-        <button type="button" onClick={onBack} className="w-full py-2 text-sm font-medium text-gray-600 underline">Zurück</button>
+        <p className="text-center text-xs text-ausa-ink-400">{CONSENT_SUBMIT_NOTE}</p>
+        <button type="button" onClick={onBack} className="w-full py-2 text-sm font-medium text-ausa-ink-500 underline">Zurück</button>
       </div>
     </form>
   )
