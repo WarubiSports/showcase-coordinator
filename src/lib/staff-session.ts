@@ -16,24 +16,26 @@ export interface StaffIdentity {
 }
 
 export type CookieToSet = { name: string; value: string; options?: CookieOptions }
+type CookieSource = { getAll: () => { name: string; value: string }[] }
 
-// Auth client bound to the request's cookies; refreshed cookies are handed to the caller to put on the response
-export const staffAuthClient = (req: NextRequest, onSetAll?: (cookies: CookieToSet[]) => void) =>
+const authClientFor = (source: CookieSource, onSetAll?: (cookies: CookieToSet[]) => void) =>
   createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookieOptions: { name: STAFF_COOKIE },
     cookies: {
-      getAll: () => req.cookies.getAll(),
+      getAll: () => source.getAll(),
       setAll: (cookies) => onSetAll?.(cookies),
     },
   })
 
-// The signed-in staff member behind the request, or null (no session, or an auth user without a staff profile)
-export const getStaffIdentity = async (req: NextRequest, onSetAll?: (cookies: CookieToSet[]) => void): Promise<StaffIdentity | null> => {
+// Auth client bound to the request's cookies; refreshed cookies are handed to the caller to put on the response
+export const staffAuthClient = (req: NextRequest, onSetAll?: (cookies: CookieToSet[]) => void) => authClientFor(req.cookies, onSetAll)
+
+const identityFor = async (source: CookieSource, onSetAll?: (cookies: CookieToSet[]) => void): Promise<StaffIdentity | null> => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null
   try {
     const {
       data: { user },
-    } = await staffAuthClient(req, onSetAll).auth.getUser()
+    } = await authClientFor(source, onSetAll).auth.getUser()
     if (!user) return null
     const { data } = await createAdminClient().from('staff_profiles').select('id, full_name, email, role').eq('id', user.id).maybeSingle()
     return (data as StaffIdentity | null) ?? null
@@ -41,5 +43,12 @@ export const getStaffIdentity = async (req: NextRequest, onSetAll?: (cookies: Co
     return null
   }
 }
+
+// The signed-in staff member behind the request, or null (no session, or an auth user without a staff profile)
+export const getStaffIdentity = (req: NextRequest, onSetAll?: (cookies: CookieToSet[]) => void) => identityFor(req.cookies, onSetAll)
+
+// The same from a server component's cookie store (next/headers cookies()). Nothing can be written there; the
+// middleware has already refreshed the cookies on the way in.
+export const getStaffIdentityFromCookies = (store: CookieSource) => identityFor(store)
 
 export const staffFirstName = (staff: StaffIdentity | null): string => staff?.full_name?.trim().split(/\s+/)[0] ?? ''
