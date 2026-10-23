@@ -59,6 +59,20 @@ export const parseAcceptForm = (raw: unknown, eventYear: number): ParsedAccept =
   const birth_year = int(r.birth_year)
   if (!birth_year || birth_year < 1990 || birth_year > 2015) return { ok: false, error: 'Bitte gib dein Geburtsjahr an.' }
 
+  // Required since 23.10 (Max): position, school type, grad year and grades, so every accepted player is college-screenable
+  const position = text(r.position, 5)
+  if (!POSITIONS.includes(position as PlayerPosition)) return { ok: false, error: 'Bitte wähl deine Position.' }
+
+  const school_type = text(r.school_type, 20)
+  if (!SCHOOL_TYPES.includes(school_type as SchoolType)) return { ok: false, error: 'Bitte gib deinen Schulabschluss an.' }
+
+  const grad_year = int(r.grad_year)
+  if (grad_year === null) return { ok: false, error: 'Bitte gib dein Abschlussjahr an.' }
+  if (grad_year < 2020 || grad_year > 2035) return { ok: false, error: 'Das Abschlussjahr sieht nicht richtig aus.' }
+
+  const grades = text(r.grades, 60)
+  if (!grades) return { ok: false, error: 'Bitte gib deinen Notenschnitt an.' }
+
   const phone = text(r.phone, 40)
   if (!phone) return { ok: false, error: 'Bitte gib eine Handynummer an.' }
 
@@ -83,12 +97,6 @@ export const parseAcceptForm = (raw: unknown, eventYear: number): ParsedAccept =
   const video_url = text(r.video_url, 500)
   if (video_url && !/^https?:\/\//i.test(video_url)) return { ok: false, error: 'Der Video-Link muss mit http beginnen.' }
 
-  const grad_year = int(r.grad_year)
-  if (grad_year !== null && (grad_year < 2020 || grad_year > 2035)) return { ok: false, error: 'Das Abschlussjahr sieht nicht richtig aus.' }
-
-  const position = text(r.position, 5)
-  const school_type = text(r.school_type, 20)
-
   return {
     ok: true,
     minor,
@@ -96,11 +104,11 @@ export const parseAcceptForm = (raw: unknown, eventYear: number): ParsedAccept =
       name,
       birth_year,
       is_adult,
-      position: POSITIONS.includes(position as PlayerPosition) ? (position as PlayerPosition) : null,
+      position: position as PlayerPosition,
       club: text(r.club, 120),
-      school_type: SCHOOL_TYPES.includes(school_type as SchoolType) ? (school_type as SchoolType) : null,
+      school_type: school_type as SchoolType,
       grad_year,
-      grades: text(r.grades, 60),
+      grades,
       english_level: text(r.english_level, 40),
       video_url,
       phone,

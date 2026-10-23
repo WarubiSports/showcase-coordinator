@@ -47,8 +47,8 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
             <input id="birth_year" type="number" inputMode="numeric" required min={1990} max={2015} value={form.birth_year} onChange={(e) => onChange({ birth_year: e.target.value, is_adult: '' })} className={INPUT_CLASS} placeholder="2008" />
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor="position">Position</label>
-            <select id="position" value={form.position} onChange={(e) => onChange({ position: e.target.value as PlayerPosition | '' })} className={INPUT_CLASS}>
+            <label className={LABEL_CLASS} htmlFor="position">Position *</label>
+            <select id="position" required value={form.position} onChange={(e) => onChange({ position: e.target.value as PlayerPosition | '' })} className={INPUT_CLASS}>
               <option value="">Bitte wählen</option>
               {POSITIONS.map((p) => <option key={p.value} value={p.value}>{p.label} ({p.value})</option>)}
             </select>
@@ -73,21 +73,21 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={LABEL_CLASS} htmlFor="school_type">Schulabschluss</label>
-            <select id="school_type" value={form.school_type} onChange={(e) => onChange({ school_type: e.target.value as SchoolType | '' })} className={INPUT_CLASS}>
+            <label className={LABEL_CLASS} htmlFor="school_type">Schulabschluss *</label>
+            <select id="school_type" required value={form.school_type} onChange={(e) => onChange({ school_type: e.target.value as SchoolType | '' })} className={INPUT_CLASS}>
               <option value="">Bitte wählen</option>
               {SCHOOL_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor="grad_year">Abschlussjahr</label>
-            <input id="grad_year" type="number" inputMode="numeric" min={2020} max={2035} value={form.grad_year} onChange={(e) => onChange({ grad_year: e.target.value })} className={INPUT_CLASS} placeholder="2027" />
+            <label className={LABEL_CLASS} htmlFor="grad_year">Abschlussjahr *</label>
+            <input id="grad_year" type="number" inputMode="numeric" required min={2020} max={2035} value={form.grad_year} onChange={(e) => onChange({ grad_year: e.target.value })} className={INPUT_CLASS} placeholder="2027" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={LABEL_CLASS} htmlFor="grades">Notenschnitt (ungefähr)</label>
-            <input id="grades" type="text" value={form.grades} onChange={(e) => onChange({ grades: e.target.value })} className={INPUT_CLASS} placeholder="2,3" />
+            <label className={LABEL_CLASS} htmlFor="grades">Notenschnitt (ungefähr) *</label>
+            <input id="grades" type="text" required value={form.grades} onChange={(e) => onChange({ grades: e.target.value })} className={INPUT_CLASS} placeholder="2,3" />
           </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="english_level">Englisch</label>
