@@ -65,6 +65,8 @@ const LoginForm = () => {
         {busy ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Einen Moment...</span> : 'Anmelden'}
       </button>
       <p className="text-center text-sm text-gray-500">Gleiche Zugangsdaten wie in der Staff App.</p>
+      {/* A plain link, not a Next Link: a prefetch of /admin would meet the password challenge */}
+      <p className="pt-2 text-center text-sm"><a href="/admin" className="text-gray-500 underline">Admin-Login mit Passwort</a></p>
     </form>
   )
 }

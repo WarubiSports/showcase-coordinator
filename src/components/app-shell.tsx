@@ -53,6 +53,7 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
           onRoleToggle={() => setUserRole(userRole === 'admin' ? 'coach' : 'admin')}
           onMenuClick={() => setSidebarOpen(true)}
           onLogout={clearUserName}
+          staffSession={!!staff}
         />
 
         <Sidebar
@@ -71,7 +72,7 @@ export function AppShell({ children, selectedCategory, onCategorySelect }: AppSh
           </div>
         </main>
 
-        <MobileNav userRole={userRole} />
+        <MobileNav userRole={userRole} staffSession={!!staff} />
         <FeedbackButton />
       </div>
     </>

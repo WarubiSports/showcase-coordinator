@@ -1,14 +1,17 @@
 'use client'
 
+import { AdminOnlyNotice } from '@/components/invites/admin-only-notice'
+
 interface InvitesNoticesProps {
   templateEvent: boolean
   migrationPending: boolean
   error: string | null
 }
 
-// Lines above the invite list: template event warning, missing migration, load error
+// Lines above the invite list: admin-only redirect, template event warning, missing migration, load error
 export const InvitesNotices = ({ templateEvent, migrationPending, error }: InvitesNoticesProps) => (
   <>
+    <AdminOnlyNotice />
     {templateEvent && (
       <div className="rounded-lg border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
         Das ist das Template-Event. Bitte zum echten Event wechseln, bevor du einlädst.

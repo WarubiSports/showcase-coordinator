@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { Menu, Bell, User, LogOut, ChevronDown, Calendar, Plus, Shield, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -29,6 +30,8 @@ interface HeaderProps {
   onRoleToggle: () => void
   onMenuClick: () => void
   onLogout: () => void
+  // A Staff App login: the title is the way home, to the invite area
+  staffSession?: boolean
 }
 
 function getInitials(name: string): string {
@@ -78,7 +81,7 @@ function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
-export function Header({ userName, userRole, onRoleToggle, onMenuClick, onLogout }: HeaderProps) {
+export function Header({ userName, userRole, onRoleToggle, onMenuClick, onLogout, staffSession = false }: HeaderProps) {
   const { events, currentEvent, pastEvents, setCurrentEvent, isSlugLocked, unlockEvents } = useEvent()
   const eventStart = useMemo(() => getEventStartDate(currentEvent), [currentEvent])
   const [countdown, setCountdown] = useState(getCountdown(eventStart))
@@ -136,7 +139,11 @@ export function Header({ userName, userRole, onRoleToggle, onMenuClick, onLogout
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold leading-tight">{currentEvent?.name || 'Showcase Coordinator'}</h1>
+                {staffSession ? (
+                  <Link href="/invites" className="text-lg font-bold leading-tight hover:text-primary transition-colors">{currentEvent?.name || 'Showcase Coordinator'}</Link>
+                ) : (
+                  <h1 className="text-lg font-bold leading-tight">{currentEvent?.name || 'Showcase Coordinator'}</h1>
+                )}
                 {!isSlugLocked && (
                   <button
                     onClick={() => setShowCreateEvent(true)}

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, CheckSquare, Megaphone, CalendarDays, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/constants'
+import { StaffNav } from '@/components/layout/staff-nav'
 
 const navigation: { name: string; href: string; icon: typeof LayoutDashboard; adminOnly?: boolean }[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -16,16 +17,20 @@ const navigation: { name: string; href: string; icon: typeof LayoutDashboard; ad
 
 interface MobileNavProps {
   userRole: UserRole
+  staffSession?: boolean
 }
 
-export function MobileNav({ userRole }: MobileNavProps) {
+export function MobileNav({ userRole, staffSession = false }: MobileNavProps) {
   const pathname = usePathname()
   const filteredNav = navigation.filter((item) => !item.adminOnly || userRole === 'admin')
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:hidden">
       <div className="flex items-center justify-around py-2">
-        {filteredNav.map((item) => {
+        {staffSession && (
+          <StaffNav itemClass="flex flex-col items-center gap-1 px-3 py-2 text-xs font-medium transition-colors" activeClass="text-primary" idleClass="text-muted-foreground" iconClass="h-5 w-5" />
+        )}
+        {!staffSession && filteredNav.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link

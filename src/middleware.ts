@@ -3,6 +3,8 @@ import { getStaffIdentity } from '@/lib/staff-session'
 import { STAFF_COOKIE } from '@/lib/staff-cookie'
 
 const PUBLIC_FILE = /\.(.*)$/
+// The one page that asks the browser for the admin password on purpose: the "Admin-Login mit Passwort" link on /login
+const ADMIN_LOGIN_PATH = '/admin'
 
 function isPublicRegistrationPath(pathname: string) {
   const parts = pathname.split('/').filter(Boolean)
@@ -63,6 +65,16 @@ function basicAuthOk(req: NextRequest, username: string, password: string) {
   }
 }
 
+const hasStaffCookie = (req: NextRequest) => req.cookies.getAll().some((c) => c.name.startsWith(STAFF_COOKIE))
+
+const redirectTo = (req: NextRequest, pathname: string, params: Record<string, string> = {}) => {
+  const url = req.nextUrl.clone()
+  url.pathname = pathname
+  url.search = ''
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
+  return NextResponse.redirect(url)
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
@@ -78,7 +90,14 @@ export async function middleware(req: NextRequest) {
   }
 
   if (basicAuthOk(req, username, password)) {
-    return NextResponse.next()
+    // The password page has done its job once the browser sends the credentials along
+    return pathname === ADMIN_LOGIN_PATH ? redirectTo(req, '/') : NextResponse.next()
+  }
+
+  // Only here does a page answer with the browser's password box. Every other page redirects, so a staff
+  // user coming from the Staff App login never meets it by accident (Marvin, 23.10), nor does a visitor.
+  if (pathname === ADMIN_LOGIN_PATH) {
+    return unauthorized()
   }
 
   if (isInviteArea(pathname)) {
@@ -92,20 +111,21 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
-    const url = req.nextUrl.clone()
-    url.pathname = '/login'
-    url.search = ''
-    url.searchParams.set('next', pathname + req.nextUrl.search)
-    return NextResponse.redirect(url)
+    return redirectTo(req, '/login', { next: pathname + req.nextUrl.search })
   }
 
-  // A staff session calling an admin-only API (the sidebar's categories through the db proxy, say) gets a plain
-  // JSON denial: a basic-auth challenge on a fetch would make the browser pop up its login dialog.
-  if (pathname.startsWith('/api/') && req.cookies.getAll().some((c) => c.name.startsWith(STAFF_COOKIE))) {
-    return NextResponse.json({ error: 'Admin login required' }, { status: 403 })
+  if (pathname.startsWith('/api/')) {
+    // A staff session calling an admin-only API (the sidebar's categories through the db proxy, say) gets a plain
+    // JSON denial: a basic-auth challenge on a fetch would make the browser pop up its login dialog. Without a
+    // session the challenge stays, the admin db loader signs in through it.
+    return hasStaffCookie(req) ? NextResponse.json({ error: 'Admin login required' }, { status: 403 }) : unauthorized()
   }
 
-  return unauthorized()
+  // Admin-only pages: a staff user is told where the border is, a visitor goes to the login page
+  if (hasStaffCookie(req)) {
+    return redirectTo(req, '/invites', { notice: 'admin-only' })
+  }
+  return redirectTo(req, '/login', { next: pathname + req.nextUrl.search })
 }
 
 export const config = {
