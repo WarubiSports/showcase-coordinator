@@ -124,7 +124,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
             {open ? 'Details ausblenden' : 'Details'}
           </Button>
           {open && (
-            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 border-t pt-3 text-sm sm:grid-cols-3">
+            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 border-t pt-3 text-sm sm:grid-cols-4">
               <dt className="text-muted-foreground">Geburtsjahr</dt><dd>{p.birth_year ?? '-'}</dd>
               <dt className="text-muted-foreground">Verein</dt><dd>{p.club ?? '-'}</dd>
               <dt className="text-muted-foreground">Schulabschluss</dt><dd>{p.school_type ? SCHOOL[p.school_type] : '-'}{p.grad_year ? ` ${p.grad_year}` : ''}</dd>
@@ -136,7 +136,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
               <dt className="text-muted-foreground">E-Mail</dt><dd className="truncate">{p.email ?? '-'}</dd>
               <dt className="text-muted-foreground">Elternteil</dt><dd>{p.parent_name ? `${p.parent_name}${p.parent_phone ? `, ${p.parent_phone}` : ''}` : '-'}</dd>
               <dt className="text-muted-foreground">Einverständnis</dt>
-              <dd className="col-span-1 sm:col-span-2">Profil/College {yesNo(p.consent_profile_at)} · Social Media {yesNo(p.consent_social_at)}</dd>
+              <dd className="col-span-1 sm:col-span-3">Profil/College {yesNo(p.consent_profile_at)} · Social Media {yesNo(p.consent_social_at)}</dd>
             </dl>
           )}
         </>
