@@ -21,6 +21,8 @@ export const InviteStats = ({ invites }: { invites: InviteWithPlayer[] }) => {
   const clips = accepted.filter((i) => i.player?.consent_profile_at).length
   const byPosition = POSITION_ORDER.map((pos) => ({ pos, n: accepted.filter((i) => i.player?.position === pos).length })).filter((x) => x.n > 0)
   const noPosition = accepted.filter((i) => !i.player?.position).length
+  const signedN = invites.filter((i) => i.category === 'signed').length
+  const newN = invites.filter((i) => i.category === 'new').length
 
   return (
     <div className="space-y-3">
@@ -31,6 +33,14 @@ export const InviteStats = ({ invites }: { invites: InviteWithPlayer[] }) => {
         <Tile value={declined} label="Declined" color="text-gray-500" />
         <Tile value={eligible} label="College-eligible" color="text-blue-600" />
         <Tile value={clips} label="Clip consent" color="text-purple-600" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Category:</span>
+        <span className="rounded-md border bg-card px-2 py-0.5 font-medium">Signed <span className="text-muted-foreground">{signedN}</span></span>
+        <span className="rounded-md border bg-card px-2 py-0.5 font-medium">New <span className="text-muted-foreground">{newN}</span></span>
+        {invites.length - signedN - newN > 0 && (
+          <span className="rounded-md border border-dashed px-2 py-0.5 text-muted-foreground">not set {invites.length - signedN - newN}</span>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Accepted by position:</span>

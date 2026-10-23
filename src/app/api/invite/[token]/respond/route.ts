@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const db = createAdminClient()
   const { data: invite, error } = await db
     .from('showcase_invites')
-    .select('id, event_id, player_id, event:showcase_events(name, slug, start_date, start_time, location, price, currency)')
+    .select('*, event:showcase_events(name, slug, start_date, start_time, location, price, currency)')
     .eq('token', token)
     .maybeSingle()
   if (error) return fail('Gerade nicht erreichbar. Bitte versuch es gleich noch einmal.', 503)
@@ -70,6 +70,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     english_level: d.english_level,
     video_url: d.video_url,
     profile_url: d.profile_url,
+    // carried over from the invite: who in Base this is and whether already with Athletes USA
+    ausa_athlete_id: (invite as Record<string, unknown>).ausa_athlete_id ?? null,
+    category: (invite as Record<string, unknown>).category ?? null,
     consent_profile_at: d.consent_profile ? now : null,
     consent_social_at: d.consent_social ? now : null,
     consent_parent_name: d.consent_name,
@@ -78,27 +81,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     updated_at: now,
   }
 
-  // Until the profile_url migration is applied the column is missing; then the write is retried without it
-  const withoutProfile = (row: typeof playerRow) => {
-    const { profile_url: _dropped, ...rest } = row
-    void _dropped
-    return rest
-  }
-  const missingProfileColumn = (message: string | undefined) => !!message && /profile_url/.test(message)
-
-  let playerId = invite.player_id
-  if (playerId) {
-    let { error: updateError } = await db.from('showcase_players').update(playerRow).eq('id', playerId)
-    if (updateError && missingProfileColumn(updateError.message)) {
-      ;({ error: updateError } = await db.from('showcase_players').update(withoutProfile(playerRow)).eq('id', playerId))
+  // Until the latest migrations are applied some columns are missing on showcase_players; the write is
+  // retried without each column the database reports missing, so an accept never fails on that alone.
+  type WriteResult = { data: { id: string } | null; error: { message: string } | null }
+  const missingColumn = (message: string | undefined): string | null => message?.match(/'([a-z_]+)' column/)?.[1] ?? null
+  const writeDroppingMissing = async (row: Record<string, unknown>, run: (r: Record<string, unknown>) => Promise<WriteResult>): Promise<WriteResult> => {
+    const current = { ...row }
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await run(current)
+      const col = res.error ? missingColumn(res.error.message) : null
+      if (!res.error || !col || !(col in current)) return res
+      delete current[col]
     }
+    return run(current)
+  }
+
+  let playerId = (invite as Record<string, unknown>).player_id as string | null
+  if (playerId) {
+    const id = playerId
+    const { error: updateError } = await writeDroppingMissing(playerRow, async (r) => {
+      const { error } = await db.from('showcase_players').update(r).eq('id', id)
+      return { data: null, error }
+    })
     if (updateError) return fail('Das hat nicht geklappt. Bitte versuch es noch einmal.', 500)
   } else {
-    const insertRow = { ...playerRow, payment_status: 'pending', created_by: 'invite' }
-    let { data: created, error: insertError } = await db.from('showcase_players').insert([insertRow]).select('id').single()
-    if (insertError && missingProfileColumn(insertError.message)) {
-      ;({ data: created, error: insertError } = await db.from('showcase_players').insert([withoutProfile(insertRow)]).select('id').single())
-    }
+    const { data: created, error: insertError } = await writeDroppingMissing(
+      { ...playerRow, payment_status: 'pending', created_by: 'invite' },
+      async (r) => {
+        const { data, error } = await db.from('showcase_players').insert([r]).select('id').single()
+        return { data: data as { id: string } | null, error }
+      },
+    )
     if (insertError || !created) return fail('Das hat nicht geklappt. Bitte versuch es noch einmal.', 500)
     playerId = created.id
   }

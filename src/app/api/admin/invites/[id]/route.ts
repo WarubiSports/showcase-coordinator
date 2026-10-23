@@ -34,6 +34,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_URL_ERROR }, { status: 400 })
     updates.profile_url = profile_url
   }
+  if ('ausa_athlete_id' in body) {
+    const id = body.ausa_athlete_id
+    if (id !== null && !(typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+      return NextResponse.json({ error: 'ausa_athlete_id must be a uuid or null' }, { status: 400 })
+    }
+    updates.ausa_athlete_id = id
+  }
+  if ('category' in body) {
+    if (body.category !== null && body.category !== 'signed' && body.category !== 'new') {
+      return NextResponse.json({ error: 'category must be signed, new or null' }, { status: 400 })
+    }
+    updates.category = body.category
+  }
   if ('invited_by' in body) {
     const by = clean(body.invited_by, 80)
     if (!by) return NextResponse.json({ error: 'invited_by cannot be empty' }, { status: 400 })

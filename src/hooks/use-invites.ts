@@ -20,6 +20,8 @@ export interface NewInviteInput {
   invited_by: string
   personal_line?: string
   profile_url?: string
+  ausa_athlete_id?: string
+  category?: 'signed' | 'new'
 }
 
 export function useInvites(eventId: string | undefined) {
@@ -58,7 +60,7 @@ export function useInvites(eventId: string | undefined) {
     return created
   }
 
-  const updateInvite = async (id: string, patch: Partial<Pick<InviteWithPlayer, 'name' | 'phone' | 'invited_by' | 'personal_line' | 'profile_url' | 'status'>>) => {
+  const updateInvite = async (id: string, patch: Partial<Pick<InviteWithPlayer, 'name' | 'phone' | 'invited_by' | 'personal_line' | 'profile_url' | 'ausa_athlete_id' | 'category' | 'status'>>) => {
     const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
     setInvites((prev) => prev.map((i) => (i.id === id ? updated : i)))
     return updated

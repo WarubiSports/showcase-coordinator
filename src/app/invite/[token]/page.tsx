@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import { InviteLanding } from '@/components/invite/invite-landing'
 import { AcceptForm } from '@/components/invite/accept-form'
 import { InviteDone } from '@/components/invite/invite-done'
+import { BaseNotice } from '@/components/invite/base-notice'
 import { initialAcceptForm, type AcceptFormState, type InvitePayload } from '@/components/invite/invite-types'
 
 type View = 'landing' | 'form' | 'accepted' | 'declined'
@@ -102,7 +103,9 @@ export default function InvitePage() {
         ) : !data ? (
           <div className="flex justify-center pt-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         ) : view === 'form' && form ? (
-          <AcceptForm
+          <div className="space-y-5">
+            {data.base && <BaseNotice base={data.base} />}
+            <AcceptForm
             form={form}
             eventYear={new Date(data.event.start_date + 'T00:00:00').getFullYear()}
             isSubmitting={isSubmitting}
@@ -110,7 +113,8 @@ export default function InvitePage() {
             onChange={(patch) => setForm((prev) => (prev ? { ...prev, ...patch } : prev))}
             onSubmit={submitAccept}
             onBack={() => setView(data.invite.status === 'accepted' ? 'accepted' : data.invite.status === 'declined' ? 'declined' : 'landing')}
-          />
+            />
+          </div>
         ) : view === 'accepted' || view === 'declined' ? (
           <>
             <InviteDone data={data} variant={view} onEdit={openForm} onDecline={decline} />

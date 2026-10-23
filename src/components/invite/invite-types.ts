@@ -1,4 +1,5 @@
 import type { PlayerPosition, SchoolType } from '@/types'
+import type { BasePrefill } from '@/lib/base-athletes'
 
 // Payload of GET /api/invite/[token]
 export interface InvitePayload {
@@ -11,6 +12,8 @@ export interface InvitePayload {
     invited_by: string
     responded_at: string | null
     profile_url: string | null
+    ausa_athlete_id: string | null
+    category: 'signed' | 'new' | null
   }
   event: {
     name: string
@@ -41,6 +44,8 @@ export interface InvitePayload {
     consent_social_at: string | null
     consent_parent_name: string | null
   } | null
+  // Read-only prefill from the player's Athletes USA profile in Base, when the invite is linked
+  base: { name: string | null; photo_url: string | null; prefill: BasePrefill } | null
 }
 
 export interface AcceptFormState {
@@ -65,24 +70,26 @@ export interface AcceptFormState {
   consent_name: string
 }
 
+// Order of truth: what the player saved before, then the invite, then the Base profile ("bitte prüfen")
 export const initialAcceptForm = (data: InvitePayload): AcceptFormState => {
   const p = data.player
+  const b = data.base?.prefill
   return {
     name: p?.name ?? data.invite.name,
-    birth_year: p?.birth_year?.toString() ?? '',
+    birth_year: p?.birth_year?.toString() ?? b?.birth_year?.toString() ?? '',
     is_adult: '',
-    position: p?.position ?? '',
-    club: p?.club ?? '',
-    school_type: p?.school_type ?? '',
-    grad_year: p?.grad_year?.toString() ?? '',
-    grades: p?.grades ?? '',
-    english_level: p?.english_level ?? '',
-    video_url: p?.video_url ?? '',
-    profile_url: p?.profile_url ?? data.invite.profile_url ?? '',
-    phone: p?.phone ?? data.invite.phone ?? '',
+    position: p?.position ?? b?.position ?? '',
+    club: p?.club ?? b?.club ?? '',
+    school_type: p?.school_type ?? b?.school_type ?? '',
+    grad_year: p?.grad_year?.toString() ?? b?.grad_year?.toString() ?? '',
+    grades: p?.grades ?? b?.grades ?? '',
+    english_level: p?.english_level ?? b?.english_level ?? '',
+    video_url: p?.video_url ?? b?.video_url ?? '',
+    profile_url: p?.profile_url ?? data.invite.profile_url ?? b?.profile_url ?? '',
+    phone: p?.phone ?? data.invite.phone ?? b?.phone ?? '',
     email: p?.email ?? '',
-    parent_name: p?.parent_name ?? '',
-    parent_phone: p?.parent_phone ?? '',
+    parent_name: p?.parent_name ?? b?.parent_name ?? '',
+    parent_phone: p?.parent_phone ?? b?.parent_phone ?? '',
     consent_profile: !!p?.consent_profile_at,
     consent_social: !!p?.consent_social_at,
     consent_parent: false,
