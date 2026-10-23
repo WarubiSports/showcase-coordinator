@@ -7,9 +7,11 @@ import { InviteLanding } from '@/components/invite/invite-landing'
 import { AcceptForm } from '@/components/invite/accept-form'
 import { InviteDone } from '@/components/invite/invite-done'
 import { BaseNotice } from '@/components/invite/base-notice'
+import { SignedConfirm } from '@/components/invite/signed-confirm'
+import { InviteError } from '@/components/invite/invite-error'
 import { initialAcceptForm, type AcceptFormState, type InvitePayload } from '@/components/invite/invite-types'
 
-type View = 'landing' | 'form' | 'accepted' | 'declined'
+type View = 'landing' | 'confirm' | 'form' | 'accepted' | 'declined'
 const GENERIC_ERROR = 'Das hat nicht geklappt. Bitte versuch es noch einmal.'
 
 // Player side of a selection invite: German, mobile first, no login. The token in the URL is the key.
@@ -50,10 +52,12 @@ export default function InvitePage() {
     if (!res.ok) throw new Error(typeof json.error === 'string' && json.error !== 'not_found' ? json.error : GENERIC_ERROR)
   }
 
+  // A player already signed with Athletes USA and linked in Base confirms what we know instead of retyping it;
+  // everyone else, and anyone editing after the answer, gets the full form
   const openForm = () => {
     if (data) setForm((prev) => prev ?? initialAcceptForm(data))
     setFormError(null)
-    setView('form')
+    setView(data?.invite.category === 'signed' && data.base && data.invite.status === 'invited' ? 'confirm' : 'form')
   }
 
   const decline = async () => {
@@ -93,15 +97,21 @@ export default function InvitePage() {
         </div>
       </header>
       <main className="mx-auto max-w-md px-5 py-6 pb-16">
-        {loadError === 'not_found' ? (
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Dieser Link ist ungültig oder abgelaufen.</h1>
-            <p className="text-gray-600">Melde dich bei der Person, von der du die Einladung bekommen hast.</p>
-          </div>
-        ) : loadError === 'unavailable' ? (
-          <p className="text-gray-600">Gerade nicht erreichbar. Bitte versuch es gleich noch einmal.</p>
+        {loadError ? (
+          <InviteError kind={loadError} />
         ) : !data ? (
           <div className="flex justify-center pt-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+        ) : view === 'confirm' && form ? (
+          <SignedConfirm
+            form={form}
+            eventYear={new Date(data.event.start_date + 'T00:00:00').getFullYear()}
+            isSubmitting={isSubmitting}
+            error={formError}
+            onChange={(patch) => setForm((prev) => (prev ? { ...prev, ...patch } : prev))}
+            onSubmit={submitAccept}
+            onEdit={() => setView('form')}
+            onBack={() => setView('landing')}
+          />
         ) : view === 'form' && form ? (
           <div className="space-y-5">
             {data.base && <BaseNotice base={data.base} />}
