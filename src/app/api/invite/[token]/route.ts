@@ -15,6 +15,13 @@ const PLAYER_FIELDS = [
   'english_level', 'video_url', 'profile_url', 'consent_profile_at', 'consent_social_at', 'consent_parent_name',
 ] as const
 
+const digits = (v: unknown) => (typeof v === 'string' ? v.replace(/\D/g, '').replace(/^0049/, '49').replace(/^0/, '49') : '')
+const samePhone = (a: unknown, b: unknown) => {
+  const x = digits(a)
+  const y = digits(b)
+  return x.length >= 8 && y.length >= 8 && x.slice(-9) === y.slice(-9)
+}
+
 const pick = (row: Record<string, unknown> | null, fields: readonly string[]) =>
   row ? Object.fromEntries(fields.map((f) => [f, row[f] ?? null])) : null
 
@@ -41,6 +48,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
       const athlete = await fetchAthlete(db, row.ausa_athlete_id)
       if (athlete) {
         const prefill = toPrefill(athlete)
+        // The link is a bearer token. Base's parent contact and grades are released to it only when the number
+        // staff put on the invite is the number Base knows, which is the check that the right person was linked.
+        if (!samePhone(row.phone, prefill.phone)) {
+          prefill.parent_name = null
+          prefill.parent_phone = null
+          prefill.grades = null
+          prefill.phone = null
+        }
         base = { name: prefill.name, photo_url: prefill.photo_url, prefill }
       }
     } catch {
