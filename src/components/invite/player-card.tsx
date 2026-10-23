@@ -29,7 +29,7 @@ export const PlayerCard = ({ invite }: { invite: InvitePayload['invite'] }) => {
         <div className="grid h-28 w-[88px] shrink-0 place-items-center rounded-lg bg-ausa-ink-100 font-ausa-display text-2xl font-semibold text-ausa-ink-400">{initials(invite.name)}</div>
       )}
       <div className="min-w-0 self-center">
-        <p className="font-ausa-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ausa-accent">Athletes USA Selection</p>
+        <p className="font-ausa-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ausa-accent">Athletes USA Auswahl</p>
         <p className="truncate font-ausa-display text-xl font-semibold leading-tight">{invite.name}</p>
         <p className="mt-0.5 truncate text-sm text-ausa-ink-500">{[invite.club, invite.league].filter(Boolean).join(' · ')}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
