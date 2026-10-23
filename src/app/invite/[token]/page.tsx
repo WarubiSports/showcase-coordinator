@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
 import { Loader2 } from 'lucide-react'
 import { InviteLanding } from '@/components/invite/invite-landing'
 import { AcceptForm } from '@/components/invite/accept-form'
@@ -90,17 +91,18 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-950">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-md px-5 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Athletes USA · Warubi Sports</p>
+    <div className="min-h-screen bg-ausa-ink-50 text-ausa-ink-900">
+      <header className="border-b border-ausa-ink-200 bg-ausa-paper">
+        <div className="mx-auto flex max-w-md items-center gap-3 px-5 py-3">
+          <Image src="/logo-ausa.png" alt="Athletes USA" width={1235} height={608} priority className="h-8 w-auto" />
+          <span className="text-xs font-medium uppercase tracking-wide text-ausa-ink-400">Warubi Sports</span>
         </div>
       </header>
       <main className="mx-auto max-w-md px-5 py-6 pb-16">
         {loadError ? (
           <InviteError kind={loadError} />
         ) : !data ? (
-          <div className="flex justify-center pt-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+          <div className="flex justify-center pt-12"><Loader2 className="h-6 w-6 animate-spin text-ausa-ink-400" /></div>
         ) : view === 'confirm' && form ? (
           <SignedConfirm
             form={form}
@@ -128,15 +130,16 @@ export default function InvitePage() {
         ) : view === 'accepted' || view === 'declined' ? (
           <>
             <InviteDone data={data} variant={view} onEdit={openForm} onDecline={decline} />
-            {formError && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{formError}</p>}
+            {formError && <p className="mt-4 rounded-xl bg-ausa-accent-soft px-4 py-3 text-sm text-ausa-accent-ink">{formError}</p>}
           </>
         ) : (
           <>
             <InviteLanding data={data} onAccept={openForm} onDecline={decline} />
-            {formError && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{formError}</p>}
+            {formError && <p className="mt-4 rounded-xl bg-ausa-accent-soft px-4 py-3 text-sm text-ausa-accent-ink">{formError}</p>}
           </>
         )}
       </main>
+      <footer className="mx-auto max-w-md px-5 pb-8 text-center text-xs text-ausa-ink-400">Athletes USA · Warubi Sports</footer>
     </div>
   )
 }

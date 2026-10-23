@@ -1,6 +1,13 @@
 import type { Metadata } from 'next'
+import { IBM_Plex_Mono, Inter, Kanit } from 'next/font/google'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { germanTime, weekdayDate } from '@/lib/german-date'
+
+// The player pages wear the Athletes USA portal look: Inter for text, Kanit for headings, IBM Plex Mono for
+// numbers (athlete.athletesusa.org). The tokens live in globals.css under the ausa- prefix.
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
+const kanit = Kanit({ subsets: ['latin'], weight: ['500', '600', '700', '800'], variable: '--font-kanit', display: 'swap' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['500'], variable: '--font-plex-mono', display: 'swap' })
 
 // Link preview for the WhatsApp message: event name, date, place. Never indexed.
 export const generateMetadata = async ({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> => {
@@ -31,5 +38,5 @@ export const generateMetadata = async ({ params }: { params: Promise<{ token: st
 }
 
 export default function InviteLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return <div className={`${inter.variable} ${kanit.variable} ${plexMono.variable} font-ausa-sans`}>{children}</div>
 }

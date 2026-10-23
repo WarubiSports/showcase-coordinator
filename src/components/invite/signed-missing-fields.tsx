@@ -17,8 +17,8 @@ export const SignedMissingFields = ({ form, missing, onChange }: SignedMissingFi
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-gray-950">Das fehlt uns noch</h2>
-        <p className="mt-1 text-sm text-gray-600">Felder mit * brauchen wir für die Anmeldung.</p>
+        <h2 className="font-ausa-display text-lg font-semibold text-ausa-ink-900">Das fehlt uns noch</h2>
+        <p className="mt-1 text-sm text-ausa-ink-500">Felder mit * brauchen wir für die Anmeldung.</p>
       </div>
       {has('birth_year') && (
         <div>
@@ -27,12 +27,12 @@ export const SignedMissingFields = ({ form, missing, onChange }: SignedMissingFi
         </div>
       )}
       {has('is_adult') && (
-        <fieldset className="rounded-xl border border-gray-200 bg-white p-3">
-          <legend className="px-1 text-sm font-medium text-gray-700">Bist du am Spieltag schon 18? *</legend>
+        <fieldset className="rounded-xl border border-ausa-ink-200 bg-ausa-paper p-3">
+          <legend className="px-1 text-sm font-medium text-ausa-ink-700">Bist du am Spieltag schon 18? *</legend>
           <div className="flex gap-4 pt-1">
             {(['ja', 'nein'] as const).map((v) => (
               <label key={v} className="flex items-center gap-2 text-base">
-                <input type="radio" name="is_adult" value={v} checked={form.is_adult === v} onChange={() => onChange({ is_adult: v })} className="h-5 w-5 accent-emerald-600" />
+                <input type="radio" name="is_adult" value={v} checked={form.is_adult === v} onChange={() => onChange({ is_adult: v })} className="h-5 w-5 accent-ausa-ink-900" />
                 {v === 'ja' ? 'Ja' : 'Nein'}
               </label>
             ))}
@@ -91,8 +91,8 @@ export const SignedMissingFields = ({ form, missing, onChange }: SignedMissingFi
         </div>
       )}
       {parent && (
-        <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-3">
-          <p className="text-sm font-medium text-gray-950">Du bist unter 18, deshalb brauchen wir ein Elternteil.</p>
+        <div className="space-y-3 rounded-xl border border-ausa-ink-200 bg-ausa-paper p-3">
+          <p className="text-sm font-medium text-ausa-ink-900">Du bist unter 18, deshalb brauchen wir ein Elternteil.</p>
           <div>
             <label className={LABEL_CLASS} htmlFor="parent_name">Name Elternteil *</label>
             <input id="parent_name" type="text" required value={form.parent_name} onChange={(e) => onChange({ parent_name: e.target.value })} className={INPUT_CLASS} />
