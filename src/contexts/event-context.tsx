@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { defaultEvent } from '@/lib/default-event'
 import type { ShowcaseEvent } from '@/types'
 
 const STORAGE_KEY = 'showcase_selected_event'
@@ -54,10 +55,10 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(SLUG_KEY)
     }
 
-    // Normal mode: restore from localStorage or pick first
+    // Normal mode: restore from localStorage, else the nearest upcoming real event (never a template)
     const savedId = localStorage.getItem(STORAGE_KEY)
     const saved = savedId ? fetched.find(e => e.id === savedId) : null
-    setCurrentEventState(saved || fetched[0] || null)
+    setCurrentEventState(saved || defaultEvent(fetched, new Date().toISOString().split('T')[0]))
     setIsLoading(false)
   }, [])
 
