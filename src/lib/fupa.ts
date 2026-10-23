@@ -1,9 +1,9 @@
 import { isProfileUrl } from '@/lib/profile-url'
 
-// FuPa enrichment for selection invites. Server only. Same approach as Base's batch-scrape-fupa
+// FuPa enrichment for selection invites, parsing half. Same approach as Base's batch-scrape-fupa
 // (deployed-stopgap/seasons.mjs): the page embeds window.REDUX_DATA with the player, the current team and
-// the seasons. A direct fetch of the page is tried first; Firecrawl (rawHtml only, no LLM) is the fallback
-// when FIRECRAWL_API_KEY is set. Nothing is guessed: a page without the data yields null and nothing is shown.
+// the seasons. Nothing is guessed: a page without the data yields null and nothing is shown.
+// The fetching half (direct fetch, Firecrawl fallback) is in fupa-fetch.ts.
 
 export interface FupaStats {
   season: string | null
@@ -26,11 +26,35 @@ const MARKER = 'window.REDUX_DATA = '
 const FULL_SLUG = /-(\d{4})-\d{2}$/
 const HALF_SLUG = /-(?:spring|autumn)(\d{4})$/
 
+const FUPA_HOST = /(^|\.)fupa\.net$/i
+
 export const isFupaUrl = (url: string): boolean => {
   try {
-    return isProfileUrl(url) && /(^|\.)fupa\.net$/i.test(new URL(url).hostname)
+    return isProfileUrl(url) && FUPA_HOST.test(new URL(url).hostname)
   } catch {
     return false
+  }
+}
+
+// What the server is allowed to fetch: https on a fupa.net host, nothing else (checked again on every redirect hop)
+export const fetchableFupaUrl = (url: string): string | null => {
+  try {
+    const u = new URL(url)
+    if (u.protocol === 'http:') u.protocol = 'https:'
+    return u.protocol === 'https:' && FUPA_HOST.test(u.hostname) && !u.username && !u.password ? u.toString() : null
+  } catch {
+    return null
+  }
+}
+
+// A stored photo must come from fupa.net over https
+const safePhotoUrl = (url: string | null): string | null => {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' && FUPA_HOST.test(u.hostname) ? u.toString() : null
+  } catch {
+    return null
   }
 }
 
@@ -108,53 +132,10 @@ export const parseFupaHtml = (html: string): FupaProfile | null => {
       : null
   const imagePath = str(obj(data?.image)?.path)
   return {
-    photo_url: og?.[1] ?? (imagePath ? `https://image.fupa.net/${imagePath.replace(/^\//, '')}/960x1200.jpeg` : null),
+    photo_url: safePhotoUrl(og?.[1] ?? null) ?? (imagePath ? safePhotoUrl(`https://image.fupa.net/${imagePath.replace(/^\//, '')}/960x1200.jpeg`) : null),
     club: current.club,
     league: current.league,
     position: str(obj(data?.currentRole)?.position) ?? str(data?.position),
     stats,
   }
-}
-
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36'
-
-const fetchDirect = async (url: string): Promise<string | null> => {
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA, 'Accept-Language': 'de-DE,de;q=0.9' }, redirect: 'follow', signal: AbortSignal.timeout(12000), cache: 'no-store' })
-    return res.ok ? await res.text() : null
-  } catch {
-    return null
-  }
-}
-
-// Firecrawl fallback: rawHtml only (the page data is in the HTML, no LLM extraction needed)
-const fetchFirecrawl = async (url: string): Promise<string | null> => {
-  const key = process.env.FIRECRAWL_API_KEY
-  if (!key) return null
-  try {
-    const res = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formats: ['rawHtml'] }),
-      signal: AbortSignal.timeout(45000),
-    })
-    if (!res.ok) return null
-    const json = (await res.json()) as { data?: { rawHtml?: string } }
-    return json.data?.rawHtml ?? null
-  } catch {
-    return null
-  }
-}
-
-export type FupaResult = { ok: true; profile: FupaProfile; source: 'direct' | 'firecrawl' } | { ok: false; reason: 'not_fupa' | 'unreachable' | 'no_data' }
-
-export const fetchFupaProfile = async (url: string): Promise<FupaResult> => {
-  if (!isFupaUrl(url)) return { ok: false, reason: 'not_fupa' }
-  const direct = await fetchDirect(url)
-  const fromDirect = direct ? parseFupaHtml(direct) : null
-  if (fromDirect) return { ok: true, profile: fromDirect, source: 'direct' }
-  const raw = await fetchFirecrawl(url)
-  const fromFirecrawl = raw ? parseFupaHtml(raw) : null
-  if (fromFirecrawl) return { ok: true, profile: fromFirecrawl, source: 'firecrawl' }
-  return { ok: false, reason: direct || raw ? 'no_data' : 'unreachable' }
 }

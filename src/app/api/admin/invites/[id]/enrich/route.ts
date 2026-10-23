@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { adminAuthError } from '@/lib/admin-auth'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
-import { fetchFupaProfile } from '@/lib/fupa'
+import { fetchFupaProfile } from '@/lib/fupa-fetch'
 
 export const dynamic = 'force-dynamic'
 
