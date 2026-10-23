@@ -11,6 +11,15 @@ export const weekdayDayMonth = (iso: string): string => {
   return `${WEEKDAYS[d.getDay()]}, ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`
 }
 
+const SHORT_WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+
+// "Fr 30.10." and "Fr 30.10.2026", for the link preview where every character counts
+export const shortDayMonth = (iso: string): string => {
+  const d = toLocalDate(iso)
+  return `${SHORT_WEEKDAYS[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`
+}
+export const shortDate = (iso: string): string => `${shortDayMonth(iso)}${toLocalDate(iso).getFullYear()}`
+
 // "Freitag, 30.10.2026"
 export const weekdayDate = (iso: string): string => `${weekdayDayMonth(iso)}${toLocalDate(iso).getFullYear()}`
 
