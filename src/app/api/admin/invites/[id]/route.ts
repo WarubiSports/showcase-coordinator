@@ -29,10 +29,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if ('phone' in body) updates.phone = clean(body.phone, 40)
   if ('personal_line' in body) updates.personal_line = clean(body.personal_line, 300)
+  let linkChanged = false
   if ('profile_url' in body) {
     const profile_url = cleanProfileUrl(body.profile_url)
     if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_URL_ERROR }, { status: 400 })
     updates.profile_url = profile_url
+    linkChanged = true
   }
   if ('ausa_athlete_id' in body) {
     const id = body.ausa_athlete_id
@@ -60,12 +62,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updates.responded_at = body.status === 'declined' ? now : null
   }
 
-  const { data, error } = await createAdminClient()
-    .from('showcase_invites')
-    .update(updates)
-    .eq('id', id)
-    .select(INVITE_WITH_PLAYER_SELECT)
-    .maybeSingle()
+  const db = createAdminClient()
+  if (linkChanged) {
+    // FuPa data belongs to the old link: clear it, the page shows nothing until the new link is read.
+    // Before the enrichment migration these columns are missing; that error is ignored on purpose.
+    await db.from('showcase_invites').update({ photo_url: null, club: null, league: null, position: null, stats: null, enriched_at: null }).eq('id', id)
+  }
+  const { data, error } = await db.from('showcase_invites').update(updates).eq('id', id).select(INVITE_WITH_PLAYER_SELECT).maybeSingle()
   if (error) return dbError(error.message)
   if (!data) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
   return NextResponse.json(data)

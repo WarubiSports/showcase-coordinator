@@ -17,12 +17,32 @@ import { useEvent } from '@/contexts/event-context'
 export default function InvitesPage() {
   const { currentEvent } = useEvent()
   const { userName } = useUser()
-  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, setJerseyNumber } = useInvites(currentEvent?.id)
+  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, setJerseyNumber } = useInvites(currentEvent?.id)
+
+  // FuPa read for one invite; a failure only means the card stays hidden
+  const handleEnrich = async (id: string, quiet = false) => {
+    try {
+      const updated = (await enrichInvite(id)) as { enrichment?: { source?: string; failed?: string } }
+      if (updated.enrichment?.failed) {
+        if (!quiet) toast.error(`FuPa page not readable (${updated.enrichment.failed})`)
+        return false
+      }
+      if (!quiet) toast.success('FuPa data loaded')
+      return true
+    } catch (err) {
+      if (!quiet) toast.error(err instanceof Error ? err.message : 'Could not load FuPa data')
+      return false
+    }
+  }
 
   const handleCreate = async (rows: NewInviteInput[]) => {
     try {
       const created = await createInvites(rows)
       toast.success(created.length === 1 ? 'Invite created' : `${created.length} invites created`)
+      const withLink = created.filter((i) => i.profile_url && /fupa\.net/i.test(i.profile_url))
+      let loaded = 0
+      for (const i of withLink) if (await handleEnrich(i.id, true)) loaded++
+      if (withLink.length) toast.message(`FuPa data loaded for ${loaded} of ${withLink.length}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not create invites')
       throw err
@@ -52,6 +72,7 @@ export default function InvitesPage() {
     try {
       await updateInvite(id, { profile_url: url })
       toast.success(url ? 'Profile link saved' : 'Profile link removed')
+      if (url && /fupa\.net/i.test(url)) await handleEnrich(id)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save the link')
     }
@@ -114,6 +135,7 @@ export default function InvitesPage() {
               onStatus={handleStatus}
               onProfileUrl={handleProfileUrl}
               onCategory={handleCategory}
+              onEnrich={(id) => handleEnrich(id)}
               onDelete={handleDelete}
             />
           </TabsContent>

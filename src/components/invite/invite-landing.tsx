@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Calendar, Clock, ExternalLink, MapPin, Video } from 'lucide-react'
 import { germanTime, weekdayDate } from '@/lib/german-date'
 import type { InvitePayload } from '@/components/invite/invite-types'
+import { PlayerCard, hasPlayerCard } from '@/components/invite/player-card'
 
 interface InviteLandingProps {
   data: InvitePayload
@@ -50,6 +51,8 @@ export const InviteLanding = ({ data, onAccept, onDecline }: InviteLandingProps)
           </a>
         )}
       </div>
+
+      {hasPlayerCard(data.invite) && <PlayerCard invite={data.invite} />}
 
       <EventFacts event={data.event} />
 
