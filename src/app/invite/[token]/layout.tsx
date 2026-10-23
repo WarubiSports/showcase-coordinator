@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { IBM_Plex_Mono, Inter, Kanit } from 'next/font/google'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { firstName } from '@/lib/german-date'
 import { ogDescription, ogTitle, type OgEvent } from '@/lib/invite-og'
+import { requestOrigin } from '@/lib/request-origin'
 
 // The player pages wear the Athletes USA portal look: Inter for text, Kanit for headings, IBM Plex Mono for
 // numbers (athlete.athletesusa.org). The tokens live in globals.css under the ausa- prefix.
@@ -13,11 +15,12 @@ const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['500'], variable: 
 type Row = { status: string; name: string; event: (OgEvent & { name: string }) | null }
 
 // Link preview for the WhatsApp message: "{Vorname}, du bist eingeladen: ..." with the date, the place and the
-// Veo line; the image comes from opengraph-image.tsx next to this file. An invalid or declined link gets the
-// neutral text. Never indexed.
+// Veo line; the image comes from opengraph-image.tsx next to this file and its URL carries the host the page was
+// requested on (metadataBase from the request, not from Vercel's production URL, which may point at a domain
+// whose DNS is not live yet). An invalid or declined link gets the neutral text. Never indexed.
 export const generateMetadata = async ({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> => {
   const { token } = await params
-  const base: Metadata = { robots: { index: false, follow: false } }
+  const base: Metadata = { metadataBase: requestOrigin(await headers()), robots: { index: false, follow: false } }
 
   // Metadata is best effort: an unusable database target or a missing table must not break the page
   let row: Row | null = null
