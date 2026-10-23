@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { isCollegeEligible } from '@/components/invites/invite-stats'
 import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
-import type { InviteStatus, InviteWithPlayer, SchoolType } from '@/types'
+import type { InviteCategory, InviteStatus, InviteWithPlayer, SchoolType } from '@/types'
 
 const STATUS: Record<InviteStatus, { label: string; cls: string }> = {
   accepted: { label: 'Accepted', cls: 'bg-green-500/15 text-green-700 border-green-500/30' },
@@ -17,6 +17,11 @@ const STATUS: Record<InviteStatus, { label: string; cls: string }> = {
 }
 
 const SCHOOL: Record<SchoolType, string> = { abitur: 'Abitur', fachabitur: 'Fachabitur', realschule: 'Realschule', other: 'Other' }
+
+const CATEGORY: Record<InviteCategory, { label: string; cls: string }> = {
+  signed: { label: 'Signed', cls: 'bg-purple-500/15 text-purple-700 border-purple-500/30' },
+  new: { label: 'New', cls: 'bg-gray-500/10 text-gray-600 border-gray-400/30' },
+}
 
 const copy = async (text: string, what: string) => {
   try {
@@ -36,10 +41,11 @@ interface InviteRowProps {
   onSelect: (selected: boolean) => void
   onStatus: (status: 'invited' | 'declined') => void
   onProfileUrl: (url: string | null) => void
+  onCategory: (category: InviteCategory) => void
   onDelete: () => void
 }
 
-export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onDelete }: InviteRowProps) => {
+export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onDelete }: InviteRowProps) => {
   const [open, setOpen] = useState(false)
   const p = invite.player
   const status = STATUS[invite.status]
@@ -68,6 +74,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold">{p?.name ?? invite.name}</h3>
             <Badge className={status.cls}>{status.label}</Badge>
+            {invite.category && <Badge className={CATEGORY[invite.category].cls}>{CATEGORY[invite.category].label}</Badge>}
             {p?.position && <Badge variant="outline">{p.position}</Badge>}
             {isCollegeEligible(p) && <Badge className="bg-blue-500/15 text-blue-700 border-blue-500/30">College-eligible</Badge>}
           </div>
@@ -75,6 +82,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
             Invited by {invite.invited_by}
             {invite.phone ? ` · ${invite.phone}` : ''}
             {invite.responded_at ? ` · answered ${new Date(invite.responded_at).toLocaleDateString('de-DE')}` : ''}
+            {invite.ausa_athlete_id ? ' · linked to Base' : ''}
           </p>
           {invite.profile_url && (
             <a href={invite.profile_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm text-blue-700 underline">
@@ -91,6 +99,9 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
             {invite.status !== 'declined' && <DropdownMenuItem onClick={() => onStatus('declined')}>Mark declined (answered on WhatsApp)</DropdownMenuItem>}
             {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Reset to no answer</DropdownMenuItem>}
             <DropdownMenuItem onClick={editProfileUrl}>{invite.profile_url ? 'Edit profile link' : 'Add profile link'}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCategory(invite.category === 'signed' ? 'new' : 'signed')}>
+              {invite.category === 'signed' ? 'Mark as new' : 'Mark as signed (Athletes USA)'}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete invite</DropdownMenuItem>
           </DropdownMenuContent>

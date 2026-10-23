@@ -57,6 +57,15 @@ export default function InvitesPage() {
     }
   }
 
+  const handleCategory = async (id: string, category: 'signed' | 'new') => {
+    try {
+      await updateInvite(id, { category })
+      toast.success(category === 'signed' ? 'Marked as signed' : 'Marked as new')
+    } catch {
+      toast.error('Could not update the category')
+    }
+  }
+
   const handleJersey = async (playerId: string, n: number | null) => {
     try {
       await setJerseyNumber(playerId, n)
@@ -104,6 +113,7 @@ export default function InvitesPage() {
               isLoading={isLoading}
               onStatus={handleStatus}
               onProfileUrl={handleProfileUrl}
+              onCategory={handleCategory}
               onDelete={handleDelete}
             />
           </TabsContent>

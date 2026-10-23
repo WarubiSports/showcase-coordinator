@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { InviteRow } from '@/components/invites/invite-row'
 import { CoachBundleBar } from '@/components/invites/coach-bundle-bar'
 import { buildWhatsAppMessage, inviteLink, whatsAppUrl, type CoachMessageEvent } from '@/lib/invite-message'
-import type { InviteStatus, InviteWithPlayer } from '@/types'
+import type { InviteCategory, InviteStatus, InviteWithPlayer } from '@/types'
 
 type SortKey = 'status' | 'name' | 'inviter'
 const subscribeNothing = () => () => {}
@@ -26,10 +26,11 @@ interface InviteTableProps {
   isLoading: boolean
   onStatus: (id: string, status: 'invited' | 'declined') => void
   onProfileUrl: (id: string, url: string | null) => void
+  onCategory: (id: string, category: InviteCategory) => void
   onDelete: (id: string) => void
 }
 
-export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onDelete }: InviteTableProps) => {
+export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onCategory, onDelete }: InviteTableProps) => {
   const [sort, setSort] = useState<SortKey>('status')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const toggle = (id: string, on: boolean) =>
@@ -85,6 +86,7 @@ export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onPro
               onSelect={(on) => toggle(invite.id, on)}
               onStatus={(status) => onStatus(invite.id, status)}
               onProfileUrl={(url) => onProfileUrl(invite.id, url)}
+              onCategory={(c) => onCategory(invite.id, c)}
               onDelete={() => onDelete(invite.id)}
             />
           )

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { NewInviteInput } from '@/hooks/use-invites'
 import { parseInviteLines } from '@/lib/invite-lines'
 import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
+import { AthleteLookup, type AthleteMatch } from '@/components/invites/athlete-lookup'
 
 interface InviteFormProps {
   defaultInviter: string
@@ -21,6 +22,8 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [profileUrl, setProfileUrl] = useState('')
+  const [linked, setLinked] = useState<AthleteMatch | null>(null)
+  const [alreadySigned, setAlreadySigned] = useState(false)
   const [bulk, setBulk] = useState('')
   const [inviter, setInviter] = useState(defaultInviter)
   const [personalLine, setPersonalLine] = useState('')
@@ -30,7 +33,13 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
     mode === 'single'
       ? name.trim() ? [{ name: name.trim(), phone: phone.trim() || undefined, profile_url: profileUrl.trim() || undefined }] : []
       : parseInviteLines(bulk)
-  ).map((r) => ({ ...r, invited_by: inviter.trim(), personal_line: personalLine.trim() || undefined }))
+  ).map((r) => ({
+    ...r,
+    invited_by: inviter.trim(),
+    personal_line: personalLine.trim() || undefined,
+    ...(mode === 'single' && linked ? { ausa_athlete_id: linked.id } : {}),
+    category: (mode === 'single' && linked?.signed) || alreadySigned ? ('signed' as const) : ('new' as const),
+  }))
   const badLinks = rows.filter((r) => r.profile_url && !isProfileUrl(r.profile_url)).map((r) => r.name)
   const canSubmit = !disabled && !isSubmitting && rows.length > 0 && inviter.trim().length > 0 && badLinks.length === 0
 
@@ -43,6 +52,8 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
       setName('')
       setPhone('')
       setProfileUrl('')
+      setLinked(null)
+      setAlreadySigned(false)
       setBulk('')
       setPersonalLine('')
     } finally {
@@ -70,10 +81,16 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
 
       {mode === 'single' ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="inv-name">Player name *</Label>
-            <Input id="inv-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Vorname Nachname" disabled={disabled} />
-          </div>
+          <AthleteLookup
+            name={name}
+            onName={setName}
+            linked={linked}
+            onLink={(m) => {
+              setLinked(m)
+              if (m?.phone && !phone.trim()) setPhone(m.phone)
+            }}
+            disabled={disabled}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="inv-phone">Phone (WhatsApp)</Label>
             <Input id="inv-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0151 2345678" disabled={disabled} />
@@ -97,6 +114,12 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
           <p className="text-xs text-muted-foreground">{rows.length} {rows.length === 1 ? 'player' : 'players'} recognised</p>
         </div>
       )}
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={alreadySigned || !!linked?.signed} disabled={disabled || !!linked?.signed} onChange={(e) => setAlreadySigned(e.target.checked)} className="h-4 w-4 accent-primary" />
+        Bereits bei Athletes USA
+        <span className="text-xs text-muted-foreground">(sets the Signed badge when the lookup finds nothing; applies to every pasted line)</span>
+      </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">

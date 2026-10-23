@@ -31,7 +31,11 @@ interface NewInvite {
   invited_by?: unknown
   personal_line?: unknown
   profile_url?: unknown
+  ausa_athlete_id?: unknown
+  category?: unknown
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const clean = (v: unknown, max: number): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
 
@@ -46,7 +50,7 @@ export async function POST(req: NextRequest) {
   if (!eventId || rows.length === 0) return NextResponse.json({ error: 'eventId and invites required' }, { status: 400 })
   if (rows.length > 100) return NextResponse.json({ error: 'Max 100 invites per request' }, { status: 400 })
 
-  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; profile_url?: string }[] = []
+  const inserts: { event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; profile_url?: string; ausa_athlete_id?: string; category?: string }[] = []
   for (const r of rows) {
     const name = clean(r.name, 120)
     const invited_by = clean(r.invited_by, 80)
@@ -60,8 +64,10 @@ export async function POST(req: NextRequest) {
       phone: clean(r.phone, 40),
       invited_by,
       personal_line: clean(r.personal_line, 300),
-      // only sent when given, so invites without a link still save before the profile_url migration runs
+      // optional columns are only sent when given, so plain invites still save before their migrations run
       ...(profile_url ? { profile_url } : {}),
+      ...(typeof r.ausa_athlete_id === 'string' && UUID.test(r.ausa_athlete_id) ? { ausa_athlete_id: r.ausa_athlete_id } : {}),
+      ...(r.category === 'signed' || r.category === 'new' ? { category: r.category } : {}),
     })
   }
 

@@ -299,6 +299,8 @@ export interface Player {
   english_level: string | null
   video_url: string | null
   profile_url: string | null
+  ausa_athlete_id: string | null
+  category: InviteCategory | null
   jersey_number: number | null
   consent_profile_at: string | null
   consent_social_at: string | null
@@ -312,6 +314,8 @@ export interface Player {
 // Selection invites
 export type SchoolType = 'abitur' | 'fachabitur' | 'realschule' | 'other'
 export type InviteStatus = 'invited' | 'accepted' | 'declined'
+// signed = already with Athletes USA (Base register or cohort, or ticked by staff); new = regional prospect
+export type InviteCategory = 'signed' | 'new'
 
 export interface Invite {
   id: string
@@ -322,6 +326,8 @@ export interface Invite {
   invited_by: string
   personal_line: string | null
   profile_url: string | null
+  ausa_athlete_id: string | null
+  category: InviteCategory | null
   status: InviteStatus
   invited_at: string
   responded_at: string | null
