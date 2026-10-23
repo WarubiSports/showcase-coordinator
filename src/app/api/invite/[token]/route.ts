@@ -35,7 +35,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const db = createAdminClient()
   const { data, error } = await db
     .from('showcase_invites')
-    .select('*, event:showcase_events(name, slug, start_date, end_date, start_time, end_time, location, description), player:showcase_players(*)')
+    .select('*, event:showcase_events(name, slug, start_date, end_date, start_time, end_time, location, description, venue_lat, venue_lng), player:showcase_players(*)')
     .eq('token', token)
     .maybeSingle()
   if (error) return NextResponse.json({ error: 'unavailable', detail: error.message }, { status: 503 })

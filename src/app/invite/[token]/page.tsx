@@ -93,9 +93,9 @@ export default function InvitePage() {
   return (
     <div className="min-h-screen bg-ausa-ink-50 text-ausa-ink-900">
       <header className="border-b border-ausa-ink-200 bg-ausa-paper">
-        <div className="mx-auto flex max-w-md items-center gap-3 px-5 py-3">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-5 py-3">
           <Image src="/logo-ausa.png" alt="Athletes USA" width={1235} height={608} priority className="h-8 w-auto" />
-          <span className="text-xs font-medium uppercase tracking-wide text-ausa-ink-400">Warubi Sports</span>
+          <Image src="/warubi-sports-logo.png" alt="Warubi Sports" width={288} height={94} className="h-7 w-auto" />
         </div>
       </header>
       <main className="mx-auto max-w-md px-5 py-6 pb-16">
