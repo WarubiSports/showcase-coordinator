@@ -20,6 +20,8 @@ export interface NewInviteInput {
   invited_by: string
   personal_line?: string
   profile_url?: string
+  // helps the FuPa search tell players of the same name apart; stored as the invite's club when Base has none
+  club?: string
   ausa_athlete_id?: string
   category?: 'signed' | 'new'
 }
@@ -60,7 +62,7 @@ export function useInvites(eventId: string | undefined) {
     return created
   }
 
-  const updateInvite = async (id: string, patch: Partial<Pick<InviteWithPlayer, 'name' | 'phone' | 'invited_by' | 'personal_line' | 'profile_url' | 'ausa_athlete_id' | 'category' | 'status'>>) => {
+  const updateInvite = async (id: string, patch: Partial<Pick<InviteWithPlayer, 'name' | 'phone' | 'invited_by' | 'personal_line' | 'profile_url' | 'club' | 'fupa_candidates' | 'ausa_athlete_id' | 'category' | 'status'>>) => {
     const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
     setInvites((prev) => prev.map((i) => (i.id === id ? updated : i)))
     return updated
@@ -78,6 +80,13 @@ export function useInvites(eventId: string | undefined) {
     return updated
   }
 
+  // FuPa player search for an invite without a link: links a single hit, else stores the hits on the row
+  const findOnFupa = async (id: string) => {
+    const updated = await adminFetch<InviteWithPlayer & { fupa?: { linked: boolean; hits: number } }>(`/api/admin/invites/${id}/fupa-search`, { method: 'POST', body: '{}' })
+    setInvites((prev) => prev.map((i) => (i.id === id ? updated : i)))
+    return updated
+  }
+
   // Pulls link, photo, club and position from the invite's Base athlete (invites linked to Base only)
   const syncFromBase = async (id: string) => {
     const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${id}/base-sync`, { method: 'POST', body: '{}' })
@@ -91,5 +100,5 @@ export function useInvites(eventId: string | undefined) {
     setInvites((prev) => prev.map((i) => (i.id === inviteId ? updated : i)))
   }
 
-  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, syncFromBase, setJerseyNumber }
+  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, findOnFupa, syncFromBase, setJerseyNumber }
 }

@@ -7,6 +7,8 @@ import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
 import { fetchAthlete } from '@/lib/base-athletes'
 import { baseInviteFields, definedFields, type BaseInviteFields } from '@/lib/base-invite'
+import { candidateProfileUrl, pickCandidate, searchFupaPlayers } from '@/lib/fupa-search'
+import type { FupaCandidate } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +35,7 @@ interface NewInvite {
   invited_by?: unknown
   personal_line?: unknown
   profile_url?: unknown
+  club?: unknown
   ausa_athlete_id?: unknown
   category?: unknown
 }
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest) {
   if (rows.length > 100) return NextResponse.json({ error: 'Max 100 invites per request' }, { status: 400 })
 
   const db = createAdminClient()
-  const inserts: ({ event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null } & Partial<BaseInviteFields>)[] = []
+  const inserts: ({ event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null; fupa_candidates?: FupaCandidate[] } & Partial<BaseInviteFields>)[] = []
   for (const r of rows) {
     const name = clean(r.name, 120)
     const invited_by = clean(r.invited_by, 80)
@@ -64,6 +67,16 @@ export async function POST(req: NextRequest) {
     const athleteId = typeof r.ausa_athlete_id === 'string' && UUID.test(r.ausa_athlete_id) ? r.ausa_athlete_id : null
     const athlete = athleteId ? await fetchAthlete(db, athleteId).catch(() => null) : null
     const base = athlete ? definedFields(baseInviteFields(athlete, profile_url)) : {}
+    const clubText = clean(r.club, 120)
+    // No link from staff or Base: FuPa's player search. A single hit, or one singled out by the typed club, becomes
+    // the link (the page reads it right after); otherwise the hits wait on the row for staff to pick.
+    const fupa: { profile_url?: string; fupa_candidates?: FupaCandidate[] } = {}
+    if (!profile_url && !base.profile_url) {
+      const found = await searchFupaPlayers(name)
+      const pick = found ? pickCandidate(found, clubText ?? base.club) : null
+      if (pick) fupa.profile_url = candidateProfileUrl(pick)
+      else if (found) fupa.fupa_candidates = found
+    }
     inserts.push({
       event_id: eventId,
       token: newInviteToken(),
@@ -74,6 +87,8 @@ export async function POST(req: NextRequest) {
       // optional columns are only sent when given, so plain invites still save before their migrations run
       ...(profile_url ? { profile_url } : {}),
       ...base,
+      ...(clubText && !base.club ? { club: clubText } : {}),
+      ...fupa,
       ...(athleteId ? { ausa_athlete_id: athleteId } : {}),
       ...(r.category === 'signed' || r.category === 'new' ? { category: r.category } : {}),
       // who created it, from the Staff App login only; nothing the client sends for these is read
@@ -81,16 +96,19 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  let { data, error } = await db.from('showcase_invites').insert(inserts).select(INVITE_WITH_PLAYER_SELECT)
-  if (error && staff && /'invited_by_(staff_id|email)' column/.test(error.message)) {
-    // staff identity migration (20261023000004) not applied yet: save the invites without it
-    const plain = inserts.map((row) => {
-      const copy = { ...row }
-      delete copy.invited_by_staff_id
-      delete copy.invited_by_email
+  // A column whose migration is not applied yet (staff identity 20261023000004, fupa_candidates 20261023000005)
+  // is dropped from the rows and the insert retried, so invites still save before those migrations run.
+  let pending: Record<string, unknown>[] = inserts
+  let { data, error } = await db.from('showcase_invites').insert(pending).select(INVITE_WITH_PLAYER_SELECT)
+  for (let attempt = 0; error && attempt < 3; attempt++) {
+    const col = error.message.match(/'([a-z_]+)' column/)?.[1]
+    if (!col || !pending.some((r) => col in r)) break
+    pending = pending.map((r) => {
+      const copy = { ...r }
+      delete copy[col]
       return copy
     })
-    ;({ data, error } = await db.from('showcase_invites').insert(plain).select(INVITE_WITH_PLAYER_SELECT))
+    ;({ data, error } = await db.from('showcase_invites').insert(pending).select(INVITE_WITH_PLAYER_SELECT))
   }
   if (error) return dbError(error.message)
   return NextResponse.json(data)

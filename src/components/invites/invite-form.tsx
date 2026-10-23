@@ -10,6 +10,7 @@ import type { NewInviteInput } from '@/hooks/use-invites'
 import { parseInviteLines } from '@/lib/invite-lines'
 import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
 import { AthleteLookup, type AthleteMatch } from '@/components/invites/athlete-lookup'
+import { InviteModeToggle, type InviteMode } from '@/components/invites/invite-mode-toggle'
 
 interface InviteFormProps {
   defaultInviter: string
@@ -18,9 +19,10 @@ interface InviteFormProps {
 }
 
 export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormProps) => {
-  const [mode, setMode] = useState<'single' | 'bulk'>('single')
+  const [mode, setMode] = useState<InviteMode>('single')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [club, setClub] = useState('')
   const [profileUrl, setProfileUrl] = useState('')
   const [linked, setLinked] = useState<AthleteMatch | null>(null)
   const [alreadySigned, setAlreadySigned] = useState(false)
@@ -31,7 +33,7 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
 
   const rows: NewInviteInput[] = (
     mode === 'single'
-      ? name.trim() ? [{ name: name.trim(), phone: phone.trim() || undefined, profile_url: profileUrl.trim() || undefined }] : []
+      ? name.trim() ? [{ name: name.trim(), phone: phone.trim() || undefined, profile_url: profileUrl.trim() || undefined, club: club.trim() || undefined }] : []
       : parseInviteLines(bulk)
   ).map((r) => ({
     ...r,
@@ -51,6 +53,7 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
       await onCreate(rows)
       setName('')
       setPhone('')
+      setClub('')
       setProfileUrl('')
       setLinked(null)
       setAlreadySigned(false)
@@ -65,18 +68,7 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
     <form onSubmit={submit} className="rounded-lg border bg-card p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Add invites</h2>
-        <div className="flex rounded-md border p-0.5 text-sm">
-          {(['single', 'bulk'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`rounded px-3 py-1 ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
-            >
-              {m === 'single' ? 'One player' : 'Paste several'}
-            </button>
-          ))}
-        </div>
+        <InviteModeToggle mode={mode} onMode={setMode} />
       </div>
 
       {mode === 'single' ? (
@@ -95,9 +87,13 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
             <Label htmlFor="inv-phone">Phone (WhatsApp)</Label>
             <Input id="inv-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0151 2345678" disabled={disabled} />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="space-y-1.5">
             <Label htmlFor="inv-profile">Profil-Link (FuPa oder Transfermarkt)</Label>
             <Input id="inv-profile" value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://www.fupa.net/player/..." disabled={disabled} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="inv-club">Verein (optional, hilft der FuPa-Suche)</Label>
+            <Input id="inv-club" value={club} onChange={(e) => setClub(e.target.value)} placeholder="SV Beispielhausen" disabled={disabled || !!linked} />
           </div>
         </div>
       ) : (

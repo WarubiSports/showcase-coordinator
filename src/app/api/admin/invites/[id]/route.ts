@@ -30,12 +30,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if ('phone' in body) updates.phone = clean(body.phone, 40)
   if ('personal_line' in body) updates.personal_line = clean(body.personal_line, 300)
+  if ('club' in body) updates.club = clean(body.club, 120)
+  // Staff can only dismiss the FuPa hits ([]) or reset them (null); hits themselves come from the search route
+  if ('fupa_candidates' in body) {
+    if (!(body.fupa_candidates === null || (Array.isArray(body.fupa_candidates) && body.fupa_candidates.length === 0))) {
+      return NextResponse.json({ error: 'fupa_candidates can only be cleared here' }, { status: 400 })
+    }
+    updates.fupa_candidates = body.fupa_candidates
+  }
   let linkChanged = false
   if ('profile_url' in body) {
     const profile_url = cleanProfileUrl(body.profile_url)
     if (profile_url && !isProfileUrl(profile_url)) return NextResponse.json({ error: PROFILE_URL_ERROR }, { status: 400 })
     updates.profile_url = profile_url
     linkChanged = true
+    if (profile_url) updates.fupa_candidates = null
   }
   if ('ausa_athlete_id' in body) {
     const id = body.ausa_athlete_id
@@ -76,7 +85,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Before the enrichment migration these columns are missing; that error is ignored on purpose.
     await db.from('showcase_invites').update({ photo_url: null, club: null, league: null, position: null, stats: null, enriched_at: null }).eq('id', id)
   }
-  const { data, error } = await db.from('showcase_invites').update(updates).eq('id', id).select(INVITE_WITH_PLAYER_SELECT).maybeSingle()
+  let { data, error } = await db.from('showcase_invites').update(updates).eq('id', id).select(INVITE_WITH_PLAYER_SELECT).maybeSingle()
+  if (error && 'fupa_candidates' in updates && /'fupa_candidates' column/.test(error.message)) {
+    // migration 20261023000005 not applied yet: the rest of the change still goes through
+    delete updates.fupa_candidates
+    ;({ data, error } = await db.from('showcase_invites').update(updates).eq('id', id).select(INVITE_WITH_PLAYER_SELECT).maybeSingle())
+  }
   if (error) return dbError(error.message)
   if (!data) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
   if (jersey === undefined) return NextResponse.json(data)

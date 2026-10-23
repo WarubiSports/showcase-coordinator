@@ -8,7 +8,7 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 
 const MAX_BYTES = 3_000_000 // a FuPa player page is about 125 KB
 
-const readCapped = async (res: Response): Promise<string | null> => {
+export const readCapped = async (res: Response): Promise<string | null> => {
   const declared = Number(res.headers.get('content-length') ?? 0)
   if (declared > MAX_BYTES || !res.body) return null
   const reader = res.body.getReader()

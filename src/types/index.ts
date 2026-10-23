@@ -326,6 +326,22 @@ export interface FupaInviteStats {
   league: string | null
 }
 
+// One hit of FuPa's player search, kept on the invite until staff picks one or dismisses the list
+export interface FupaCandidate {
+  id: number
+  name: string
+  link_url: string
+  position: string | null
+  image: string | null
+  club: string | null
+  club_image: string | null
+  level: number | null
+  region: string | null
+  district: string | null
+  birth_year: number | null
+  score: number
+}
+
 export interface Invite {
   id: string
   event_id: string
@@ -347,6 +363,8 @@ export interface Invite {
   position: string | null
   stats: FupaInviteStats | null
   enriched_at: string | null
+  // FuPa search hits for an invite without a link: null = not searched, [] = nothing found or dismissed
+  fupa_candidates: FupaCandidate[] | null
   status: InviteStatus
   invited_at: string
   responded_at: string | null

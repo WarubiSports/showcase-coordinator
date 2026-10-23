@@ -12,6 +12,7 @@ import { RosterTable } from '@/components/invites/roster-table'
 import { useInvites, type NewInviteInput } from '@/hooks/use-invites'
 import { useUser } from '@/hooks/use-user'
 import { useStaff } from '@/hooks/use-staff'
+import { useFupaActions } from '@/hooks/use-fupa-actions'
 import { isTemplateEvent } from '@/lib/default-event'
 import { useEvent } from '@/contexts/event-context'
 
@@ -22,23 +23,10 @@ export default function InvitesPage() {
   const { staff, firstName: staffFirstName, signOut } = useStaff()
   // With a Staff App login the inviter defaults to that first name; under basic auth to the welcome-dialog name
   const defaultInviter = staffFirstName || userName || ''
-  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, syncFromBase, setJerseyNumber } = useInvites(currentEvent?.id)
+  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, findOnFupa, syncFromBase, setJerseyNumber } = useInvites(currentEvent?.id)
 
-  // FuPa read for one invite; a failure only means the card stays hidden
-  const handleEnrich = async (id: string, quiet = false) => {
-    try {
-      const updated = (await enrichInvite(id)) as { enrichment?: { source?: string; failed?: string } }
-      if (updated.enrichment?.failed) {
-        if (!quiet) toast.error(`FuPa page not readable (${updated.enrichment.failed})`)
-        return false
-      }
-      if (!quiet) toast.success('FuPa data loaded')
-      return true
-    } catch (err) {
-      if (!quiet) toast.error(err instanceof Error ? err.message : 'Could not load FuPa data')
-      return false
-    }
-  }
+  const fupa = useFupaActions({ enrichInvite, findOnFupa, updateInvite })
+  const handleEnrich = fupa.enrich
 
   const handleCreate = async (rows: NewInviteInput[]) => {
     try {
@@ -136,6 +124,10 @@ export default function InvitesPage() {
               onCategory={handleCategory}
               onEnrich={(id) => handleEnrich(id)}
               onBaseSync={handleBaseSync}
+              onFindFupa={fupa.find}
+              onPickFupa={fupa.pick}
+              onDismissFupa={fupa.dismiss}
+              onClub={(id, club) => fupa.club(id, club, invites.some((i) => i.id === id && !!i.profile_url))}
               onDelete={handleDelete}
             />
           </TabsContent>
