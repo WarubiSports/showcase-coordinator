@@ -1,4 +1,5 @@
 import type { PlayerPosition, SchoolType } from '@/types'
+import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-url'
 
 // Validation for the player's accept form (server side; the page mirrors the rules for instant feedback).
 // Error strings are player-facing German.
@@ -17,6 +18,7 @@ export interface AcceptFormData {
   grades: string | null
   english_level: string | null
   video_url: string | null
+  profile_url: string | null
   phone: string
   email: string | null
   parent_name: string | null
@@ -97,6 +99,9 @@ export const parseAcceptForm = (raw: unknown, eventYear: number): ParsedAccept =
   const video_url = text(r.video_url, 500)
   if (video_url && !/^https?:\/\//i.test(video_url)) return { ok: false, error: 'Der Video-Link muss mit http beginnen.' }
 
+  const profile_url = cleanProfileUrl(r.profile_url)
+  if (profile_url && !isProfileUrl(profile_url)) return { ok: false, error: PROFILE_URL_ERROR }
+
   return {
     ok: true,
     minor,
@@ -111,6 +116,7 @@ export const parseAcceptForm = (raw: unknown, eventYear: number): ParsedAccept =
       grades,
       english_level: text(r.english_level, 40),
       video_url,
+      profile_url,
       phone,
       email,
       parent_name: minor ? parent_name : null,

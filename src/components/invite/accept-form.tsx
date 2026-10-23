@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
 import { needsAdultQuestion, isMinorAtEvent } from '@/lib/invite-accept'
 import { CONSENT_SUBMIT_NOTE } from '@/lib/consent-text'
+import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
 import { ConsentBlock } from '@/components/invite/consent-block'
 import { ENGLISH_LEVELS, INPUT_CLASS, LABEL_CLASS, POSITIONS, SCHOOL_TYPES, type AcceptFormState } from '@/components/invite/invite-types'
 import type { PlayerPosition, SchoolType } from '@/types'
@@ -100,6 +101,11 @@ export const AcceptForm = ({ form, eventYear, isSubmitting, error, onChange, onS
         <div>
           <label className={LABEL_CLASS} htmlFor="video_url">Video-Link (falls vorhanden)</label>
           <input id="video_url" type="url" inputMode="url" value={form.video_url} onChange={(e) => onChange({ video_url: e.target.value })} className={INPUT_CLASS} placeholder="https://" />
+        </div>
+        <div>
+          <label className={LABEL_CLASS} htmlFor="profile_url">FuPa- oder Transfermarkt-Profil (optional)</label>
+          <input id="profile_url" type="url" inputMode="url" value={form.profile_url} onChange={(e) => onChange({ profile_url: e.target.value })} className={INPUT_CLASS} placeholder="https://www.fupa.net/player/..." />
+          {form.profile_url.trim() && !isProfileUrl(form.profile_url) ? <p className="mt-1 text-xs text-red-700">{PROFILE_URL_ERROR}</p> : null}
         </div>
         <div>
           <label className={LABEL_CLASS} htmlFor="phone">Handynummer *</label>

@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { NewInviteInput } from '@/hooks/use-invites'
+import { parseInviteLines } from '@/lib/invite-lines'
+import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
 
 interface InviteFormProps {
   defaultInviter: string
@@ -14,31 +16,23 @@ interface InviteFormProps {
   onCreate: (rows: NewInviteInput[]) => Promise<void>
 }
 
-// "Max Mustermann, 0151 2345678" per line; phone is optional
-const parseLines = (text: string): { name: string; phone?: string }[] =>
-  text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [name, phone] = line.split(/\s*[,;\t]\s*/)
-      return { name: name.trim(), phone: phone?.trim() || undefined }
-    })
-    .filter((r) => r.name)
-
 export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormProps) => {
   const [mode, setMode] = useState<'single' | 'bulk'>('single')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [profileUrl, setProfileUrl] = useState('')
   const [bulk, setBulk] = useState('')
   const [inviter, setInviter] = useState(defaultInviter)
   const [personalLine, setPersonalLine] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const rows: NewInviteInput[] = (mode === 'single' ? (name.trim() ? [{ name: name.trim(), phone: phone.trim() || undefined }] : []) : parseLines(bulk)).map(
-    (r) => ({ ...r, invited_by: inviter.trim(), personal_line: personalLine.trim() || undefined }),
-  )
-  const canSubmit = !disabled && !isSubmitting && rows.length > 0 && inviter.trim().length > 0
+  const rows: NewInviteInput[] = (
+    mode === 'single'
+      ? name.trim() ? [{ name: name.trim(), phone: phone.trim() || undefined, profile_url: profileUrl.trim() || undefined }] : []
+      : parseInviteLines(bulk)
+  ).map((r) => ({ ...r, invited_by: inviter.trim(), personal_line: personalLine.trim() || undefined }))
+  const badLinks = rows.filter((r) => r.profile_url && !isProfileUrl(r.profile_url)).map((r) => r.name)
+  const canSubmit = !disabled && !isSubmitting && rows.length > 0 && inviter.trim().length > 0 && badLinks.length === 0
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,6 +42,7 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
       await onCreate(rows)
       setName('')
       setPhone('')
+      setProfileUrl('')
       setBulk('')
       setPersonalLine('')
     } finally {
@@ -83,16 +78,20 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
             <Label htmlFor="inv-phone">Phone (WhatsApp)</Label>
             <Input id="inv-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0151 2345678" disabled={disabled} />
           </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="inv-profile">Profil-Link (FuPa oder Transfermarkt)</Label>
+            <Input id="inv-profile" value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://www.fupa.net/player/..." disabled={disabled} />
+          </div>
         </div>
       ) : (
         <div className="space-y-1.5">
-          <Label htmlFor="inv-bulk">One player per line: name, phone</Label>
+          <Label htmlFor="inv-bulk">One player per line: name, phone, profile link (phone and link optional)</Label>
           <Textarea
             id="inv-bulk"
             value={bulk}
             onChange={(e) => setBulk(e.target.value)}
             rows={5}
-            placeholder={'Vorname Nachname, 0151 2345678\nVorname Nachname'}
+            placeholder={'Vorname Nachname, 0151 2345678, https://www.fupa.net/player/...\nVorname Nachname'}
             disabled={disabled}
           />
           <p className="text-xs text-muted-foreground">{rows.length} {rows.length === 1 ? 'player' : 'players'} recognised</p>
@@ -116,6 +115,7 @@ export const InviteForm = ({ defaultInviter, disabled, onCreate }: InviteFormPro
         </div>
       </div>
 
+      {badLinks.length > 0 && <p className="text-sm text-destructive">{PROFILE_URL_ERROR} ({badLinks.join(', ')})</p>}
       <div className="flex justify-end">
         <Button type="submit" disabled={!canSubmit}>
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}

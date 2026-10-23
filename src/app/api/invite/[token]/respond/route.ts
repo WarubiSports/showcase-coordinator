@@ -69,6 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     grades: d.grades,
     english_level: d.english_level,
     video_url: d.video_url,
+    profile_url: d.profile_url,
     consent_profile_at: d.consent_profile ? now : null,
     consent_social_at: d.consent_social ? now : null,
     consent_parent_name: d.consent_name,
@@ -77,16 +78,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     updated_at: now,
   }
 
+  // Until the profile_url migration is applied the column is missing; then the write is retried without it
+  const withoutProfile = (row: typeof playerRow) => {
+    const { profile_url: _dropped, ...rest } = row
+    void _dropped
+    return rest
+  }
+  const missingProfileColumn = (message: string | undefined) => !!message && /profile_url/.test(message)
+
   let playerId = invite.player_id
   if (playerId) {
-    const { error: updateError } = await db.from('showcase_players').update(playerRow).eq('id', playerId)
+    let { error: updateError } = await db.from('showcase_players').update(playerRow).eq('id', playerId)
+    if (updateError && missingProfileColumn(updateError.message)) {
+      ;({ error: updateError } = await db.from('showcase_players').update(withoutProfile(playerRow)).eq('id', playerId))
+    }
     if (updateError) return fail('Das hat nicht geklappt. Bitte versuch es noch einmal.', 500)
   } else {
-    const { data: created, error: insertError } = await db
-      .from('showcase_players')
-      .insert([{ ...playerRow, payment_status: 'pending', created_by: 'invite' }])
-      .select('id')
-      .single()
+    const insertRow = { ...playerRow, payment_status: 'pending', created_by: 'invite' }
+    let { data: created, error: insertError } = await db.from('showcase_players').insert([insertRow]).select('id').single()
+    if (insertError && missingProfileColumn(insertError.message)) {
+      ;({ data: created, error: insertError } = await db.from('showcase_players').insert([withoutProfile(insertRow)]).select('id').single())
+    }
     if (insertError || !created) return fail('Das hat nicht geklappt. Bitte versuch es noch einmal.', 500)
     playerId = created.id
   }

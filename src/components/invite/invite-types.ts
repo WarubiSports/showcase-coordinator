@@ -10,6 +10,7 @@ export interface InvitePayload {
     phone: string | null
     invited_by: string
     responded_at: string | null
+    profile_url: string | null
   }
   event: {
     name: string
@@ -35,6 +36,7 @@ export interface InvitePayload {
     grades: string | null
     english_level: string | null
     video_url: string | null
+    profile_url: string | null
     consent_profile_at: string | null
     consent_social_at: string | null
     consent_parent_name: string | null
@@ -52,6 +54,7 @@ export interface AcceptFormState {
   grades: string
   english_level: string
   video_url: string
+  profile_url: string
   phone: string
   email: string
   parent_name: string
@@ -75,6 +78,7 @@ export const initialAcceptForm = (data: InvitePayload): AcceptFormState => {
     grades: p?.grades ?? '',
     english_level: p?.english_level ?? '',
     video_url: p?.video_url ?? '',
+    profile_url: p?.profile_url ?? data.invite.profile_url ?? '',
     phone: p?.phone ?? data.invite.phone ?? '',
     email: p?.email ?? '',
     parent_name: p?.parent_name ?? '',

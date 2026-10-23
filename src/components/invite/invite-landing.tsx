@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Clock, MapPin, Video } from 'lucide-react'
+import { Calendar, Clock, ExternalLink, MapPin, Video } from 'lucide-react'
 import { germanTime, weekdayDate } from '@/lib/german-date'
 import type { InvitePayload } from '@/components/invite/invite-types'
 
@@ -27,6 +27,7 @@ export const EventFacts = ({ event }: { event: InvitePayload['event'] }) => {
 export const InviteLanding = ({ data, onAccept, onDecline }: InviteLandingProps) => {
   const [confirmDecline, setConfirmDecline] = useState(false)
   const [declining, setDeclining] = useState(false)
+  const profileUrl = data.player?.profile_url ?? data.invite.profile_url
 
   const decline = async () => {
     setDeclining(true)
@@ -42,6 +43,12 @@ export const InviteLanding = ({ data, onAccept, onDecline }: InviteLandingProps)
       <div>
         <h1 className="text-3xl font-bold text-gray-950">Hi {data.invite.first_name},</h1>
         <p className="mt-1 text-gray-600">{data.invite.invited_by} hat dich eingeladen.</p>
+        {profileUrl && (
+          <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-gray-950 underline">
+            <ExternalLink className="h-4 w-4" />
+            Dein Profil
+          </a>
+        )}
       </div>
 
       <EventFacts event={data.event} />
