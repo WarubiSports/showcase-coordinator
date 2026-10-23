@@ -14,6 +14,13 @@ export interface InvitePayload {
     profile_url: string | null
     ausa_athlete_id: string | null
     category: 'signed' | 'new' | null
+    // FuPa enrichment, read by the server from the profile link; all null until read or when the read failed
+    photo_url: string | null
+    club: string | null
+    league: string | null
+    position: string | null
+    stats: { season: string | null; games: number; goals: number; assists: number; team: string | null; league: string | null } | null
+    enriched_at: string | null
   }
   event: {
     name: string

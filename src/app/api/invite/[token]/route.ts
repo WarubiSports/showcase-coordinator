@@ -9,7 +9,10 @@ export const dynamic = 'force-dynamic'
 // Returns only the invited player's own data, never other invites.
 
 // The rows are selected whole (a column added by a later migration must not break the page) and cut down here
-const INVITE_FIELDS = ['id', 'status', 'name', 'phone', 'invited_by', 'responded_at', 'profile_url', 'ausa_athlete_id', 'category'] as const
+const INVITE_FIELDS = [
+  'id', 'status', 'name', 'phone', 'invited_by', 'responded_at', 'profile_url', 'ausa_athlete_id', 'category',
+  'photo_url', 'club', 'league', 'position', 'stats', 'enriched_at',
+] as const
 const PLAYER_FIELDS = [
   'name', 'birth_year', 'position', 'club', 'email', 'phone', 'parent_name', 'parent_phone', 'school_type', 'grad_year', 'grades',
   'english_level', 'video_url', 'profile_url', 'consent_profile_at', 'consent_social_at', 'consent_parent_name',

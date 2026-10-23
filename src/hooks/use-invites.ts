@@ -71,11 +71,18 @@ export function useInvites(eventId: string | undefined) {
     setInvites((prev) => prev.filter((i) => i.id !== id))
   }
 
+  // Reads the FuPa page behind the invite's profile link and stores photo, club, league, position and stats
+  const enrichInvite = async (id: string) => {
+    const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${id}/enrich`, { method: 'POST', body: '{}' })
+    setInvites((prev) => prev.map((i) => (i.id === id ? updated : i)))
+    return updated
+  }
+
   // Shirt number lives on the player row (existing admin players route)
   const setJerseyNumber = async (playerId: string, jersey_number: number | null) => {
     await adminFetch(`/api/admin/players/${playerId}`, { method: 'PATCH', body: JSON.stringify({ jersey_number }) })
     setInvites((prev) => prev.map((i) => (i.player && i.player.id === playerId ? { ...i, player: { ...i.player, jersey_number } } : i)))
   }
 
-  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, setJerseyNumber }
+  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, setJerseyNumber }
 }

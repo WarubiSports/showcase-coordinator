@@ -317,6 +317,15 @@ export type InviteStatus = 'invited' | 'accepted' | 'declined'
 // signed = already with Athletes USA (Base register or cohort, or ticked by staff); new = regional prospect
 export type InviteCategory = 'signed' | 'new'
 
+export interface FupaInviteStats {
+  season: string | null
+  games: number
+  goals: number
+  assists: number
+  team: string | null
+  league: string | null
+}
+
 export interface Invite {
   id: string
   event_id: string
@@ -328,6 +337,13 @@ export interface Invite {
   profile_url: string | null
   ausa_athlete_id: string | null
   category: InviteCategory | null
+  // FuPa enrichment (read from the profile link by the server; all null until enriched or when it failed)
+  photo_url: string | null
+  club: string | null
+  league: string | null
+  position: string | null
+  stats: FupaInviteStats | null
+  enriched_at: string | null
   status: InviteStatus
   invited_at: string
   responded_at: string | null

@@ -8,20 +8,8 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { isCollegeEligible } from '@/components/invites/invite-stats'
 import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
-import type { InviteCategory, InviteStatus, InviteWithPlayer, SchoolType } from '@/types'
-
-const STATUS: Record<InviteStatus, { label: string; cls: string }> = {
-  accepted: { label: 'Accepted', cls: 'bg-green-500/15 text-green-700 border-green-500/30' },
-  invited: { label: 'No answer yet', cls: 'bg-yellow-500/15 text-yellow-700 border-yellow-500/30' },
-  declined: { label: 'Declined', cls: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
-}
-
-const SCHOOL: Record<SchoolType, string> = { abitur: 'Abitur', fachabitur: 'Fachabitur', realschule: 'Realschule', other: 'Other' }
-
-const CATEGORY: Record<InviteCategory, { label: string; cls: string }> = {
-  signed: { label: 'Signed', cls: 'bg-purple-500/15 text-purple-700 border-purple-500/30' },
-  new: { label: 'New', cls: 'bg-gray-500/10 text-gray-600 border-gray-400/30' },
-}
+import { CATEGORY, SCHOOL, STATUS } from '@/components/invites/invite-badges'
+import type { InviteCategory, InviteWithPlayer } from '@/types'
 
 const copy = async (text: string, what: string) => {
   try {
@@ -42,10 +30,11 @@ interface InviteRowProps {
   onStatus: (status: 'invited' | 'declined') => void
   onProfileUrl: (url: string | null) => void
   onCategory: (category: InviteCategory) => void
+  onEnrich: () => void
   onDelete: () => void
 }
 
-export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onDelete }: InviteRowProps) => {
+export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onEnrich, onDelete }: InviteRowProps) => {
   const [open, setOpen] = useState(false)
   const p = invite.player
   const status = STATUS[invite.status]
@@ -90,6 +79,18 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
               {/fupa\.net/i.test(invite.profile_url) ? 'FuPa profile' : 'Transfermarkt profile'}
             </a>
           )}
+          {invite.enriched_at && (
+            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+              {invite.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={invite.photo_url} alt="" className="h-7 w-7 rounded-full object-cover object-top" />
+              )}
+              <span className="truncate">
+                FuPa: {[invite.club, invite.league, invite.position].filter(Boolean).join(' · ')}
+                {invite.stats ? ` · ${invite.stats.games} Sp. ${invite.stats.goals} T. ${invite.stats.assists} V.${invite.stats.season ? ` (${invite.stats.season})` : ''}` : ''}
+              </span>
+            </p>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -99,6 +100,7 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
             {invite.status !== 'declined' && <DropdownMenuItem onClick={() => onStatus('declined')}>Mark declined (answered on WhatsApp)</DropdownMenuItem>}
             {invite.status !== 'invited' && <DropdownMenuItem onClick={() => onStatus('invited')}>Reset to no answer</DropdownMenuItem>}
             <DropdownMenuItem onClick={editProfileUrl}>{invite.profile_url ? 'Edit profile link' : 'Add profile link'}</DropdownMenuItem>
+            {invite.profile_url && /fupa\.net/i.test(invite.profile_url) && <DropdownMenuItem onClick={onEnrich}>Reload FuPa data</DropdownMenuItem>}
             <DropdownMenuItem onClick={() => onCategory(invite.category === 'signed' ? 'new' : 'signed')}>
               {invite.category === 'signed' ? 'Mark as new' : 'Mark as signed (Athletes USA)'}
             </DropdownMenuItem>
