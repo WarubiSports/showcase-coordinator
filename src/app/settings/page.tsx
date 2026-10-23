@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AppShell } from '@/components/app-shell'
 import { useEvent } from '@/contexts/event-context'
 import { useEvents } from '@/hooks/use-events'
-import { supabase } from '@/lib/supabase'
+import { adminDb as supabase } from '@/lib/admin-db'
 import type { EventScout } from '@/types'
 import { toast } from 'sonner'
 

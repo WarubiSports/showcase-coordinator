@@ -14,6 +14,10 @@ function isPublicPath(pathname: string) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/registration-email') ||
     pathname.startsWith('/api/organizer/') ||
+    pathname === '/api/itp-move-probe' ||
+    // selection invite page + API: access is the unguessable token in the URL
+    pathname.startsWith('/invite/') ||
+    pathname.startsWith('/api/invite/') ||
     pathname === '/favicon.ico' ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml' ||

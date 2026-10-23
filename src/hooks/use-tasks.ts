@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { adminDb as supabase } from '@/lib/admin-db'
 import type { Task, TaskFilters, TaskStatus, TaskPriority, Category } from '@/types'
 
 interface TaskWithCategory extends Omit<Task, 'category'> {

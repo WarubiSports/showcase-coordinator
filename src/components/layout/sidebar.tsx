@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CheckSquare, Megaphone, CalendarDays, Users, X, MessageSquarePlus, UserCircle, Settings } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, Megaphone, CalendarDays, Users, X, MessageSquarePlus, UserCircle, Settings, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -24,6 +24,7 @@ const navigation: { name: string; href: string; icon: typeof LayoutDashboard; ad
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, adminOnly: true },
   { name: 'Event Days', href: '/day-view', icon: CalendarDays, adminOnly: true },
   { name: 'Players', href: '/players', icon: UserCircle },
+  { name: 'Invites', href: '/invites', icon: Send, adminOnly: true },
   { name: 'Attendees', href: '/attendees', icon: Users, adminOnly: true },
   { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
   { name: 'Feedback', href: '/feedback', icon: MessageSquarePlus },

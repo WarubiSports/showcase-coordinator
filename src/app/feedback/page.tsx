@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { adminDb as supabase } from '@/lib/admin-db'
 import { useEvent } from '@/contexts/event-context'
 import type { Feedback, FeedbackStatus } from '@/types'
 import { useUser } from '@/hooks/use-user'
