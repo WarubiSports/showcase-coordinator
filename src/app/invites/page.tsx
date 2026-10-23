@@ -3,6 +3,7 @@
 import { toast } from 'sonner'
 import { AppShell } from '@/components/app-shell'
 import { InvitesHeader } from '@/components/invites/invites-header'
+import { InvitesNotices } from '@/components/invites/invites-notices'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { InviteForm } from '@/components/invites/invite-form'
 import { InviteStats } from '@/components/invites/invite-stats'
@@ -21,7 +22,7 @@ export default function InvitesPage() {
   const { staff, firstName: staffFirstName, signOut } = useStaff()
   // With a Staff App login the inviter defaults to that first name; under basic auth to the welcome-dialog name
   const defaultInviter = staffFirstName || userName || ''
-  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, setJerseyNumber } = useInvites(currentEvent?.id)
+  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, syncFromBase, setJerseyNumber } = useInvites(currentEvent?.id)
 
   // FuPa read for one invite; a failure only means the card stays hidden
   const handleEnrich = async (id: string, quiet = false) => {
@@ -91,6 +92,17 @@ export default function InvitesPage() {
     }
   }
 
+  // Base values first, then the FuPa read on top when the link is a FuPa page
+  const handleBaseSync = async (id: string) => {
+    try {
+      const updated = await syncFromBase(id)
+      toast.success('Base data synced')
+      if (updated.profile_url && /fupa\.net/i.test(updated.profile_url)) await handleEnrich(id)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not sync from Base')
+    }
+  }
+
   const handleJersey = async (inviteId: string, n: number | null) => {
     try {
       await setJerseyNumber(inviteId, n)
@@ -103,18 +115,7 @@ export default function InvitesPage() {
     <AppShell>
       <div className="space-y-6">
         <InvitesHeader eventName={currentEvent?.name ?? null} isLoading={isLoading} staff={staff} onRefresh={refetch} onSignOut={signOut} />
-        {currentEvent && isTemplateEvent(currentEvent) && (
-          <div className="rounded-lg border border-amber-500/50 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-            This is the template event, switch to the real event before inviting.
-          </div>
-        )}
-
-        {migrationPending && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Invites are not set up in the database yet. Apply migration <code>20261022000001_selection_invites.sql</code> and refresh.
-          </div>
-        )}
-        {error && <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
+        <InvitesNotices templateEvent={!!currentEvent && isTemplateEvent(currentEvent)} migrationPending={migrationPending} error={error} />
 
         <InviteStats invites={invites} />
 
@@ -134,6 +135,7 @@ export default function InvitesPage() {
               onProfileUrl={handleProfileUrl}
               onCategory={handleCategory}
               onEnrich={(id) => handleEnrich(id)}
+              onBaseSync={handleBaseSync}
               onDelete={handleDelete}
             />
           </TabsContent>

@@ -1,6 +1,7 @@
 import type { createAdminClient } from '@/lib/supabase-admin'
 import type { PlayerPosition, SchoolType } from '@/types'
 import { isProfileUrl } from '@/lib/profile-url'
+import { safeBasePhotoUrl } from '@/lib/photo-url'
 
 // Read-only view of Base (public.athletes in the same Warubi Core project) for the selection invites.
 // Server only: every call runs with the service role; nothing here is written back to Base.
@@ -9,7 +10,7 @@ import { isProfileUrl } from '@/lib/profile-url'
 type AdminClient = ReturnType<typeof createAdminClient>
 
 export const ATHLETE_COLUMNS =
-  'id, full_name, first_name, last_name, date_of_birth, teams, position_primary, position_soccer, schulabschluss_typ, abitur_year, schulabschluss_datum, graduation_date, gpa_overall, english_level, highlight_video_url, profile_url, transfermarkt_url, phone, parent_first_name, parent_last_name, parent_phone, profile_picture_url, photo_url, unified_stage'
+  'id, full_name, first_name, last_name, date_of_birth, teams, position_primary, position_soccer, schulabschluss_typ, abitur_year, schulabschluss_datum, graduation_date, gpa_overall, english_level, highlight_video_url, home_statistics_url, transfermarkt_url, phone, parent_first_name, parent_last_name, parent_phone, profile_picture_url, photo_url, unified_stage'
 
 export interface BaseAthleteRow {
   id: string
@@ -27,7 +28,9 @@ export interface BaseAthleteRow {
   gpa_overall: number | null
   english_level: string | null
   highlight_video_url: string | null
-  profile_url: string | null
+  // Base's FuPa link lives here (the v_german_coverage view calls it fupa_url); athletes.profile_url is the
+  // profiles.athletesusa.org page and is not a stats profile
+  home_statistics_url: string | null
   transfermarkt_url: string | null
   phone: string | null
   parent_first_name: string | null
@@ -70,10 +73,15 @@ const POSITION_MAP: [RegExp, PlayerPosition][] = [
   [/striker|forward|stürmer|^st$|^cf$/i, 'ST'],
 ]
 
+// Base often lists several positions ("RW, LW, ST", "CDM, CM"): the whole label first, then the first part that maps
 export const mapPosition = (label: string | null | undefined): PlayerPosition | null => {
   const l = label?.trim()
   if (!l) return null
-  return POSITION_MAP.find(([re]) => re.test(l))?.[1] ?? null
+  for (const part of [l, ...l.split(/[,/]/).map((s) => s.trim()).filter(Boolean)]) {
+    const hit = POSITION_MAP.find(([re]) => re.test(part))?.[1]
+    if (hit) return hit
+  }
+  return null
 }
 
 const mapSchoolType = (label: string | null | undefined): SchoolType | null => {
@@ -103,11 +111,11 @@ export const toPrefill = (a: BaseAthleteRow): BasePrefill => ({
   grades: a.gpa_overall != null ? String(a.gpa_overall).replace('.', ',') : null,
   english_level: a.english_level?.trim() || null,
   video_url: a.highlight_video_url?.trim() || null,
-  profile_url: firstValid(a.profile_url, a.transfermarkt_url),
+  profile_url: firstValid(a.home_statistics_url, a.transfermarkt_url),
   phone: a.phone?.trim() || null,
   parent_name: [a.parent_first_name, a.parent_last_name].filter(Boolean).join(' ').trim() || null,
   parent_phone: a.parent_phone?.trim() || null,
-  photo_url: a.profile_picture_url?.trim() || a.photo_url?.trim() || null,
+  photo_url: safeBasePhotoUrl(a.profile_picture_url) ?? safeBasePhotoUrl(a.photo_url),
 })
 
 // Signed with Athletes USA = Base's register (leads.signed_at, 20260915_signed_register.sql) or the
