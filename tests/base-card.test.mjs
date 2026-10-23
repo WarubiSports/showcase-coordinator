@@ -53,6 +53,19 @@ test('photo hosts: own storage, image.fupa.net and athletesusa.org over https; n
   assert.equal(baseAthletes.toPrefill(athlete({ profile_picture_url: 'https://montevallofalcons.com/x.jpg', photo_url: 'https://image.fupa.net/p/1.jpeg' })).photo_url, 'https://image.fupa.net/p/1.jpeg')
 })
 
+test('prefill guards: a club that is a URL, a path or overlong is dropped; year and type never cross', () => {
+  assert.equal(baseAthletes.toPrefill(athlete({ teams: 'https://naiastats.prestosports.com/sports/msoc/2025-26/teams/example' })).club, null)
+  assert.equal(baseAthletes.toPrefill(athlete({ teams: 'SV Beispielhausen / U19' })).club, null)
+  assert.equal(baseAthletes.toPrefill(athlete({ teams: 'x'.repeat(61) })).club, null)
+  assert.equal(baseAthletes.toPrefill(athlete({ teams: '  SV Beispielhausen  ' })).club, 'SV Beispielhausen')
+  const p = baseAthletes.toPrefill(athlete({ schulabschluss_typ: null, abitur_year: null, schulabschluss_datum: null, graduation_date: '2018-06-30' }))
+  assert.equal(p.school_type, null, 'a graduation date says nothing about the type')
+  assert.equal(p.grad_year, 2018)
+  const q = baseAthletes.toPrefill(athlete({ schulabschluss_typ: 'Abitur', abitur_year: null, schulabschluss_datum: null, graduation_date: null }))
+  assert.equal(q.school_type, 'abitur')
+  assert.equal(q.grad_year, null, 'a type says nothing about the year')
+})
+
 test('positions: a list like "RW, LW, ST" or "CDM, CM" maps to its first known entry', () => {
   assert.equal(baseAthletes.mapPosition('RW, LW, ST'), 'RW')
   assert.equal(baseAthletes.mapPosition('CDM, CM'), 'CDM')

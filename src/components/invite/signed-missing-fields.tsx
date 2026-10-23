@@ -16,10 +16,6 @@ export const SignedMissingFields = ({ form, missing, onChange }: SignedMissingFi
   const parent = has('parent_name') || has('parent_phone')
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="font-ausa-display text-lg font-semibold text-ausa-ink-900">Das fehlt uns noch</h2>
-        <p className="mt-1 text-sm text-ausa-ink-500">Felder mit * brauchen wir für die Anmeldung.</p>
-      </div>
       {has('birth_year') && (
         <div>
           <label className={LABEL_CLASS} htmlFor="birth_year">Geburtsjahr *</label>

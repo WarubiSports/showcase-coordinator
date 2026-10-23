@@ -1,4 +1,4 @@
-import type { AcceptFormState } from '@/components/invite/invite-types'
+import { POSITIONS, SCHOOL_TYPES, type AcceptFormState } from '@/components/invite/invite-types'
 import { isMinorAtEvent, needsAdultQuestion } from '@/lib/invite-accept'
 
 export type SignedField = 'birth_year' | 'is_adult' | 'position' | 'school_type' | 'grad_year' | 'grades' | 'phone' | 'parent_name' | 'parent_phone'
@@ -11,6 +11,29 @@ const hasBirthYear = (form: AcceptFormState): number | null => {
 export const isMinorForm = (form: AcceptFormState, eventYear: number): boolean => {
   const year = hasBirthYear(form)
   return year !== null && isMinorAtEvent(year, form.is_adult === 'ja' ? true : form.is_adult === 'nein' ? false : null, eventYear)
+}
+
+export interface SignedCardRow {
+  field: SignedField | 'name' | 'club' | 'english_level' | 'parent'
+  label: string
+  value: string
+}
+
+// What the card shows: one row per known field, type and year as separate rows, the phone as stored.
+// A field with a row here is never in missingSignedFields, and the other way round.
+export const signedCardRows = (form: AcceptFormState, eventYear: number): SignedCardRow[] => {
+  const rows: SignedCardRow[] = [
+    { field: 'birth_year', label: 'Geburtsjahr', value: form.birth_year.trim() },
+    { field: 'position', label: 'Position', value: POSITIONS.find((p) => p.value === form.position)?.label ?? '' },
+    { field: 'club', label: 'Verein', value: form.club.trim() },
+    { field: 'school_type', label: 'Schulabschluss', value: SCHOOL_TYPES.find((s) => s.value === form.school_type)?.label ?? '' },
+    { field: 'grad_year', label: 'Abschlussjahr', value: form.grad_year.trim() },
+    { field: 'grades', label: 'Notenschnitt', value: form.grades.trim() },
+    { field: 'english_level', label: 'Englisch', value: form.english_level.trim() },
+    { field: 'phone', label: 'Handynummer', value: form.phone.trim() },
+  ]
+  if (isMinorForm(form, eventYear)) rows.push({ field: 'parent', label: 'Elternteil', value: [form.parent_name.trim(), form.parent_phone.trim()].filter(Boolean).join(', ') })
+  return rows.filter((r) => r.value)
 }
 
 // The mandatory fields of the accept form that the Base profile could not fill. A signed player is asked

@@ -4,7 +4,9 @@ import vm from 'node:vm'
 import { test } from 'node:test'
 import ts from 'typescript'
 import * as profileUrl from '../src/lib/profile-url.ts'
-import { initialAcceptForm } from '../src/components/invite/invite-types.ts'
+import * as inviteTypes from '../src/components/invite/invite-types.ts'
+
+const { initialAcceptForm } = inviteTypes
 
 // The signed player's confirm step against the real server-side validation. No network, no database.
 function load(path, imports) {
@@ -15,7 +17,7 @@ function load(path, imports) {
   return exports
 }
 const accept = load('../src/lib/invite-accept.ts', { '@/lib/profile-url': profileUrl })
-const signed = load('../src/components/invite/signed-fields.ts', { '@/lib/invite-accept': accept })
+const signed = load('../src/components/invite/signed-fields.ts', { '@/lib/invite-accept': accept, '@/components/invite/invite-types': inviteTypes })
 const EVENT_YEAR = 2026
 // Arrays built inside the vm carry another realm's prototype; compare their plain shape
 const plain = (v) => JSON.parse(JSON.stringify(v))
@@ -64,6 +66,20 @@ test('missing-field path: what Base could not fill (or the privacy rule withheld
   const filled = { ...form, grades: '2,4', phone: '0151 00000009', parent_name: 'Tanja Testspieler', parent_phone: '0151 00000002' }
   assert.deepEqual(plain(signed.missingSignedFields(filled, EVENT_YEAR)), [])
   assert.equal(accept.parseAcceptForm(submission(filled), EVENT_YEAR).ok, true)
+})
+
+test('the card and the questions never overlap: a known field is shown, a missing one is asked, never both', () => {
+  // Max's case: Base has the graduation year but not the type, and a stats URL where the club should be
+  const form = initialAcceptForm(payload(prefill({ school_type: null, grad_year: 2018, club: null })))
+  const rows = plain(signed.signedCardRows(form, EVENT_YEAR))
+  assert.deepEqual(rows.map((r) => r.label), ['Geburtsjahr', 'Position', 'Abschlussjahr', 'Notenschnitt', 'Englisch', 'Handynummer', 'Elternteil'])
+  assert.equal(rows.find((r) => r.label === 'Abschlussjahr').value, '2018')
+  const missing = plain(signed.missingSignedFields(form, EVENT_YEAR))
+  assert.deepEqual(missing, ['school_type'])
+  const shown = new Set(rows.map((r) => r.field))
+  assert.ok(missing.every((f) => !shown.has(f)), 'nothing asked twice')
+  const full = initialAcceptForm(payload(prefill()))
+  assert.deepEqual(plain(signed.signedCardRows(full, EVENT_YEAR)).map((r) => r.label), ['Geburtsjahr', 'Position', 'Verein', 'Schulabschluss', 'Abschlussjahr', 'Notenschnitt', 'Englisch', 'Handynummer', 'Elternteil'])
 })
 
 test('adults and the year someone turns 18: no parent asked, the 18 question asked once', () => {
