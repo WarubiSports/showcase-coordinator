@@ -69,7 +69,7 @@ export const SignedConfirm = ({ form, eventYear, isSubmitting, error, onChange, 
       {error && <p className="rounded-xl bg-ausa-accent-soft px-4 py-3 text-sm text-ausa-accent-ink">{error}</p>}
 
       <div className="space-y-3">
-        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-ausa-accent py-4 font-ausa-display text-lg font-semibold text-white hover:bg-ausa-accent-hover disabled:opacity-50">
+        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-ausa-accent py-4 text-lg font-bold text-white hover:bg-ausa-accent-hover disabled:opacity-50">
           {isSubmitting ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Wird gesendet...</span> : 'Stimmt so'}
         </button>
         <p className="text-center text-xs text-ausa-ink-400">{CONSENT_SUBMIT_NOTE}</p>

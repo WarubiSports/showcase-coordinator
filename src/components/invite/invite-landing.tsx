@@ -75,7 +75,7 @@ export const InviteLanding = ({ data, onAccept, onDecline }: InviteLandingProps)
         </div>
       ) : (
         <div className="space-y-3">
-          <button onClick={onAccept} className="w-full rounded-xl bg-ausa-accent py-4 font-ausa-display text-lg font-semibold text-white hover:bg-ausa-accent-hover active:scale-[0.98]">
+          <button onClick={onAccept} className="w-full rounded-xl bg-ausa-accent py-4 text-lg font-bold text-white hover:bg-ausa-accent-hover active:scale-[0.98]">
             Ich bin dabei
           </button>
           <button onClick={() => setConfirmDecline(true)} className="w-full rounded-xl border border-ausa-ink-300 bg-ausa-paper py-4 text-lg font-semibold text-ausa-ink-700">
