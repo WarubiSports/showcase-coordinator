@@ -11,6 +11,7 @@ import { BaseNotice } from '@/components/invite/base-notice'
 import { SignedConfirm } from '@/components/invite/signed-confirm'
 import { InviteError } from '@/components/invite/invite-error'
 import { initialAcceptForm, type AcceptFormState, type InvitePayload } from '@/components/invite/invite-types'
+import { usesConfirmCard } from '@/components/invite/signed-fields'
 
 type View = 'landing' | 'confirm' | 'form' | 'accepted' | 'declined'
 const GENERIC_ERROR = 'Das hat nicht geklappt. Bitte versuch es noch einmal.'
@@ -53,12 +54,12 @@ export default function InvitePage() {
     if (!res.ok) throw new Error(typeof json.error === 'string' && json.error !== 'not_found' ? json.error : GENERIC_ERROR)
   }
 
-  // A player already signed with Athletes USA and linked in Base confirms what we know instead of retyping it;
-  // everyone else, and anyone editing after the answer, gets the full form
+  // A Base-linked player whose Base record covers the card confirms what we know instead of retyping it, whatever
+  // the category; everyone else, and anyone editing after the answer, gets the full form
   const openForm = () => {
     if (data) setForm((prev) => prev ?? initialAcceptForm(data))
     setFormError(null)
-    setView(data?.invite.category === 'signed' && data.base && data.invite.status === 'invited' ? 'confirm' : 'form')
+    setView(data && usesConfirmCard(data) ? 'confirm' : 'form')
   }
 
   const decline = async () => {

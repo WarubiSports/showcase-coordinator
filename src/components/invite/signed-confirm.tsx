@@ -22,7 +22,7 @@ interface SignedConfirmProps {
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('')
 
-// Accept step for a player already signed with Athletes USA and linked in Base: one card with what we know,
+// Accept step for a player linked in Base with enough data there (signed or Neu): one card with what we know,
 // what Base could not fill asked inside the same card, then the consent block. "Zusagen" sends the same
 // form the full form sends, so the server validates and writes exactly as for everyone.
 export const SignedConfirm = ({ form, photo, eventYear, isSubmitting, error, onChange, onSubmit, onEdit, onBack }: SignedConfirmProps) => {

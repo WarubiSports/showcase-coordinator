@@ -28,8 +28,8 @@ const prefill = (over = {}) => ({
   name: 'Timo Testspieler', birth_year: 2009, position: 'RW', club: 'SV Beispielhausen', school_type: 'abitur', grad_year: 2027, grades: '2,1', english_level: 'Gut',
   video_url: null, profile_url: 'https://www.fupa.net/player/timo-testspieler-1', phone: '0151 00000001', parent_name: 'Tanja Testspieler', parent_phone: '0151 00000002', photo_url: null, ...over,
 })
-const payload = (p) => ({
-  invite: { id: 'a', status: 'invited', name: 'Timo Testspieler', first_name: 'Timo', phone: '0151 00000001', invited_by: 'Max', responded_at: null, profile_url: null, ausa_athlete_id: 'x', category: 'signed', photo_url: null, club: null, league: null, position: null, stats: null, enriched_at: null },
+const payload = (p, inviteOver = {}) => ({
+  invite: { id: 'a', status: 'invited', name: 'Timo Testspieler', first_name: 'Timo', phone: '0151 00000001', invited_by: 'Max', responded_at: null, profile_url: null, ausa_athlete_id: 'x', category: 'signed', photo_url: null, club: null, league: null, position: null, stats: null, enriched_at: null, ...inviteOver },
   event: { name: 'Spiel', slug: 's', start_date: '2026-10-30', end_date: '2026-10-30', start_time: null, end_time: null, location: 'Köln', description: null },
   player: null,
   base: { name: 'Timo Testspieler', photo_url: null, prefill: p },
@@ -88,4 +88,17 @@ test('adults and the year someone turns 18: no parent asked, the 18 question ask
   const turning18 = initialAcceptForm(payload(prefill({ birth_year: 2008 })))
   assert.deepEqual(plain(signed.missingSignedFields(turning18, 2026)), ['is_adult'].filter(() => 2026 - 2008 === 18))
   assert.deepEqual(plain(signed.missingSignedFields({ ...turning18, is_adult: 'ja' }, 2026)), [])
+})
+
+test('the card opens for any Base-linked invite whose Base record covers it; sparse data or a phone mismatch opens the form', () => {
+  // Neu after the portal intake (Matthew's case): name, birth year, position and phone known
+  assert.equal(signed.usesConfirmCard(payload(prefill(), { category: 'new' })), true, 'category new with full Base data')
+  assert.equal(signed.usesConfirmCard(payload(prefill({ school_type: null, grad_year: null, grades: null }), { category: 'new' })), true, 'school and grades may be missing, the card asks them')
+  assert.equal(signed.usesConfirmCard(payload(prefill({ position: null }), { category: 'new' })), false, 'no position in Base: the form')
+  assert.equal(signed.usesConfirmCard(payload(prefill({ birth_year: null }), { category: 'new' })), false, 'no birth year in Base: the form')
+  assert.equal(signed.usesConfirmCard(payload(prefill())), true, 'signed as today')
+  // The token route withholds phone, parent and grades when the invite phone is not Base's phone
+  assert.equal(signed.usesConfirmCard(payload(prefill({ phone: null, parent_name: null, parent_phone: null, grades: null }))), false, 'phone mismatch: the form')
+  assert.equal(signed.usesConfirmCard({ ...payload(prefill()), base: null }), false, 'not linked: the form')
+  assert.equal(signed.usesConfirmCard(payload(prefill(), { status: 'accepted' })), false, 'editing after the answer: the form')
 })
