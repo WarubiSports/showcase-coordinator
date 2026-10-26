@@ -94,11 +94,18 @@ export function useInvites(eventId: string | undefined) {
     return updated
   }
 
+  // The club's crest for an invite with a club but no photo (FuPa club search)
+  const loadCrest = async (id: string) => {
+    const updated = await adminFetch<InviteWithPlayer & { crest?: { url: string | null } }>(`/api/admin/invites/${id}/crest`, { method: 'POST', body: '{}' })
+    setInvites((prev) => prev.map((i) => (i.id === id ? updated : i)))
+    return updated
+  }
+
   // Shirt number lives on the sign-up row; the invite route writes it for the invite's own sign-up only
   const setJerseyNumber = async (inviteId: string, jersey_number: number | null) => {
     const updated = await adminFetch<InviteWithPlayer>(`/api/admin/invites/${inviteId}`, { method: 'PATCH', body: JSON.stringify({ jersey_number }) })
     setInvites((prev) => prev.map((i) => (i.id === inviteId ? updated : i)))
   }
 
-  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, findOnFupa, syncFromBase, setJerseyNumber }
+  return { invites, isLoading, error, migrationPending, refetch: fetchInvites, createInvites, updateInvite, deleteInvite, enrichInvite, findOnFupa, syncFromBase, loadCrest, setJerseyNumber }
 }

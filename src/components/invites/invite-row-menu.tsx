@@ -14,11 +14,12 @@ interface InviteRowMenuProps {
   onBaseSync: () => void
   onFindFupa: () => void
   onEditClub: () => void
+  onCrest: () => void
   onDelete: () => void
 }
 
 // The row's "More" menu: answers, profile link, FuPa and Base reads, category, delete
-export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onEditClub, onDelete }: InviteRowMenuProps) => (
+export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onEditClub, onCrest, onDelete }: InviteRowMenuProps) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="ghost" size="icon" aria-label="Mehr"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -31,6 +32,7 @@ export const InviteRowMenu = ({ invite, onStatus, onEditProfileUrl, onCategory, 
       {!invite.profile_url && <DropdownMenuItem onClick={onFindFupa}>Auf FuPa suchen</DropdownMenuItem>}
       <DropdownMenuItem onClick={onEditClub}>{invite.club ? 'Verein ändern' : 'Verein hinzufügen'}</DropdownMenuItem>
       {invite.ausa_athlete_id && <DropdownMenuItem onClick={onBaseSync}>Aus Base übernehmen</DropdownMenuItem>}
+      {invite.club && !invite.photo_url && <DropdownMenuItem onClick={onCrest}>Vereinswappen laden</DropdownMenuItem>}
       <DropdownMenuItem onClick={() => onCategory(invite.category === 'signed' ? 'new' : 'signed')}>
         {invite.category === 'signed' ? 'Als Neu markieren' : 'Als Signed markieren (Athletes USA)'}
       </DropdownMenuItem>

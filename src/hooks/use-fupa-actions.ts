@@ -8,11 +8,12 @@ interface FupaActionsDeps {
   enrichInvite: (id: string) => Promise<InviteWithPlayer>
   findOnFupa: (id: string) => Promise<InviteWithPlayer & { fupa?: { linked: boolean; hits: number } }>
   updateInvite: (id: string, patch: Partial<Pick<InviteWithPlayer, 'profile_url' | 'club' | 'fupa_candidates'>>) => Promise<InviteWithPlayer>
+  loadCrest: (id: string) => Promise<InviteWithPlayer & { crest?: { url: string | null } }>
 }
 
 // Staff-side FuPa handlers: the page read for a linked invite, and for an invite without a link the search,
 // picking a hit, dismissing the hits and editing the club that helps the search
-export const useFupaActions = ({ enrichInvite, findOnFupa, updateInvite }: FupaActionsDeps) => {
+export const useFupaActions = ({ enrichInvite, findOnFupa, updateInvite, loadCrest }: FupaActionsDeps) => {
   // FuPa read for one invite; a failure only means the card keeps what it has
   const enrich = async (id: string, quiet = false) => {
     try {
@@ -72,5 +73,16 @@ export const useFupaActions = ({ enrichInvite, findOnFupa, updateInvite }: FupaA
     }
   }
 
-  return { enrich, find, pick, dismiss, club }
+  // The club's crest in the photo slot, for an invite with a club but no photo
+  const crest = async (id: string) => {
+    try {
+      const updated = await loadCrest(id)
+      if (updated.crest?.url) toast.success('Vereinswappen geladen')
+      else toast.message('Kein Wappen gefunden: der Verein muss genau so heißen wie auf FuPa')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Vereinswappen konnte nicht geladen werden')
+    }
+  }
+
+  return { enrich, find, pick, dismiss, club, crest }
 }

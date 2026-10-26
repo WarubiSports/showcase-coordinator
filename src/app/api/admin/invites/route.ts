@@ -8,7 +8,8 @@ import { PROFILE_URL_ERROR, cleanProfileUrl, isProfileUrl } from '@/lib/profile-
 import { fetchAthlete } from '@/lib/base-athletes'
 import { baseInviteFields, definedFields, type BaseInviteFields } from '@/lib/base-invite'
 import { candidateProfileUrl, pickCandidate, searchFupaPlayers } from '@/lib/fupa-search'
-import type { FupaCandidate } from '@/types'
+import { crestUpdateFor } from '@/lib/club-crest-server'
+import type { FupaCandidate, FupaInviteStats } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
   if (rows.length > 100) return NextResponse.json({ error: 'Maximal 100 Einladungen pro Anfrage' }, { status: 400 })
 
   const db = createAdminClient()
-  const inserts: ({ event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null; fupa_candidates?: FupaCandidate[] } & Partial<BaseInviteFields>)[] = []
+  const inserts: ({ event_id: string; token: string; name: string; phone: string | null; invited_by: string; personal_line: string | null; ausa_athlete_id?: string; category?: string; invited_by_staff_id?: string; invited_by_email?: string | null; fupa_candidates?: FupaCandidate[]; stats?: FupaInviteStats } & Partial<BaseInviteFields>)[] = []
   for (const r of rows) {
     const name = clean(r.name, 120)
     const invited_by = clean(r.invited_by, 80)
@@ -77,6 +78,8 @@ export async function POST(req: NextRequest) {
       if (pick) fupa.profile_url = candidateProfileUrl(pick)
       else if (found) fupa.fupa_candidates = found
     }
+    // A club but no photo (from Base): the club's crest fills the photo slot
+    const crest = await crestUpdateFor({ photo_url: base.photo_url ?? null, club: clubText ?? base.club ?? null, stats: null })
     inserts.push({
       event_id: eventId,
       token: newInviteToken(),
@@ -89,6 +92,7 @@ export async function POST(req: NextRequest) {
       ...base,
       ...(clubText && !base.club ? { club: clubText } : {}),
       ...fupa,
+      ...(crest ?? {}),
       ...(athleteId ? { ausa_athlete_id: athleteId } : {}),
       ...(r.category === 'signed' || r.category === 'new' ? { category: r.category } : {}),
       // who created it, from the Staff App login only; nothing the client sends for these is read

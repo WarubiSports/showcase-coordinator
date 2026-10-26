@@ -29,6 +29,7 @@ interface InviteTableProps {
   onCategory: (id: string, category: InviteCategory) => void
   onEnrich: (id: string) => void
   onBaseSync: (id: string) => void
+  onCrest: (id: string) => void
   onFindFupa: (id: string) => void
   onPickFupa: (id: string, candidate: FupaCandidate) => void
   onDismissFupa: (id: string) => void
@@ -36,7 +37,7 @@ interface InviteTableProps {
   onDelete: (id: string) => void
 }
 
-export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onPickFupa, onDismissFupa, onClub, onDelete }: InviteTableProps) => {
+export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onPickFupa, onDismissFupa, onClub, onCrest, onDelete }: InviteTableProps) => {
   const [sort, setSort] = useState<SortKey>('status')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const toggle = (id: string, on: boolean) =>
@@ -95,6 +96,7 @@ export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onPro
               onCategory={(c) => onCategory(invite.id, c)}
               onEnrich={() => onEnrich(invite.id)}
               onBaseSync={() => onBaseSync(invite.id)}
+              onCrest={() => onCrest(invite.id)}
               onFindFupa={() => onFindFupa(invite.id)}
               onPickFupa={(c) => onPickFupa(invite.id, c)}
               onDismissFupa={() => onDismissFupa(invite.id)}
