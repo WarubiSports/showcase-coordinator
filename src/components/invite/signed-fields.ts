@@ -54,3 +54,17 @@ export const missingSignedFields = (form: AcceptFormState, eventYear: number): S
   }
   return out
 }
+
+interface ConfirmInput {
+  invite: { status: string }
+  base: { prefill: { name: string | null; birth_year: number | null; position: string | null; phone: string | null } } | null
+}
+
+// The confirm card instead of the full form: a Base-linked invite still open whose Base record covers what the
+// card does not ask under it (name, birth year, position, phone). Any category: a Neu player after the portal
+// intake knows these too (Max, 26.10). On a phone mismatch Base's PII fields are withheld (PR #4), so the
+// check fails and the full form opens, prefilled as before.
+export const usesConfirmCard = (data: ConfirmInput): boolean => {
+  const p = data.base?.prefill
+  return data.invite.status === 'invited' && !!p && !!(p.name && p.birth_year && p.position && p.phone)
+}
