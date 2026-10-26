@@ -5,6 +5,8 @@ import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { INVITE_WITH_PLAYER_SELECT, dbError } from '@/lib/invite-db'
 import { fetchAthlete } from '@/lib/base-athletes'
 import { baseInviteFields, definedFields } from '@/lib/base-invite'
+import { crestUpdateFor } from '@/lib/club-crest-server'
+import type { FupaInviteStats } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
 
   const db = createAdminClient()
-  const { data: invite, error } = await db.from('showcase_invites').select('id, ausa_athlete_id, profile_url').eq('id', id).maybeSingle()
+  const { data: invite, error } = await db.from('showcase_invites').select('id, ausa_athlete_id, profile_url, photo_url, club, stats').eq('id', id).maybeSingle()
   if (error) return dbError(error.message)
   if (!invite) return NextResponse.json({ error: 'Einladung nicht gefunden' }, { status: 404 })
   if (typeof invite.ausa_athlete_id !== 'string') return NextResponse.json({ error: 'Die Einladung ist nicht mit Base verknüpft' }, { status: 400 })
@@ -26,10 +28,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const athlete = await fetchAthlete(db, invite.ausa_athlete_id)
   if (!athlete) return NextResponse.json({ error: 'Athlet in Base nicht gefunden' }, { status: 404 })
   const values = definedFields(baseInviteFields(athlete, typeof invite.profile_url === 'string' ? invite.profile_url : null))
+  // Still no photo: the club's crest fills the slot
+  const crest = await crestUpdateFor({ photo_url: (values.photo_url ?? invite.photo_url ?? null) as string | null, club: (values.club ?? invite.club ?? null) as string | null, stats: (invite.stats ?? null) as FupaInviteStats | null })
 
   const { data, error: writeError } = await db
     .from('showcase_invites')
-    .update({ ...values, updated_at: new Date().toISOString() })
+    .update({ ...values, ...(crest ?? {}), updated_at: new Date().toISOString() })
     .eq('id', id)
     .select(INVITE_WITH_PLAYER_SELECT)
     .maybeSingle()

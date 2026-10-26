@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { InviteRowMenu } from '@/components/invites/invite-row-menu'
+import { InviteClubLine } from '@/components/invites/invite-club-line'
 import { FupaPicker } from '@/components/invites/fupa-picker'
 import { isCollegeEligible } from '@/components/invites/invite-stats'
 import { PROFILE_URL_ERROR, isProfileUrl } from '@/lib/profile-url'
@@ -37,10 +38,11 @@ interface InviteRowProps {
   onPickFupa: (candidate: FupaCandidate) => void
   onDismissFupa: () => void
   onClub: (club: string | null) => void
+  onCrest: () => void
   onDelete: () => void
 }
 
-export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onPickFupa, onDismissFupa, onClub, onDelete }: InviteRowProps) => {
+export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onPickFupa, onDismissFupa, onClub, onCrest, onDelete }: InviteRowProps) => {
   const [open, setOpen] = useState(false)
   const p = invite.player
   const status = STATUS[invite.status]
@@ -90,21 +92,9 @@ export const InviteRow = ({ invite, link, message, waUrl, selected, onSelect, on
             </a>
           )}
           {!invite.profile_url && Array.isArray(invite.fupa_candidates) && <FupaPicker candidates={invite.fupa_candidates} onPick={onPickFupa} onDismiss={onDismissFupa} />}
-          {(invite.enriched_at || invite.photo_url || invite.club || invite.position) && (
-            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              {invite.photo_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={invite.photo_url} alt="" className="h-7 w-7 rounded-full object-cover object-top" />
-              )}
-              <span className="truncate">
-                {invite.enriched_at ? 'FuPa' : 'Base'}: {[invite.club, invite.league, invite.position].filter(Boolean).join(' · ')}
-                {invite.stats ? ` · ${invite.stats.games} Sp. ${invite.stats.goals} T. ${invite.stats.assists} V.${invite.stats.season ? ` (${invite.stats.season})` : ''}` : ''}
-                {invite.stats?.career && invite.stats.career.games > 0 ? ` · Karriere ${invite.stats.career.games} Sp. ${invite.stats.career.goals} T.` : ''}
-              </span>
-            </p>
-          )}
+          <InviteClubLine invite={invite} />
         </div>
-        <InviteRowMenu invite={invite} onStatus={onStatus} onEditProfileUrl={editProfileUrl} onCategory={onCategory} onEnrich={onEnrich} onBaseSync={onBaseSync} onFindFupa={onFindFupa} onEditClub={editClub} onDelete={onDelete} />
+        <InviteRowMenu invite={invite} onStatus={onStatus} onEditProfileUrl={editProfileUrl} onCategory={onCategory} onEnrich={onEnrich} onBaseSync={onBaseSync} onFindFupa={onFindFupa} onEditClub={editClub} onCrest={onCrest} onDelete={onDelete} />
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">

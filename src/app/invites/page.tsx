@@ -26,9 +26,9 @@ export default function InvitesPage() {
   const { staff, firstName: staffFirstName, signOut } = useStaff()
   // With a Staff App login the inviter defaults to that first name; under basic auth to the welcome-dialog name
   const defaultInviter = staffFirstName || userName || ''
-  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, findOnFupa, syncFromBase, setJerseyNumber } = useInvites(currentEvent?.id)
+  const { invites, isLoading, error, migrationPending, refetch, createInvites, updateInvite, deleteInvite, enrichInvite, findOnFupa, syncFromBase, loadCrest, setJerseyNumber } = useInvites(currentEvent?.id)
 
-  const fupa = useFupaActions({ enrichInvite, findOnFupa, updateInvite })
+  const fupa = useFupaActions({ enrichInvite, findOnFupa, updateInvite, loadCrest })
   const handleEnrich = fupa.enrich
 
   const handleCreate = async (rows: NewInviteInput[]) => {
@@ -128,6 +128,7 @@ export default function InvitesPage() {
               onCategory={handleCategory}
               onEnrich={(id) => handleEnrich(id)}
               onBaseSync={handleBaseSync}
+              onCrest={fupa.crest}
               onFindFupa={fupa.find}
               onPickFupa={fupa.pick}
               onDismissFupa={fupa.dismiss}

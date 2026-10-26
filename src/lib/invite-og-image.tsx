@@ -7,6 +7,7 @@ export const OG_SIZE = { width: 1200, height: 630 }
 export type OgFont = { name: string; data: ArrayBuffer; weight: 400 | 600 | 700; style: 'normal' }
 export interface OgAssets {
   photo: string | null
+  crest?: string | null
   ausaLogo: string
   fckLogo: string
   fonts: OgFont[]
@@ -29,9 +30,17 @@ const Lockup = ({ a, h }: { a: OgAssets; h: number }) => (
   </div>
 )
 
-// Right side: the photo, else initials in a navy circle, else (neutral preview) the two logos large
+// Right side: the photo, else the club's crest on paper, else initials in a navy circle, else (neutral preview)
+// the two logos large
 const Portrait = ({ m, a }: { m: InviteOgModel; a: OgAssets }) => {
   if (a.photo) return <img src={a.photo} width={300} height={380} style={{ objectFit: 'cover', objectPosition: 'top', borderRadius: 28, border: `2px solid ${INK_200}`, background: INK_50 }} alt="" />
+  if (a.crest) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 300, height: 380, borderRadius: 28, border: `2px solid ${INK_200}`, background: PAPER }}>
+        <img src={a.crest} width={200} height={200} style={{ objectFit: 'contain' }} alt="" />
+      </div>
+    )
+  }
   if (m.initials) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 240, height: 240, borderRadius: 120, background: INK, color: PAPER, fontFamily: 'Kanit', fontSize: 100, fontWeight: 700 }}>

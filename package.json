@@ -18,7 +18,8 @@
     "test:invite-og": "node --test tests/invite-og.test.mjs",
     "test:request-origin": "node --test tests/request-origin.test.mjs",
     "test:staff-state": "node --test tests/staff-state.test.mjs",
-    "test:event-page": "node --test tests/event-page.test.mjs"
+    "test:event-page": "node --test tests/event-page.test.mjs",
+    "test:club-crest": "node --test tests/club-crest.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

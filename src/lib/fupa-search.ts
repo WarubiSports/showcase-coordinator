@@ -71,12 +71,10 @@ export const pickCandidate = (candidates: FupaCandidate[], clubText: string | nu
   return byClub.length === 1 ? byClub[0] : null
 }
 
-// null = search not reachable (nothing is stored then); [] = no hit for this name
-export const searchFupaPlayers = async (name: string): Promise<FupaCandidate[] | null> => {
-  const q = name.trim()
-  if (q.length < 3) return []
+// Raw hits of one search; null = not reachable (nothing is stored then)
+const searchHits = async (q: string, type: 'player' | 'club'): Promise<unknown[] | null> => {
   try {
-    const res = await fetch(`${SEARCH}?q=${encodeURIComponent(q)}&type=player`, {
+    const res = await fetch(`${SEARCH}?q=${encodeURIComponent(q)}&type=${type}`, {
       headers: { 'User-Agent': UA, Accept: 'application/json', 'Accept-Language': 'de-DE,de;q=0.9' },
       signal: AbortSignal.timeout(12000),
       cache: 'no-store',
@@ -84,8 +82,22 @@ export const searchFupaPlayers = async (name: string): Promise<FupaCandidate[] |
     if (!res.ok) return null
     const body = await readCapped(res)
     const hits = body ? (JSON.parse(body) as unknown) : null
-    return Array.isArray(hits) ? candidatesFor(hits, q) : null
+    return Array.isArray(hits) ? hits : null
   } catch {
     return null
   }
+}
+
+// null = search not reachable (nothing is stored then); [] = no hit for this name
+export const searchFupaPlayers = async (name: string): Promise<FupaCandidate[] | null> => {
+  const q = name.trim()
+  if (q.length < 3) return []
+  const hits = await searchHits(q, 'player')
+  return hits ? candidatesFor(hits, q) : null
+}
+
+// The club search, for the crest (club-crest-server.ts picks the exact match)
+export const searchFupaClubs = async (club: string): Promise<unknown[] | null> => {
+  const q = club.trim()
+  return q.length < 2 ? [] : searchHits(q, 'club')
 }
