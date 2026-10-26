@@ -1,23 +1,18 @@
 'use client'
 
 import { useState, useSyncExternalStore } from 'react'
+import { Search, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InviteRow } from '@/components/invites/invite-row'
 import { CoachBundleBar } from '@/components/invites/coach-bundle-bar'
 import { buildWhatsAppMessage, inviteLink, whatsAppUrl, type CoachMessageEvent } from '@/lib/invite-message'
-import type { FupaCandidate, InviteCategory, InviteStatus, InviteWithPlayer } from '@/types'
+import { visibleInvites, type InviteSortKey } from '@/lib/invite-list'
+import type { FupaCandidate, InviteCategory, InviteWithPlayer } from '@/types'
 
-type SortKey = 'status' | 'name' | 'inviter'
 const subscribeNothing = () => () => {}
-const STATUS_ORDER: Record<InviteStatus, number> = { accepted: 0, invited: 1, declined: 2 }
-
-const sortInvites = (invites: InviteWithPlayer[], key: SortKey): InviteWithPlayer[] =>
-  [...invites].sort((a, b) => {
-    if (key === 'status' && STATUS_ORDER[a.status] !== STATUS_ORDER[b.status]) return STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
-    if (key === 'inviter' && a.invited_by !== b.invited_by) return a.invited_by.localeCompare(b.invited_by)
-    return a.name.localeCompare(b.name)
-  })
 
 interface InviteTableProps {
   invites: InviteWithPlayer[]
@@ -38,7 +33,8 @@ interface InviteTableProps {
 }
 
 export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onProfileUrl, onCategory, onEnrich, onBaseSync, onFindFupa, onPickFupa, onDismissFupa, onClub, onCrest, onDelete }: InviteTableProps) => {
-  const [sort, setSort] = useState<SortKey>('status')
+  const [sort, setSort] = useState<InviteSortKey>('status')
+  const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -58,26 +54,41 @@ export const InviteTable = ({ invites, event, sender, isLoading, onStatus, onPro
   }
 
   const forCoach = invites.filter((i) => selected.has(i.id)).map((i) => ({ name: i.name, link: inviteLink(origin, i.token) }))
+  const visible = visibleInvites(invites, query, sort)
+  const visibleIds = new Set(visible.map((i) => i.id))
+  const hiddenSelected = invites.filter((i) => selected.has(i.id) && !visibleIds.has(i.id)).length
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-semibold">{invites.length} {invites.length === 1 ? 'Einladung' : 'Einladungen'}</h2>
+          <h2 className="font-semibold" aria-live="polite">
+            {query.trim() ? `${visible.length} von ${invites.length} Einladungen` : `${invites.length} ${invites.length === 1 ? 'Einladung' : 'Einladungen'}`}
+          </h2>
           <p className="text-xs text-muted-foreground">Spieler anhaken, um eine Nachricht für ihren Vereinstrainer zu bauen.</p>
         </div>
-        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+        <Select value={sort} onValueChange={(v) => setSort(v as InviteSortKey)}>
+          <SelectTrigger className="w-full sm:w-40" aria-label="Einladungen sortieren"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="status">Nach Status</SelectItem>
             <SelectItem value="name">Nach Name</SelectItem>
             <SelectItem value="inviter">Nach Einlader</SelectItem>
+            <SelectItem value="club">Nach Verein</SelectItem>
           </SelectContent>
         </Select>
       </div>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Spieler oder Verein suchen …" aria-label="Spieler oder Verein suchen" className="pl-9 pr-12 [&::-webkit-search-cancel-button]:appearance-none" />
+        {query && <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2" onClick={() => setQuery('')} aria-label="Suche löschen"><X className="h-4 w-4" /></Button>}
+      </div>
       {forCoach.length > 0 && <CoachBundleBar players={forCoach} event={event} sender={sender} onClear={() => setSelected(new Set())} />}
+      {hiddenSelected > 0 && <p className="text-sm text-muted-foreground">
+        {hiddenSelected === 1 ? 'Ein ausgewählter Spieler ist durch die Suche ausgeblendet und bleibt' : `${hiddenSelected} ausgewählte Spieler sind durch die Suche ausgeblendet und bleiben`} in der Coach-Nachricht.
+      </p>}
+      {visible.length === 0 && <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Keine Spieler oder Vereine gefunden. Versuche einen anderen Suchbegriff.</div>}
       <ul className="space-y-3">
-        {sortInvites(invites, sort).map((invite) => {
+        {visible.map((invite) => {
           const link = inviteLink(origin, invite.token)
           const message = event
             ? buildWhatsAppMessage({ name: invite.name, personalLine: invite.personal_line, sender: invite.invited_by, link, event })
