@@ -326,6 +326,8 @@ export interface FupaInviteStats {
   league: string | null
   // totals over every season on the FuPa page; absent on rows enriched before 23.10
   career?: { games: number; goals: number; assists: number; seasons: number } | null
+  // the men's team row of the same season, when the card is built on the youth row (27.10); absent otherwise
+  senior?: { team: string | null; league: string | null; season: string | null; games: number; goals: number; assists: number } | null
   // the club's crest from FuPa's club search, for invites without a photo (26.10)
   club_crest?: string | null
 }

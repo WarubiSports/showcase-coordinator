@@ -1,5 +1,6 @@
 'use client'
 
+import { seniorShortLine } from '@/lib/card-lines'
 import { hasSeasonStats } from '@/lib/club-crest'
 import type { InviteWithPlayer } from '@/types'
 
@@ -20,6 +21,7 @@ export const InviteClubLine = ({ invite }: { invite: InviteWithPlayer }) => {
         )}
         {[invite.club, invite.league, invite.position].filter(Boolean).join(' · ')}
         {hasSeasonStats(invite.stats) && invite.stats ? ` · ${invite.stats.games} Sp. ${invite.stats.goals} T. ${invite.stats.assists} V.${invite.stats.season ? ` (${invite.stats.season})` : ''}` : ''}
+        {seniorShortLine(invite.stats?.senior) ? ` · ${seniorShortLine(invite.stats?.senior)}` : ''}
         {invite.stats?.career && invite.stats.career.games > 0 ? ` · Karriere ${invite.stats.career.games} Sp. ${invite.stats.career.goals} T.` : ''}
       </span>
     </p>

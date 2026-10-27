@@ -112,3 +112,14 @@ test('card lines: a count of 0 is left out, no games means no line', () => {
   assert.equal(cardLines.careerLine({ games: 0, goals: 0, assists: 0 }), null)
   assert.equal(cardLines.careerLine(undefined), null)
 })
+
+test('men\'s second line: same zero rule, German label, none without games', () => {
+  assert.equal(cardLines.seniorLine({ games: 2, goals: 4, assists: 0 }), 'Herren: 2 Spiele · 4 Tore')
+  assert.equal(cardLines.seniorLine({ games: 1, goals: 0, assists: 1 }), 'Herren: 1 Spiel · 1 Vorlage')
+  assert.equal(cardLines.seniorLine({ games: 0, goals: 0, assists: 0 }), null)
+  assert.equal(cardLines.seniorLine(undefined), null)
+  assert.equal(cardLines.seniorShortLine({ games: 2, goals: 4, assists: 0 }), 'Herren 2 Sp. 4 T.')
+  assert.equal(cardLines.seniorShortLine({ games: 5, goals: 0, assists: 0 }), 'Herren 5 Sp.')
+  assert.equal(cardLines.seniorShortLine({ games: 0, goals: 0, assists: 0 }), null)
+  assert.equal(cardLines.seniorShortLine(null), null)
+})

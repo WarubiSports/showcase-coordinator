@@ -1,5 +1,5 @@
 import type { InvitePayload } from '@/components/invite/invite-types'
-import { careerLine, seasonLine } from '@/lib/card-lines'
+import { careerLine, seasonLine, seniorLine } from '@/lib/card-lines'
 import { clubCrest } from '@/lib/club-crest'
 
 // Player card above the event facts: FuPa data the server read for the invite, or Base's photo, club and
@@ -17,6 +17,7 @@ const initials = (name: string) =>
 export const PlayerCard = ({ invite }: { invite: InvitePayload['invite'] }) => {
   // Zero counts are left out, a season or career without games has no line
   const statsLine = seasonLine(invite.stats)
+  const senior = seniorLine(invite.stats?.senior)
   const career = careerLine(invite.stats?.career)
   const crest = clubCrest(invite)
   return (
@@ -43,6 +44,7 @@ export const PlayerCard = ({ invite }: { invite: InvitePayload['invite'] }) => {
           {invite.position && <span className="rounded-md bg-ausa-ink-100 px-2 py-0.5 font-medium text-ausa-ink-900">{invite.position}</span>}
           {statsLine && <span className="font-ausa-mono text-xs text-ausa-ink-700">{statsLine}</span>}
         </div>
+        {senior && <p className="mt-1 font-ausa-mono text-xs text-ausa-ink-700">{senior}</p>}
         {career && <p className="mt-1 font-ausa-mono text-xs text-ausa-ink-700">{career}</p>}
         {/* Where the card's data comes from; a club typed by staff for a player in neither has no source line */}
         {(invite.enriched_at || invite.ausa_athlete_id) && (
