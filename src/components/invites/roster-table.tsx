@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Printer } from 'lucide-react'
+import Link from 'next/link'
+import { Printer, Timer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { InvitePlayer, InviteWithPlayer } from '@/types'
@@ -57,11 +58,16 @@ export const RosterTable = ({ invites, onJersey }: RosterTableProps) => {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">{rows.length} Spieler mit Zusage</h2>
-        <Button variant="outline" size="sm" asChild>
-          <a href="/invites/roster" target="_blank" rel="noopener noreferrer"><Printer className="h-4 w-4" />Druckansicht</a>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/invites/tests"><Timer className="h-4 w-4" />Tests</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/invites/roster" target="_blank" rel="noopener noreferrer"><Printer className="h-4 w-4" />Druckansicht</a>
+          </Button>
+        </div>
       </div>
       {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Noch keine Zusagen.</div>

@@ -18,7 +18,7 @@ interface SidebarProps {
   isOpen: boolean
   onClose: () => void
   userRole: UserRole
-  // A Staff App login sees only the invite area: Einladungen and Kader, whatever the stored role
+  // A Staff App login sees only the invite area: Einladungen, Kader and Tests, whatever the stored role
   staffSession?: boolean
 }
 

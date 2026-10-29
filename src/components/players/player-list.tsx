@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getBest } from '@/lib/selection-tests'
 import type { Player, PaymentStatus } from '@/types'
 
 interface PlayerListProps {
@@ -31,13 +32,6 @@ function formatDate(dateString: string | null): string | null {
     day: 'numeric',
     year: 'numeric',
   })
-}
-
-function getBest(val1: number | null, val2: number | null, lowerIsBetter = false): number | null {
-  if (val1 === null && val2 === null) return null
-  if (val1 === null) return val2
-  if (val2 === null) return val1
-  return lowerIsBetter ? Math.min(val1, val2) : Math.max(val1, val2)
 }
 
 function PlayerCard({
