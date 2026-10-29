@@ -1,5 +1,5 @@
 -- Pitch-side tests of a selection game (Athletes USA Auswahl, 30.10.2026): sprint splits at 5, 10, 20, 30 m and
--- 40 yd plus an agility run, two attempts each, entered by staff on /invites/tests.
+-- 40 yd plus the 5-0-5 agility run, two attempts each, entered by staff on /invites/tests.
 -- TARGET: Warubi Core (wwomwawpxmkrykybpqok), schema itp. Additive, nullable, no policy change.
 -- Broad jump reuses the existing broad_jump_1/2 (cm); the legacy sprint_1/2 (no distance) stays untouched.
 -- Until this runs the page shows a banner and its inputs stay disabled; the API refuses writes with migration_pending.
@@ -28,8 +28,8 @@ comment on column itp.showcase_players.sprint_30m_1 is 'Sprint split at 30 m, at
 comment on column itp.showcase_players.sprint_30m_2 is 'Sprint split at 30 m, attempt 2, seconds';
 comment on column itp.showcase_players.sprint_40yd_1 is 'Sprint split at 40 yards, attempt 1, seconds';
 comment on column itp.showcase_players.sprint_40yd_2 is 'Sprint split at 40 yards, attempt 2, seconds';
-comment on column itp.showcase_players.agility_1 is 'Agility run, attempt 1, seconds';
-comment on column itp.showcase_players.agility_2 is 'Agility run, attempt 2, seconds';
+comment on column itp.showcase_players.agility_1 is 'Agility 5-0-5, attempt 1, seconds';
+comment on column itp.showcase_players.agility_2 is 'Agility 5-0-5, attempt 2, seconds';
 
 -- Rollback (drops the entered values with the columns):
 -- alter table itp.showcase_players

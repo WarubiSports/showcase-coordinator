@@ -16,8 +16,8 @@ const best = (player: SelectionTestPlayer, key: TestKey) => {
 
 const ATTEMPTS = [1, 2] as const
 
-// One player's tests: sprint splits per attempt in two rows, agility and broad jump with both attempts side by
-// side, and the best value of each (lowest time, longest jump)
+// One player's tests (the card's "Tests" view): sprint splits per attempt in two rows, agility and broad jump with
+// both attempts side by side, and the best value of each (lowest time, longest jump)
 export const SelectionTestCard = ({ player, disabled, onSave }: SelectionTestCardProps) => {
   const input = (field: TestField, placeholder: string) => (
     <ScoreInput
@@ -29,9 +29,9 @@ export const SelectionTestCard = ({ player, disabled, onSave }: SelectionTestCar
     />
   )
 
-  const pair = (key: 'agility' | 'broad_jump', title: string) => (
+  const pair = (key: 'agility' | 'broad_jump', unit: string) => (
     <section className="space-y-1">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-sm font-semibold">{TESTS[key].label} <span className="font-normal text-muted-foreground">· {unit}</span></h3>
       <div className="grid grid-cols-3 gap-1.5 text-center text-xs text-muted-foreground">
         <span>Versuch 1</span>
         <span>Versuch 2</span>
@@ -46,12 +46,7 @@ export const SelectionTestCard = ({ player, disabled, onSave }: SelectionTestCar
   )
 
   return (
-    <li className="space-y-4 rounded-xl border bg-card p-3 shadow-sm">
-      <h2 className="text-base font-semibold leading-tight">
-        <span className="tabular-nums">#{player.jersey_number ?? '?'}</span> {player.name}
-        {player.position && <span className="font-normal text-muted-foreground"> · {player.position}</span>}
-      </h2>
-
+    <div className="space-y-4">
       <section className="space-y-1">
         <h3 className="text-sm font-semibold">Sprint <span className="font-normal text-muted-foreground">(Sekunden)</span></h3>
         <div className="grid grid-cols-5 gap-1.5 text-center text-xs font-medium text-muted-foreground">
@@ -75,8 +70,8 @@ export const SelectionTestCard = ({ player, disabled, onSave }: SelectionTestCar
         </div>
       </section>
 
-      {pair('agility', 'Agility (Sekunden)')}
-      {pair('broad_jump', 'Weitsprung (cm)')}
-    </li>
+      {pair('agility', 'Sekunden')}
+      {pair('broad_jump', 'cm')}
+    </div>
   )
 }

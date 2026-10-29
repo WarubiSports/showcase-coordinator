@@ -24,15 +24,16 @@ interface TestSpec {
 
 const time = (label: string, max: number): TestSpec => ({ label, unit: 's', min: 0.5, max, lowerIsBetter: true })
 
-// Plausibility limits, wide enough for any real attempt and tight enough to catch a slipped digit. Agility goes to
-// 30 s because an Illinois run takes 15 to 19 s; broad jump is in cm, the unit of the /players screen.
+// Plausibility limits, wide enough for any real attempt and tight enough to catch a slipped digit. Agility is the
+// 5-0-5 (ITP records agility only as agility_505), with a generous 30 s limit; broad jump is in cm, the unit of
+// the /players screen.
 export const TESTS: Record<TestKey, TestSpec> = {
   sprint_5m: time('Sprint 5 m', 15),
   sprint_10m: time('Sprint 10 m', 15),
   sprint_20m: time('Sprint 20 m', 15),
   sprint_30m: time('Sprint 30 m', 15),
   sprint_40yd: time('Sprint 40 yd', 10),
-  agility: time('Agility', 30),
+  agility: time('Agility (5-0-5)', 30),
   broad_jump: { label: 'Weitsprung', unit: 'cm', min: 50, max: 400, lowerIsBetter: false },
 }
 
