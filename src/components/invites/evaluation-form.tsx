@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ChoiceButtons } from '@/components/invites/choice-buttons'
 import {
-  COLLEGE_FIT, OUTCOMES, RATING_KEYS, RATING_LABELS, TEXT_LIMITS, inputOf, savedAtLabel,
+  COLLEGE_FIT, OUTCOMES, RATING_KEYS, RATING_LABELS, TEXT_LIMITS, formAfterServerChange, inputOf, savedAtLabel,
   type EvaluationEntry, type EvaluationInput, type RatingKey,
 } from '@/lib/selection-evaluation'
 
@@ -20,10 +20,15 @@ interface EvaluationFormProps {
   onSave: (note: EvaluationInput, expectedVersion: number) => Promise<void>
 }
 
-// The signed-in staff member's own evaluation of one player. Saved with "Speichern"; the parent remounts the
-// form (key = version) after a save or a reload, so it always starts from what the server holds.
+// The signed-in staff member's own evaluation of one player, saved with "Speichern" against the version last seen.
+// When the stored note changes (save, reload, conflict) unsaved edits stay; an untouched form shows the new note.
 export const EvaluationForm = ({ scout, own, onSave }: EvaluationFormProps) => {
   const [form, setForm] = useState<EvaluationInput>(() => inputOf(own?.note))
+  const [seen, setSeen] = useState(own)
+  if (seen !== own) {
+    setSeen(own)
+    setForm(formAfterServerChange(form, seen?.note, own?.note))
+  }
   const [saving, setSaving] = useState(false)
   const dirty = JSON.stringify(form) !== JSON.stringify(inputOf(own?.note))
   const set = <K extends keyof EvaluationInput>(key: K, value: EvaluationInput[K]) => setForm((f) => ({ ...f, [key]: value }))

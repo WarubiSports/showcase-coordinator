@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { adminOrStaffAuth } from '@/lib/staff-auth'
 import { dbError } from '@/lib/invite-db'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
-import { TEST_FIELDS, isTestsMigrationPending, parseTestValues, sortRoster, toTestPlayer } from '@/lib/selection-tests'
+import { TEST_FIELDS, isTestsMigrationPending, parseExpected, parseTestValues, sortRoster, toTestPlayer } from '@/lib/selection-tests'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,6 +67,8 @@ export async function PATCH(req: NextRequest) {
   // Only the whitelisted test columns, each validated; nothing else from the body reaches the update
   const parsed = parseTestValues(body?.values)
   if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
+  const base = parseExpected(parsed.values, body?.expected)
+  if ('error' in base) return NextResponse.json({ error: base.error }, { status: 400 })
 
   const db = createAdminClient()
   // Only a player of this event's Kader: an accepted invite of the event links to the sign-up
@@ -80,16 +82,26 @@ export async function PATCH(req: NextRequest) {
   if (linkError) return dbError(linkError.message)
   if (!links?.length) return NextResponse.json({ error: 'Spieler ist nicht im Kader dieses Events' }, { status: 404 })
 
-  // One statement: before the migration the returned columns are missing, so it fails as a whole and writes nothing
-  const { data, error } = await db
+  // One statement, and only while each changed field still holds the value the client saw (two testers on one
+  // attempt never overwrite each other unseen). Before the migration the new columns are missing, so it fails as a
+  // whole and writes nothing.
+  let update = db
     .from('showcase_players')
     .update({ ...parsed.values, updated_at: new Date().toISOString() })
     .eq('id', playerId)
     .eq('event_id', eventId)
-    .select(WITH_TESTS)
-    .maybeSingle()
+  for (const [field, seen] of Object.entries(base.expected)) update = seen === null ? update.is(field, null) : update.eq(field, seen)
+  const { data, error } = await update.select(WITH_TESTS).maybeSingle()
   if (error && isTestsMigrationPending(error.message)) return NextResponse.json(MIGRATION_PENDING, { status: 503 })
   if (error) return dbError(error.message)
-  if (!data) return NextResponse.json({ error: 'Spieler nicht gefunden' }, { status: 404 })
-  return NextResponse.json(toTestPlayer(data as unknown as Record<string, unknown>))
+  if (data) return NextResponse.json(toTestPlayer(data as unknown as Record<string, unknown>))
+
+  // Nothing matched: someone changed a value in between (or the row is gone). Answer with what is stored now.
+  const { data: now, error: readError } = await db.from('showcase_players').select(WITH_TESTS).eq('id', playerId).eq('event_id', eventId).maybeSingle()
+  if (readError) return dbError(readError.message)
+  if (!now) return NextResponse.json({ error: 'Spieler nicht gefunden' }, { status: 404 })
+  return NextResponse.json(
+    { error: 'value_conflict', message: 'Wert wurde inzwischen von jemand anderem geändert', current: toTestPlayer(now as unknown as Record<string, unknown>) },
+    { status: 409 },
+  )
 }

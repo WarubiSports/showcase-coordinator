@@ -13,12 +13,12 @@ const nextServer = require('next/server')
 // Staff evaluations next to the tests (30.10.2026): the note checks, the Hamburg-shaped stored note, and the actual
 // route handlers against a fake client. Nothing here can reach a database.
 
-function loadSource(path, imports) {
+function loadSource(path, imports, globals = {}) {
   const source = readFileSync(new URL(path, import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const exports = {}
   vm.runInNewContext(code, {
-    exports, module: { exports }, URL,
+    exports, module: { exports }, URL, ...globals,
     require(name) {
       if (!Object.hasOwn(imports, name)) throw new Error(`Unexpected dependency of ${path}: ${name}`)
       return imports[name]
@@ -139,17 +139,20 @@ const fakeDb = ({ invariant = null, rpcError = false } = {}) => {
 }
 
 const STAFF = { id: 's1', full_name: 'Testtrainer Eins', email: 't1@example.test', role: 'staff' }
+const BASIC = `Basic ${Buffer.from('admin:fixture-password').toString('base64')}`
+const adminAuth = loadSource('../src/lib/admin-auth.ts', { 'next/server': nextServer }, {
+  atob, process: { env: { COORDINATOR_ADMIN_PASSWORD: 'fixture-password', COORDINATOR_ADMIN_USER: 'admin' } },
+})
+// The real staff-auth module; only the session lookup is faked (an x-test-staff header = a valid staff session)
+const staffAuth = loadSource('../src/lib/staff-auth.ts', {
+  'next/server': nextServer,
+  '@/lib/admin-auth': adminAuth,
+  '@/lib/staff-session': { getStaffIdentity: async (req) => (req.headers.get('x-test-staff') ? JSON.parse(req.headers.get('x-test-staff')) : null) },
+})
 const routeWith = (db) => loadSource('../src/app/api/admin/invites/evaluations/route.ts', {
   'next/server': nextServer,
   '@/lib/supabase-admin': { createAdminClient: () => db.client },
-  // x-test-staff: a staff session; authorization: the basic-auth admin (no name); neither: refused
-  '@/lib/staff-auth': {
-    adminOrStaffAuth: async (req) => {
-      if (req.headers.get('x-test-staff')) return { denied: null, staff: JSON.parse(req.headers.get('x-test-staff')) }
-      if (req.headers.get('authorization') === 'basic') return { denied: null, staff: null }
-      return { denied: nextServer.NextResponse.json({ error: 'Authentication required' }, { status: 401 }), staff: null }
-    },
-  },
+  '@/lib/staff-auth': staffAuth,
   '@/lib/admin-db-core': dbCore,
   '@/lib/selection-evaluation-note': note,
 })
@@ -170,13 +173,13 @@ test('GET: every note of the Kader with its writer, never one outside the Kader;
   assert.equal(body.scout, 'Testtrainer Eins')
   assert.deepEqual(body.entries.map((e) => [e.playerId, e.scout, e.version]), [[P2, 'Testtrainer Zwei', 3]])
   assert.equal(body.entries[0].note.positive, 'Schnell')
-  assert.equal((await (await get(route, { authorization: 'basic' })).json()).scout, null, 'basic auth reads without a name')
+  assert.equal((await (await get(route, { authorization: BASIC })).json()).scout, null, 'basic auth reads without a name')
 })
 
 test('POST: refused before any write without a staff name, cross-site, with a name in the body, bad values or outside the Kader', async () => {
   const db = fakeDb()
   const route = routeWith(db)
-  let res = await post(route, request(), { authorization: 'basic' })
+  let res = await post(route, request(), { authorization: BASIC })
   assert.equal(res.status, 403)
   assert.match((await res.json()).error, /Staff-App-Login/)
   assert.equal((await post(route, request(), { ...asStaff(), origin: 'https://attacker.example' })).status, 403)
@@ -227,4 +230,32 @@ test('POST: the function\'s refusals and failures come back as clear errors', as
   res = await post(routeWith(fakeDb({ rpcError: true })), request())
   assert.equal(res.status, 500)
   assert.match((await res.json()).error, /Speichern hat nicht geklappt/)
+})
+
+test('auth: a staff session is the writer even when Basic credentials come along; other routes unchanged', async () => {
+  const req = (headers) => new nextServer.NextRequest(`${ORIGIN}/api/admin/invites/evaluations`, { headers })
+  const both = { authorization: BASIC, ...asStaff() }
+  assert.equal((await staffAuth.staffFirstAuth(req(both))).staff.full_name, 'Testtrainer Eins')
+  assert.equal((await staffAuth.staffFirstAuth(req({ authorization: BASIC }))).staff, null)
+  assert.equal((await staffAuth.staffFirstAuth(req({ authorization: BASIC }))).denied, null)
+  assert.equal((await staffAuth.staffFirstAuth(req({}))).denied.status, 401)
+  assert.equal((await staffAuth.staffFirstAuth(req({ authorization: 'Basic d3Jvbmc6d3Jvbmc=' }))).denied.status, 401)
+  // adminOrStaffAuth, used by every other invite route, still lets Basic answer first
+  assert.equal((await staffAuth.adminOrStaffAuth(req(both))).staff, null)
+
+  const db = fakeDb()
+  const res = await post(routeWith(db), request(), both)
+  assert.equal(res.status, 200)
+  assert.equal(db.rpcs[0].args.p_scout_name, 'Testtrainer Eins')
+})
+
+test('form after the stored note changed: unsaved edits stay, an untouched form follows the server', () => {
+  const v1 = { ...input({ positive: 'Schnell' }), observedAt: '2026-10-30T16:00:00.000Z' }
+  const v2 = { ...input({ positive: 'Schnell, kopfballstark' }), observedAt: '2026-10-30T16:00:00.000Z' }
+  const untouched = shared.inputOf(v1)
+  assert.deepEqual(plain(shared.formAfterServerChange(untouched, v1, v2)), plain(shared.inputOf(v2)))
+  const edited = { ...untouched, developmentPoint: 'Linker Fuß' }
+  assert.equal(shared.formAfterServerChange(edited, v1, v2), edited, 'conflict: the typed evaluation stays')
+  assert.equal(shared.formAfterServerChange(edited, undefined, v2), edited, 'first save collided with one from another device')
+  assert.deepEqual(plain(shared.formAfterServerChange(shared.emptyEvaluation(), undefined, v2)), plain(shared.inputOf(v2)))
 })

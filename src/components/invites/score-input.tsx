@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AlertCircle, Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fieldLabel, formatScore, parseScoreText, validateScore, type TestField } from '@/lib/selection-tests'
+import { adoptServerValue, type SaveOutcome } from '@/lib/score-sync'
+import { ScoreConflictError } from '@/hooks/use-selection-tests'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -13,14 +15,23 @@ interface ScoreInputProps {
   value: number | null
   placeholder: string
   disabled: boolean
-  onSave: (value: number | null) => Promise<void>
+  onSave: (value: number | null) => Promise<SaveOutcome>
 }
 
 // One attempt's value. Saves when the field is left; a small mark in the corner says saved, saving or error.
-// While typing (or after a failed save) the typed text stays; otherwise it shows what the server holds.
+// The typed text stays authoritative while the tester is in the field, has typed something newer than what is being
+// saved, or a save failed; only then does it give way to what the server holds.
 export const ScoreInput = ({ field, value, placeholder, disabled, onSave }: ScoreInputProps) => {
-  const [draft, setDraft] = useState<string | null>(null)
+  const [draft, setDraftState] = useState<string | null>(null)
   const [state, setState] = useState<SaveState>('idle')
+  // Read inside the async save, where the render's values are already old
+  const draftRef = useRef<string | null>(null)
+  const focusedRef = useRef(false)
+  const inFlight = useRef(0)
+  const setDraft = (v: string | null) => {
+    draftRef.current = v
+    setDraftState(v)
+  }
 
   const fail = (message: string) => {
     setState('error')
@@ -28,23 +39,37 @@ export const ScoreInput = ({ field, value, placeholder, disabled, onSave }: Scor
   }
 
   const save = async () => {
-    if (draft === null) return
-    const parsed = parseScoreText(draft)
+    focusedRef.current = false
+    const sent = draftRef.current
+    if (sent === null) return
+    const parsed = parseScoreText(sent)
     if ('error' in parsed) return fail(`${fieldLabel(field)}: ${parsed.error}`)
     const problem = validateScore(field, parsed.value)
     if (problem) return fail(problem)
-    if (parsed.value === value) {
+    if (parsed.value === value && inFlight.current === 0) {
       setDraft(null)
       setState((s) => (s === 'error' ? 'idle' : s))
       return
     }
+    inFlight.current++
     setState('saving')
     try {
-      await onSave(parsed.value)
-      setDraft(null)
-      setState('saved')
+      // 'stale': a newer save of this field is on its way and decides what shows
+      if ((await onSave(parsed.value)) === 'stale') return
+      if (adoptServerValue(sent, draftRef.current, focusedRef.current)) {
+        setDraft(null)
+        setState('saved')
+      } else {
+        setState('idle')
+      }
     } catch (err) {
-      fail(err instanceof Error ? err.message : 'Speichern hat nicht geklappt')
+      if (err instanceof ScoreConflictError) {
+        fail(`${fieldLabel(field)}: Wert wurde inzwischen von jemand anderem geändert: ${formatScore(err.current) || 'leer'}. Bitte prüfen.`)
+      } else {
+        fail(err instanceof Error ? err.message : 'Speichern hat nicht geklappt')
+      }
+    } finally {
+      inFlight.current--
     }
   }
 
@@ -61,6 +86,7 @@ export const ScoreInput = ({ field, value, placeholder, disabled, onSave }: Scor
         disabled={disabled}
         value={draft ?? formatScore(value)}
         onChange={(e) => setDraft(e.target.value)}
+        onFocus={() => { focusedRef.current = true }}
         onBlur={save}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
         className={cn(

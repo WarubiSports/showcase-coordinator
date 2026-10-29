@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { adminOrStaffAuth } from '@/lib/staff-auth'
+import { staffFirstAuth } from '@/lib/staff-auth'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
 import { observedAtFor, parseEvaluationRequest, readStoredNote, scoutNameOf, toStoredNote } from '@/lib/selection-evaluation-note'
 import type { EvaluationEntry } from '@/lib/selection-evaluation'
@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic'
 // Staff evaluations of the Kader of one event, stored like the Hamburg showcase notes: itp.scouting_event_notes
 // (event_id = the Coordinator event id, player_id = the showcase_players id, scout_name = the writer). The table is
 // read-only for the service role; writes go through itp.save_scouting_event_note, which checks the version.
-// Everyone in the invite area reads all notes; only a Staff App login writes, and only under its own name.
+// Everyone in the invite area reads all notes; only a Staff App login writes, and only under its own name (the staff
+// session counts even when the browser also sends the admin Basic credentials).
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -23,7 +24,7 @@ const unavailable = () =>
   NextResponse.json({ error: 'Bewertungen sind gerade nicht erreichbar. Bitte gleich nochmal versuchen.' }, { status: 503 })
 
 export async function GET(req: NextRequest) {
-  const { denied, staff } = await adminOrStaffAuth(req)
+  const { denied, staff } = await staffFirstAuth(req)
   if (denied) return denied
   const eventId = req.nextUrl.searchParams.get('event_id')
   if (!eventId || !UUID.test(eventId)) return NextResponse.json({ error: 'event_id required' }, { status: 400 })
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { denied: authDenied, staff } = await adminOrStaffAuth(req)
+  const { denied: authDenied, staff } = await staffFirstAuth(req)
   const denied = authDenied ?? crossSite(req)
   if (denied) return denied
   const scout = scoutNameOf(staff)
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
   if (!result?.saved) {
     return NextResponse.json({
       error: 'version_conflict',
-      message: 'Deine Bewertung wurde inzwischen woanders gespeichert (z. B. auf einem anderen Gerät). Der aktuelle Stand ist neu geladen, bitte prüfen und nochmal speichern.',
+      message: 'Deine Bewertung wurde inzwischen woanders gespeichert (z. B. auf einem anderen Gerät). Deine Eingaben sind noch da: bitte prüfen und nochmal „Speichern“ drücken, das ersetzt den anderen Stand.',
       currentVersion: result?.version ?? null,
     }, { status: 409 })
   }

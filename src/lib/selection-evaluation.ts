@@ -69,5 +69,10 @@ export const inputOf = (note: Evaluation | undefined): EvaluationInput => {
   return { observedPosition, ratings, positive, developmentPoint, rawVoice, manualOutcome, footballCollegeFit }
 }
 
+// The stored note changed under an open form (a save, a reload, a version conflict): an untouched form follows
+// it, a form with unsaved edits keeps them, and the next "Speichern" saves against the new version
+export const formAfterServerChange = (form: EvaluationInput, before: Evaluation | undefined, after: Evaluation | undefined): EvaluationInput =>
+  JSON.stringify(form) === JSON.stringify(inputOf(before)) ? inputOf(after) : form
+
 export const savedAtLabel = (iso: string): string =>
   new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })

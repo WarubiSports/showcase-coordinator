@@ -6,6 +6,7 @@ import { test } from 'node:test'
 import ts from 'typescript'
 import * as dbCore from '../src/lib/admin-db-core.ts'
 import * as tests from '../src/lib/selection-tests.ts'
+import * as sync from '../src/lib/score-sync.ts'
 
 const require = createRequire(import.meta.url)
 const nextServer = require('next/server')
@@ -97,6 +98,40 @@ test('missing-column errors are recognised, other errors are not', () => {
   assert.equal(tests.isTestsMigrationPending(undefined), false)
 })
 
+test('saves of one field: only the latest answer counts, a quick second save expects the first one\'s value', () => {
+  const s = sync.createScoreSync()
+  const a = s.start('p1:sprint_10m_1', 1.8, 1.82)
+  assert.equal(a.expected, 1.82, 'first save expects what is on screen')
+  const b = s.start('p1:sprint_10m_1', 1.79, 1.82)
+  assert.equal(b.expected, 1.8, 'the second expects the value in flight, not the older one on screen')
+  const other = s.start('p1:agility_1', null, 2.4)
+  assert.equal(other.expected, 2.4, 'other fields are independent')
+  assert.equal(s.finish('p1:sprint_10m_1', b.seq), true, 'newer answer first: it counts')
+  assert.equal(s.finish('p1:sprint_10m_1', a.seq), false, 'the older answer arriving late is dropped')
+  assert.equal(s.finish('p1:agility_1', other.seq), true)
+  const c = s.start('p1:sprint_10m_1', null, 1.79)
+  assert.equal(c.expected, 1.79, 'nothing in flight any more: back to what is on screen')
+  const d = s.start('p1:sprint_10m_1', 1.7, 1.79)
+  assert.equal(d.expected, null, 'a clearing save in flight is expected as empty')
+  assert.equal(s.finish('p1:sprint_10m_1', c.seq), false, 'older answer first: dropped')
+  assert.equal(s.finish('p1:sprint_10m_1', d.seq), true)
+})
+
+test('after a save the field shows the server value only if nothing newer was typed and the field is left', () => {
+  assert.equal(sync.adoptServerValue('1,80', '1,80', false), true)
+  assert.equal(sync.adoptServerValue('1,80', '1,79', false), false, 'typed again while saving: keep the newer text')
+  assert.equal(sync.adoptServerValue('1,80', '1,80', true), false, 'back in the field: keep what is there')
+  assert.equal(sync.adoptServerValue('1,80', null, false), false)
+})
+
+test('expected values: exactly the changed fields, numbers or null', () => {
+  assert.deepEqual(tests.parseExpected({ agility_1: 2.4 }, { agility_1: null }), { expected: { agility_1: null } })
+  assert.deepEqual(tests.parseExpected({ agility_1: 2.4 }, { agility_1: 99 }), { expected: { agility_1: 99 } }, 'not range-checked')
+  for (const bad of [null, [], {}, { agility_2: 1 }, { agility_1: 1, agility_2: 1 }, { agility_1: Number.NaN }, { agility_1: '2,4' }]) {
+    assert.ok('error' in tests.parseExpected({ agility_1: 2.4 }, bad), JSON.stringify(bad))
+  }
+})
+
 // ---- the route, with a fake client ----
 
 const EVENT = '91cd147c-2937-40a6-b385-305ccbd68cf6'
@@ -132,9 +167,15 @@ const fakeDb = ({ pending = false } = {}) => {
         const missing = Object.keys(values).find((k) => NEW_COLUMNS.includes(k))
         return { data: null, error: { message: missing ? `Could not find the '${missing}' column of 'showcase_players' in the schema cache` : 'column showcase_players.sprint_5m_1 does not exist' } }
       }
-      const row = { ...players[eq('id')], ...values }
-      return { data: row, error: null }
+      // Like PostgREST: the row changes only when every filter matches (eq on a value, is on null)
+      const row = players[eq('id')]
+      const matches = row && eq('event_id') === EVENT && q.ops.every((o) =>
+        o[0] === 'is' ? (row[o[1]] ?? null) === null : o[0] !== 'eq' || ['id', 'event_id'].includes(o[1]) || row[o[1]] === o[2])
+      if (!matches) return { data: null, error: null }
+      Object.assign(row, values)
+      return { data: pick(row, select), error: null }
     }
+    if (q.table === 'showcase_players') return { data: players[eq('id')] ? pick(players[eq('id')], select) : null, error: null }
     throw new Error(`unexpected query on ${q.table}`)
   }
   const client = {
@@ -148,7 +189,7 @@ const fakeDb = ({ pending = false } = {}) => {
       return chain
     },
   }
-  return { client, calls }
+  return { client, calls, players }
 }
 
 const routeWith = (db) => {
@@ -207,24 +248,31 @@ test('PATCH: refuses foreign columns, bad numbers, other events and cross-site c
   const db = fakeDb()
   const route = routeWith(db)
   const base = { eventId: EVENT, playerId: P1 }
-  assert.equal((await patch(route, { ...base, values: { sprint_10m_1: 1.8 } }, { origin: 'https://attacker.example' })).status, 403)
-  assert.equal((await patch(route, { ...base, values: { sprint_10m_1: 1.8 } }, { authorization: '' })).status, 401)
+  const ok = { ...base, values: { sprint_10m_1: 1.8 }, expected: { sprint_10m_1: 1.82 } }
+  assert.equal((await patch(route, ok, { origin: 'https://attacker.example' })).status, 403)
+  assert.equal((await patch(route, ok, { authorization: '' })).status, 401)
   let res = await patch(route, { ...base, values: { jersey_number: 99 } })
   assert.equal(res.status, 400)
   assert.match((await res.json()).error, /Unbekanntes Feld/)
   res = await patch(route, { ...base, values: { sprint_30m_2: 45 } })
   assert.equal(res.status, 400)
   assert.equal((await res.json()).error, 'Sprint 30 m: bitte einen Wert zwischen 0,5 und 15 s eingeben')
-  assert.equal((await patch(route, { eventId: EVENT, values: { agility_1: 5 } })).status, 400)
+  assert.equal((await patch(route, { eventId: EVENT, values: { agility_1: 5 }, expected: { agility_1: null } })).status, 400)
+  // the value last seen is required for every changed field, and only for those
+  for (const expected of [undefined, {}, { agility_1: null, agility_2: null }, { agility_2: null }, { agility_1: '5' }]) {
+    res = await patch(route, { ...base, values: { agility_1: 5 }, expected })
+    assert.equal(res.status, 400, JSON.stringify(expected))
+    assert.equal((await res.json()).error, 'Bisheriger Wert fehlt')
+  }
   assert.equal(db.calls.length, 0, 'no query for a refused request')
-  res = await patch(route, { eventId: EVENT, playerId: OUTSIDER, values: { agility_1: 5 } })
+  res = await patch(route, { eventId: EVENT, playerId: OUTSIDER, values: { agility_1: 5 }, expected: { agility_1: null } })
   assert.equal(res.status, 404)
   assert.ok(!db.calls.some((q) => q.ops.some((o) => o[0] === 'update')), 'nothing written for a player outside the Kader')
 })
 
 test('PATCH: writes only the given test fields of that player and returns the row', async () => {
   const db = fakeDb()
-  const res = await patch(routeWith(db), { eventId: EVENT, playerId: P1, values: { sprint_10m_2: 1.79, broad_jump_1: null } })
+  const res = await patch(routeWith(db), { eventId: EVENT, playerId: P1, values: { sprint_10m_2: 1.79, broad_jump_1: null }, expected: { sprint_10m_2: null, broad_jump_1: 230 } })
   assert.equal(res.status, 200)
   const body = await res.json()
   assert.equal(body.sprint_10m_2, 1.79)
@@ -232,12 +280,33 @@ test('PATCH: writes only the given test fields of that player and returns the ro
   const update = db.calls.find((q) => q.table === 'showcase_players')
   const values = update.ops.find((o) => o[0] === 'update')[1]
   assert.deepEqual(Object.keys(values).sort(), ['broad_jump_1', 'sprint_10m_2', 'updated_at'])
-  assert.deepEqual(update.ops.filter((o) => o[0] === 'eq').map((o) => o.slice(1)), [['id', P1], ['event_id', EVENT]])
+  assert.deepEqual(update.ops.filter((o) => o[0] === 'eq' || o[0] === 'is').map((o) => o.slice(0, 3)),
+    [['eq', 'id', P1], ['eq', 'event_id', EVENT], ['is', 'sprint_10m_2', null], ['eq', 'broad_jump_1', 230]], 'one update, guarded per field')
+})
+
+test('PATCH: a value changed by someone else in between is a 409 with the stored values, and nothing is written', async () => {
+  const db = fakeDb()
+  const route = routeWith(db)
+  // Tester A saved 1.80 over the 1.82 both saw; tester B still sends 1.82 as the value seen
+  assert.equal((await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_10m_1: 1.8 }, expected: { sprint_10m_1: 1.82 } })).status, 200)
+  const res = await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_10m_1: 1.85 }, expected: { sprint_10m_1: 1.82 } })
+  assert.equal(res.status, 409)
+  const body = await res.json()
+  assert.equal(body.error, 'value_conflict')
+  assert.equal(body.current.sprint_10m_1, 1.8)
+  assert.equal(body.current.broad_jump_1, 230)
+  assert.equal(db.players[P1].sprint_10m_1, 1.8, 'B did not overwrite A')
+  // B saves again against the value now shown: accepted
+  assert.equal((await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_10m_1: 1.85 }, expected: { sprint_10m_1: 1.8 } })).status, 200)
+  // An empty field someone filled in between: same conflict
+  await patch(route, { eventId: EVENT, playerId: P2, values: { agility_1: 2.4 }, expected: { agility_1: null } })
+  assert.equal((await patch(route, { eventId: EVENT, playerId: P2, values: { agility_1: 2.5 }, expected: { agility_1: null } })).status, 409)
 })
 
 test('PATCH before the migration: a clear migration_pending answer, never a 500', async () => {
   for (const values of [{ sprint_5m_1: 1.05 }, { broad_jump_1: 240 }]) {
-    const res = await patch(routeWith(fakeDb({ pending: true })), { eventId: EVENT, playerId: P1, values })
+    const expected = Object.fromEntries(Object.keys(values).map((k) => [k, null]))
+    const res = await patch(routeWith(fakeDb({ pending: true })), { eventId: EVENT, playerId: P1, values, expected })
     assert.equal(res.status, 503)
     const body = await res.json()
     assert.equal(body.error, 'migration_pending')

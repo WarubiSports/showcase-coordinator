@@ -27,7 +27,8 @@ export const useEvaluations = (eventId: string | undefined) => {
     fetchEntries()
   }, [fetchEntries])
 
-  // Saves the own note. A version conflict reloads everything and throws the German explanation.
+  // Saves the own note. A version conflict reloads the notes (the form keeps its edits and takes the new version as
+  // its save base) and throws the German explanation.
   const saveEvaluation = async (playerId: string, note: EvaluationInput, expectedVersion: number) => {
     if (!eventId) throw new Error('Kein Event ausgewählt')
     const res = await fetch('/api/admin/invites/evaluations', {

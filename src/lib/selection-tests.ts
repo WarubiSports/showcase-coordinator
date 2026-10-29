@@ -90,6 +90,21 @@ export const parseTestValues = (input: unknown): { values: Partial<Record<TestFi
   return { values }
 }
 
+// The value the client last saw for each field it changes (compare-and-set): exactly the saved fields, each the
+// stored number or null. Not range-checked: it only has to match what the database holds.
+export const parseExpected = (
+  values: Partial<Record<TestField, number | null>>,
+  input: unknown,
+): { expected: Partial<Record<TestField, number | null>> } | { error: string } => {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) return { error: 'Bisheriger Wert fehlt' }
+  const fields = Object.keys(values)
+  const given = Object.entries(input)
+  if (given.length !== fields.length || !given.every(([f, v]) => fields.includes(f) && (v === null || (typeof v === 'number' && Number.isFinite(v))))) {
+    return { error: 'Bisheriger Wert fehlt' }
+  }
+  return { expected: Object.fromEntries(given) as Partial<Record<TestField, number | null>> }
+}
+
 export function getBest(val1: number | null, val2: number | null, lowerIsBetter = false): number | null {
   if (val1 === null && val2 === null) return null
   if (val1 === null) return val2

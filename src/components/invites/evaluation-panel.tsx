@@ -18,7 +18,7 @@ export const EvaluationPanel = ({ playerId, scout, entries, onSave }: Evaluation
   return (
     <div className="space-y-4">
       {scout ? (
-        <EvaluationForm key={own?.version ?? 0} scout={scout} own={own} onSave={(note, version) => onSave(playerId, note, version)} />
+        <EvaluationForm scout={scout} own={own} onSave={(note, version) => onSave(playerId, note, version)} />
       ) : (
         <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Eigene Bewertungen gehen nur mit dem Staff-App-Login. Hier nur lesen.

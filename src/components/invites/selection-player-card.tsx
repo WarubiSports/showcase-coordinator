@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { SelectionTestCard } from '@/components/invites/selection-test-card'
 import { EvaluationPanel } from '@/components/invites/evaluation-panel'
 import type { SelectionTestPlayer, TestField } from '@/lib/selection-tests'
+import type { SaveOutcome } from '@/lib/score-sync'
 import type { EvaluationEntry, EvaluationInput } from '@/lib/selection-evaluation'
 
 type View = 'tests' | 'evaluation'
@@ -12,7 +13,7 @@ type View = 'tests' | 'evaluation'
 interface SelectionPlayerCardProps {
   player: SelectionTestPlayer
   testsDisabled: boolean
-  onSaveScore: (playerId: string, field: TestField, value: number | null) => Promise<void>
+  onSaveScore: (playerId: string, field: TestField, value: number | null, onScreen: number | null) => Promise<SaveOutcome>
   scout: string | null
   evaluations: EvaluationEntry[]
   onSaveEvaluation: (playerId: string, note: EvaluationInput, expectedVersion: number) => Promise<void>

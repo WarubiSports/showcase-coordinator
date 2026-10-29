@@ -1,12 +1,13 @@
 'use client'
 
 import { ScoreInput } from '@/components/invites/score-input'
+import type { SaveOutcome } from '@/lib/score-sync'
 import { SPRINT_SPLITS, TESTS, bestOf, formatScore, type SelectionTestPlayer, type TestField, type TestKey } from '@/lib/selection-tests'
 
 interface SelectionTestCardProps {
   player: SelectionTestPlayer
   disabled: boolean
-  onSave: (playerId: string, field: TestField, value: number | null) => Promise<void>
+  onSave: (playerId: string, field: TestField, value: number | null, onScreen: number | null) => Promise<SaveOutcome>
 }
 
 const best = (player: SelectionTestPlayer, key: TestKey) => {
@@ -25,7 +26,7 @@ export const SelectionTestCard = ({ player, disabled, onSave }: SelectionTestCar
       value={player[field]}
       placeholder={placeholder}
       disabled={disabled}
-      onSave={(value) => onSave(player.id, field, value)}
+      onSave={(value) => onSave(player.id, field, value, player[field])}
     />
   )
 
