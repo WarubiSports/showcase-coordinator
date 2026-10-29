@@ -58,20 +58,25 @@ export const parseEvaluationRequest = (input: unknown): EvaluationRequest | { er
   }
 }
 
-// The stored note: Hamburg's complete key set, the fields this page does not ask for at Hamburg's defaults
-export const toStoredNote = (input: EvaluationInput, observedAt: string) => ({
-  attendance: '', jersey: '', group: '',
+const HAMBURG_DEFAULTS = {
+  attendance: '', jersey: '', group: '', evidenceConfidence: 'brief', nextEvidence: 'none', internalNextAction: 'no_current_action',
+  academicCurrentGrade: '', academicQualification: '', academicGraduationYear: '', footageReviewed: false,
+}
+
+// The note to store: the existing one (if any) with only this form's fields replaced, so anything entered elsewhere
+// (attendance, academics, footage reviewed, ...) stays; a new note gets Hamburg's defaults for those. The version
+// check of the save function guards the whole merged note. observedAt: kept from the existing note, else now.
+export const toStoredNote = (input: EvaluationInput, existing: unknown, now: string) => ({
+  ...HAMBURG_DEFAULTS,
+  ...(isObject(existing) ? existing : {}),
   observedPosition: input.observedPosition,
   ratings: input.ratings,
   positive: input.positive,
   developmentPoint: input.developmentPoint,
   rawVoice: input.rawVoice,
-  evidenceConfidence: 'brief', nextEvidence: 'none', internalNextAction: 'no_current_action',
   manualOutcome: input.manualOutcome,
   footballCollegeFit: input.footballCollegeFit,
-  academicCurrentGrade: '', academicQualification: '', academicGraduationYear: '',
-  footageReviewed: false,
-  observedAt,
+  observedAt: observedAtFor(existing, now),
 })
 
 const validTime = (v: unknown): v is string => typeof v === 'string' && v.length <= 40 && Number.isFinite(Date.parse(v))

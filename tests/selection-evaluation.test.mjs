@@ -63,7 +63,7 @@ test('a save request: exact keys, enums, 1-5 ratings, capped text', () => {
 })
 
 test('the stored note has Hamburg\'s full key set and valid Hamburg defaults', () => {
-  const stored = note.toStoredNote(input({ manualOutcome: 'ready_for_recruiting_review', footballCollegeFit: 'no' }), '2026-10-30T16:05:00.000Z')
+  const stored = note.toStoredNote(input({ manualOutcome: 'ready_for_recruiting_review', footballCollegeFit: 'no' }), null, '2026-10-30T16:05:00.000Z')
   assert.deepEqual(Object.keys(stored).sort(), [...HAMBURG_NOTE_KEYS].sort())
   assert.deepEqual(Object.keys(stored.ratings), ['technical', 'athletic', 'tactical', 'mentality', 'overall'])
   assert.equal(stored.attendance, '')
@@ -89,9 +89,10 @@ test('writer name from the staff profile only; first observation time is kept', 
 
 // ---- the route, with a fake client ----
 
-const fakeDb = ({ invariant = null, rpcError = false } = {}) => {
+const fakeDb = ({ invariant = null, rpcError = false, seed = [] } = {}) => {
   const rows = [
-    { event_id: EVENT, player_id: P2, scout_name: 'Testtrainer Zwei', note: note.toStoredNote(input({ positive: 'Schnell' }), '2026-10-30T15:00:00.000Z'), version: 3, updated_at: '2026-10-30T15:10:00.000Z' },
+    ...seed,
+    { event_id: EVENT, player_id: P2, scout_name: 'Testtrainer Zwei', note: note.toStoredNote(input({ positive: 'Schnell' }), null, '2026-10-30T15:00:00.000Z'), version: 3, updated_at: '2026-10-30T15:10:00.000Z' },
     { event_id: EVENT, player_id: OUTSIDER, scout_name: 'Testtrainer Zwei', note: {}, version: 1, updated_at: '2026-10-30T15:20:00.000Z' },
   ]
   const calls = []
@@ -258,4 +259,34 @@ test('form after the stored note changed: unsaved edits stay, an untouched form 
   assert.equal(shared.formAfterServerChange(edited, v1, v2), edited, 'conflict: the typed evaluation stays')
   assert.equal(shared.formAfterServerChange(edited, undefined, v2), edited, 'first save collided with one from another device')
   assert.deepEqual(plain(shared.formAfterServerChange(shared.emptyEvaluation(), undefined, v2)), plain(shared.inputOf(v2)))
+})
+
+// A note with Hamburg fields this page does not show (as the Hamburg workflow could have filled them)
+const HAMBURG_FILLED = {
+  ...note.toStoredNote(input({ positive: 'Alt', ratings: { technical: 2, athletic: 2, tactical: 2, mentality: 2, overall: 2 } }), null, '2026-10-30T15:00:00.000Z'),
+  attendance: 'present', jersey: '7', group: 'gruppe-a', evidenceConfidence: 'strong', nextEvidence: 'academics',
+  internalNextAction: 'review_now', academicCurrentGrade: '2,1', academicQualification: 'Abitur', academicGraduationYear: '2027',
+  footageReviewed: true, extraFromElsewhere: 'bleibt',
+}
+
+test('saving over an existing note replaces only this form\'s fields, everything else stays', () => {
+  const edited = input({ positive: 'Neu', ratings: { technical: 4, athletic: null, tactical: 3, mentality: 5, overall: 4 }, manualOutcome: 'more_evidence_needed', footballCollegeFit: 'yes' })
+  const merged = note.toStoredNote(edited, HAMBURG_FILLED, '2026-10-30T18:00:00.000Z')
+  for (const k of ['attendance', 'jersey', 'group', 'evidenceConfidence', 'nextEvidence', 'internalNextAction', 'academicCurrentGrade',
+    'academicQualification', 'academicGraduationYear', 'footageReviewed', 'extraFromElsewhere']) assert.equal(merged[k], HAMBURG_FILLED[k], k)
+  assert.equal(merged.positive, 'Neu')
+  assert.deepEqual(plain(merged.ratings), plain(edited.ratings))
+  assert.equal(merged.manualOutcome, 'more_evidence_needed')
+  assert.equal(merged.observedAt, '2026-10-30T15:00:00.000Z', 'first observation kept')
+  assert.equal(note.toStoredNote(edited, null, '2026-10-30T18:00:00.000Z').footageReviewed, false, 'new note: Hamburg default')
+})
+
+test('POST over an existing Hamburg-filled note keeps its other fields in what is saved', async () => {
+  const db = fakeDb({ seed: [{ event_id: EVENT, player_id: P1, scout_name: 'Testtrainer Eins', note: HAMBURG_FILLED, version: 2, updated_at: '2026-10-30T15:00:00.000Z' }] })
+  const res = await post(routeWith(db), request({ expectedVersion: 2, note: input({ positive: 'Neu' }) }))
+  assert.equal(res.status, 200)
+  const saved = db.rpcs[0].args.p_note
+  assert.deepEqual([saved.attendance, saved.academicQualification, saved.footageReviewed, saved.extraFromElsewhere, saved.positive],
+    ['present', 'Abitur', true, 'bleibt', 'Neu'])
+  assert.equal(db.rpcs[0].args.p_expected_version, 2)
 })

@@ -98,23 +98,76 @@ test('missing-column errors are recognised, other errors are not', () => {
   assert.equal(tests.isTestsMigrationPending(undefined), false)
 })
 
-test('saves of one field: only the latest answer counts, a quick second save expects the first one\'s value', () => {
-  const s = sync.createScoreSync()
-  const a = s.start('p1:sprint_10m_1', 1.8, 1.82)
-  assert.equal(a.expected, 1.82, 'first save expects what is on screen')
-  const b = s.start('p1:sprint_10m_1', 1.79, 1.82)
-  assert.equal(b.expected, 1.8, 'the second expects the value in flight, not the older one on screen')
-  const other = s.start('p1:agility_1', null, 2.4)
-  assert.equal(other.expected, 2.4, 'other fields are independent')
-  assert.equal(s.finish('p1:sprint_10m_1', b.seq), true, 'newer answer first: it counts')
-  assert.equal(s.finish('p1:sprint_10m_1', a.seq), false, 'the older answer arriving late is dropped')
-  assert.equal(s.finish('p1:agility_1', other.seq), true)
-  const c = s.start('p1:sprint_10m_1', null, 1.79)
-  assert.equal(c.expected, 1.79, 'nothing in flight any more: back to what is on screen')
-  const d = s.start('p1:sprint_10m_1', 1.7, 1.79)
-  assert.equal(d.expected, null, 'a clearing save in flight is expected as empty')
-  assert.equal(s.finish('p1:sprint_10m_1', c.seq), false, 'older answer first: dropped')
-  assert.equal(s.finish('p1:sprint_10m_1', d.seq), true)
+const deferred = () => {
+  let resolve, reject
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej })
+  return { promise, resolve, reject }
+}
+const tick = () => new Promise((r) => setTimeout(r, 0))
+
+test('saves of one field run one after another; the next expects what the previous one stored', async () => {
+  const q = sync.createScoreQueue()
+  const sent = []
+  const answers = [deferred(), deferred()]
+  const send = (i) => (expected) => { sent.push({ i, expected }); return answers[i].promise }
+  const first = q.run('p1:sprint_10m_1', 1.82, send(0))
+  const second = q.run('p1:sprint_10m_1', 1.82, send(1))
+  await tick()
+  assert.deepEqual(sent, [{ i: 0, expected: 1.82 }], 'the correction waits: it cannot overtake the first save')
+  answers[0].resolve({ stored: 1.85, conflict: false })
+  await tick()
+  assert.deepEqual(sent[1], { i: 1, expected: 1.85 }, 'and then expects what the first one stored')
+  answers[1].resolve({ stored: 1.86, conflict: false })
+  assert.deepEqual(await first, { ok: true, result: { stored: 1.85, conflict: false }, latest: false })
+  assert.deepEqual(await second, { ok: true, result: { stored: 1.86, conflict: false }, latest: true })
+  // Queue drained: a later save goes back to what is on screen
+  const later = await q.run('p1:sprint_10m_1', 1.9, async (expected) => ({ stored: expected, conflict: false }))
+  assert.equal(later.result.stored, 1.9)
+})
+
+test('after a failed or conflicting save the next one keeps the older guard; other fields are not held up', async () => {
+  const q = sync.createScoreQueue()
+  const seen = []
+  const failing = q.run('p1:agility_1', 2.4, async () => { throw new Error('offline') })
+  const next = q.run('p1:agility_1', 2.4, async (expected) => { seen.push(expected); return { stored: 2.3, conflict: false } })
+  const failed = await failing
+  assert.equal(failed.ok, false)
+  assert.equal(failed.latest, false)
+  assert.equal((await next).ok, true)
+  assert.deepEqual(seen, [2.4], 'nothing stored by the failed save: still guarded by the value on screen')
+
+  const conflicted = q.run('p1:agility_2', null, async () => ({ stored: 2.5, conflict: true }))
+  const retry = q.run('p1:agility_2', null, async (expected) => { seen.push(expected); return { stored: 2.5, conflict: true } })
+  assert.equal((await conflicted).result.conflict, true)
+  assert.equal((await retry).latest, true)
+  assert.equal(seen[1], null, 'after a conflict the queued save does not take the other tester\'s value as its base')
+
+  const slow = deferred()
+  const blocked = q.run('p1:sprint_5m_1', null, () => slow.promise)
+  const other = await q.run('p2:sprint_5m_1', null, async () => ({ stored: 1.1, conflict: false }))
+  assert.equal(other.ok, true, 'another field saves while the first one is still out')
+  slow.resolve({ stored: 1.05, conflict: false })
+  assert.equal((await blocked).ok, true)
+})
+
+test('a roster reload that started before a save keeps the saved field and takes the rest', async () => {
+  const q = sync.createScoreQueue()
+  const since = q.now()
+  await q.run('p1:sprint_10m_1', 1.82, async () => ({ stored: 1.79, conflict: false }))
+  const current = [{ id: 'p1', sprint_10m_1: 1.79, agility_1: null }]
+  const fresh = [{ id: 'p1', sprint_10m_1: 1.82, agility_1: 2.4 }, { id: 'p2', sprint_10m_1: 1.9, agility_1: null }]
+  const merged = sync.mergeFetched(fresh, current, ['sprint_10m_1', 'agility_1'], (id, f) => q.touchedSince(`${id}:${f}`, since))
+  assert.deepEqual(merged, [{ id: 'p1', sprint_10m_1: 1.79, agility_1: 2.4 }, { id: 'p2', sprint_10m_1: 1.9, agility_1: null }])
+  // A reload started after the save takes everything from the server
+  const after = q.now()
+  assert.deepEqual(sync.mergeFetched(fresh, current, ['sprint_10m_1', 'agility_1'], (id, f) => q.touchedSince(`${id}:${f}`, after)), fresh)
+  // A save still queued when the reload answers counts as well
+  const pending = deferred()
+  const t = q.now()
+  const queued = q.run('p1:agility_1', null, () => pending.promise)
+  assert.equal(q.touchedSince('p1:agility_1', t), true)
+  pending.resolve({ stored: 2.5, conflict: false })
+  await queued
 })
 
 test('after a save the field shows the server value only if nothing newer was typed and the field is left', () => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { staffFirstAuth } from '@/lib/staff-auth'
 import { isSameOriginJsonRequest } from '@/lib/admin-db-core'
-import { observedAtFor, parseEvaluationRequest, readStoredNote, scoutNameOf, toStoredNote } from '@/lib/selection-evaluation-note'
+import { parseEvaluationRequest, readStoredNote, scoutNameOf, toStoredNote } from '@/lib/selection-evaluation-note'
 import type { EvaluationEntry } from '@/lib/selection-evaluation'
 
 export const dynamic = 'force-dynamic'
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   if (link.error || own.error) return unavailable()
   if (!link.data?.length) return NextResponse.json({ error: 'Spieler ist nicht im Kader dieses Events' }, { status: 404 })
 
-  const stored = toStoredNote(note, observedAtFor(own.data?.note, new Date().toISOString()))
+  const stored = toStoredNote(note, own.data?.note, new Date().toISOString())
   const { data, error } = await db.rpc('save_scouting_event_note', {
     p_event_id: eventId,
     p_player_id: playerId,

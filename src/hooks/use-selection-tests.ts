@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import type { SelectionTestPlayer, TestField } from '@/lib/selection-tests'
-import { createScoreSync, type SaveOutcome } from '@/lib/score-sync'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { TEST_FIELDS, type SelectionTestPlayer, type TestField } from '@/lib/selection-tests'
+import { createScoreQueue, mergeFetched, type SaveOutcome } from '@/lib/score-sync'
 
 // Someone else saved this field in between; carries the value stored now
 export class ScoreConflictError extends Error {
@@ -27,8 +27,13 @@ export const useSelectionTests = (eventId: string | undefined) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [migrationPending, setMigrationPending] = useState(false)
+  const [queue] = useState(createScoreQueue)
+  const lastLoad = useRef(0)
 
+  // A reload keeps the fields saved or queued since it started, and an older reload answering late is dropped
   const fetchRoster = useCallback(async () => {
+    const load = ++lastLoad.current
+    const since = queue.now()
     setIsLoading(true)
     setError(null)
     try {
@@ -36,51 +41,45 @@ export const useSelectionTests = (eventId: string | undefined) => {
       const body = await call<{ players: SelectionTestPlayer[]; migrationPending: boolean }>(
         `/api/admin/invites/tests?event_id=${encodeURIComponent(eventId)}`,
       )
-      setPlayers(body.players)
+      if (load !== lastLoad.current) return
+      setPlayers((prev) => mergeFetched(body.players, prev, TEST_FIELDS, (id, f) => queue.touchedSince(`${id}:${f}`, since)))
       setMigrationPending(body.migrationPending)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kader konnte nicht geladen werden')
+      if (load === lastLoad.current) setError(err instanceof Error ? err.message : 'Kader konnte nicht geladen werden')
     } finally {
-      setIsLoading(false)
+      if (load === lastLoad.current) setIsLoading(false)
     }
-  }, [eventId])
+  }, [eventId, queue])
 
   useEffect(() => {
     fetchRoster()
   }, [fetchRoster])
 
-  const [sync] = useState(createScoreSync)
-
-  // Saves one field. Only that field is taken from the answer, and only from the answer to the latest save of the
-  // field ('stale' otherwise). A conflict (someone else changed it) puts the stored value on screen and throws it.
+  // Saves one field, queued behind earlier saves of the same field. Every answer puts what the server stored on the
+  // page, in order; only the latest save's answer reports back to the input ('stale' for the others). A conflict
+  // (someone else changed it) throws the stored value.
   const saveScore = async (playerId: string, field: TestField, value: number | null, onScreen: number | null): Promise<SaveOutcome> => {
     if (!eventId) throw new Error('Kein Event ausgewählt')
-    const key = `${playerId}:${field}`
-    const { seq, expected } = sync.start(key, value, onScreen)
     const setField = (v: number | null) => setPlayers((prev) => prev.map((p) => (p.id === playerId ? { ...p, [field]: v } : p)))
-    let res: Response
-    let body: Record<string, unknown>
-    try {
-      res = await fetch('/api/admin/invites/tests', {
+    const settled = await queue.run(`${playerId}:${field}`, onScreen, async (expected) => {
+      const res = await fetch('/api/admin/invites/tests', {
         method: 'PATCH',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId, playerId, values: { [field]: value }, expected: { [field]: expected } }),
       })
-      body = await res.json().catch(() => ({}))
-    } catch (err) {
-      if (!sync.finish(key, seq)) return 'stale'
-      throw err
-    }
-    if (!sync.finish(key, seq)) return 'stale'
-    if (res.status === 409 && body.current) {
-      const current = (body.current as SelectionTestPlayer)[field]
-      setField(current)
-      if (current === value) return 'applied'
-      throw new ScoreConflictError(current)
-    }
-    if (!res.ok) throw new Error(String(body.message || body.error || `Anfrage fehlgeschlagen (${res.status})`))
-    setField((body as unknown as SelectionTestPlayer)[field])
+      const body = await res.json().catch(() => ({}))
+      if (res.status === 409 && body.current) {
+        const current = (body.current as SelectionTestPlayer)[field]
+        return { stored: current, conflict: current !== value }
+      }
+      if (!res.ok) throw new Error(String(body.message || body.error || `Anfrage fehlgeschlagen (${res.status})`))
+      return { stored: (body as SelectionTestPlayer)[field], conflict: false }
+    })
+    if (settled.ok) setField(settled.result.stored)
+    if (!settled.latest) return 'stale'
+    if (!settled.ok) throw settled.error
+    if (settled.result.conflict) throw new ScoreConflictError(settled.result.stored)
     return 'applied'
   }
 
