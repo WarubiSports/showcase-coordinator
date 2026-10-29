@@ -74,5 +74,24 @@ export const inputOf = (note: Evaluation | undefined): EvaluationInput => {
 export const formAfterServerChange = (form: EvaluationInput, before: Evaluation | undefined, after: Evaluation | undefined): EvaluationInput =>
   JSON.stringify(form) === JSON.stringify(inputOf(before)) ? inputOf(after) : form
 
+// Marks when the own note of a player was last saved or had a save in flight, to compare with a reload's start
+export const createTouchClock = () => {
+  const touchedAt = new Map<string, number>()
+  let clock = 0
+  return {
+    touch: (playerId: string) => { touchedAt.set(playerId, ++clock) },
+    now: () => clock,
+    touchedSince: (playerId: string, since: number) => (touchedAt.get(playerId) ?? 0) > since,
+  }
+}
+
+// A reload of the notes, except the own note of players saved (or saving) since the reload started: those keep
+// what the page holds, so an older answer cannot put back an older note or version
+export const mergeFetchedEntries = (fresh: EvaluationEntry[], current: EvaluationEntry[], scout: string | null, keep: (playerId: string) => boolean) => {
+  if (!scout) return fresh
+  const mine = (e: EvaluationEntry) => e.scout === scout && keep(e.playerId)
+  return [...current.filter(mine), ...fresh.filter((e) => !mine(e))]
+}
+
 export const savedAtLabel = (iso: string): string =>
   new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })

@@ -290,3 +290,20 @@ test('POST over an existing Hamburg-filled note keeps its other fields in what i
     ['present', 'Abitur', true, 'bleibt', 'Neu'])
   assert.equal(db.rpcs[0].args.p_expected_version, 2)
 })
+
+test('a reload answering after a newer own save does not put back the older note; colleagues still update', () => {
+  const entry = (playerId, scout, version, positive) => ({ playerId, scout, version, updatedAt: `2026-10-30T16:0${version}:00.000Z`, note: { ...input({ positive }), observedAt: '' } })
+  const clock = shared.createTouchClock()
+  const since = clock.now() // reload starts
+  clock.touch(P1) // own save starts
+  clock.touch(P1) // and settles with version 2
+  const current = [entry(P1, 'Testtrainer Eins', 2, 'neu'), entry(P2, 'Testtrainer Zwei', 3, 'alt')]
+  const fresh = [entry(P1, 'Testtrainer Eins', 1, 'vorher'), entry(P2, 'Testtrainer Zwei', 4, 'neu vom Kollegen')]
+  const merged = shared.mergeFetchedEntries(fresh, current, 'Testtrainer Eins', (id) => clock.touchedSince(id, since))
+  assert.deepEqual(merged.map((e) => [e.playerId, e.scout, e.version]).sort(), [[P1, 'Testtrainer Eins', 2], [P2, 'Testtrainer Zwei', 4]].sort())
+  // A reload started after the save takes the server's own note (e.g. after a version conflict)
+  const after = clock.now()
+  assert.deepEqual(shared.mergeFetchedEntries(fresh, current, 'Testtrainer Eins', (id) => clock.touchedSince(id, after)), fresh)
+  // Without a writer (basic auth) nothing is held back
+  assert.deepEqual(shared.mergeFetchedEntries(fresh, current, null, () => true), fresh)
+})
