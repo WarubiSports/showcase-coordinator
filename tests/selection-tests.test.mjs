@@ -35,7 +35,8 @@ test('the migration adds exactly the new columns; broad jump reuses broad_jump_1
   const added = [...sql.matchAll(/^\s*add column if not exists ([a-z0-9_]+) numeric/gm)].map((m) => m[1])
   assert.deepEqual(added, NEW_COLUMNS)
   assert.match(sql, /^alter table itp\.showcase_players$/m)
-  assert.deepEqual([...tests.TEST_FIELDS].sort(), [...NEW_COLUMNS, 'broad_jump_1', 'broad_jump_2'].sort())
+  const unused = ['sprint_10m_1', 'sprint_10m_2'] // no 10 m split is taken (Max, 29.10.2026); the columns stay
+  assert.deepEqual([...tests.TEST_FIELDS].sort(), [...NEW_COLUMNS.filter((c) => !unused.includes(c)), 'broad_jump_1', 'broad_jump_2'].sort())
   for (const line of sql.split('\n').filter((l) => /drop column/.test(l))) assert.match(line, /^--/, 'rollback stays commented')
 })
 
@@ -55,29 +56,45 @@ test('typed values: comma or dot, empty clears, anything else is refused', () =>
 test('plausible ranges per test, with a German message', () => {
   const ok = (field, v) => assert.equal(tests.validateScore(field, v), null, `${field} ${v}`)
   const no = (field, v) => assert.match(tests.validateScore(field, v) ?? '', /bitte einen Wert zwischen/, `${field} ${v}`)
-  ok('sprint_5m_1', 0.5); ok('sprint_5m_1', 1.05); ok('sprint_30m_2', 15); no('sprint_10m_1', 0.4); no('sprint_20m_2', 15.01)
+  ok('sprint_5m_1', 0.5); ok('sprint_5m_1', 1.05); ok('sprint_30m_2', 15); no('sprint_20m_1', 0.4); no('sprint_20m_2', 15.01)
   ok('sprint_40yd_1', 4.95); no('sprint_40yd_2', 10.5)
   ok('agility_1', 4.8); ok('agility_2', 17.3); no('agility_1', 31)
   ok('broad_jump_1', 245); no('broad_jump_2', 49); no('broad_jump_1', 401)
   ok('sprint_5m_1', null); no('sprint_5m_1', '1.05'); no('sprint_5m_1', Number.NaN)
   assert.equal(tests.validateScore('broad_jump_1', 20), 'Weitsprung: bitte einen Wert zwischen 50 und 400 cm eingeben')
-  assert.equal(tests.validateScore('sprint_10m_1', 99), 'Sprint 10 m: bitte einen Wert zwischen 0,5 und 15 s eingeben')
+  assert.equal(tests.validateScore('sprint_20m_1', 99), 'Sprint 20 m: bitte einen Wert zwischen 0,5 und 15 s eingeben')
 })
 
 test('save values: whitelist only, every value checked', () => {
-  assert.deepEqual(tests.parseTestValues({ sprint_10m_1: 1.82, broad_jump_2: null }), { values: { sprint_10m_1: 1.82, broad_jump_2: null } })
+  assert.deepEqual(tests.parseTestValues({ sprint_20m_1: 1.82, broad_jump_2: null }), { values: { sprint_20m_1: 1.82, broad_jump_2: null } })
   assert.match(tests.parseTestValues({ jersey_number: 7 }).error, /Unbekanntes Feld: jersey_number/)
   assert.match(tests.parseTestValues({ sprint_1: 4.5 }).error, /Unbekanntes Feld: sprint_1/, 'the legacy sprint stays out')
-  assert.match(tests.parseTestValues({ sprint_10m_1: 1.8, name: 'x' }).error, /Unbekanntes Feld/)
+  assert.match(tests.parseTestValues({ sprint_20m_1: 1.8, name: 'x' }).error, /Unbekanntes Feld/)
   assert.ok('error' in tests.parseTestValues({}))
   assert.ok('error' in tests.parseTestValues(null))
   assert.ok('error' in tests.parseTestValues([1]))
   assert.ok('error' in tests.parseTestValues({ agility_1: 99 }))
+  assert.match(tests.parseTestValues({ sprint_10m_1: 1.8 }).error, /Unbekanntes Feld: sprint_10m_1/, 'no 10 m split any more')
+})
+
+test('top speed: 10 m over the 20 to 30 m split in km/h, best attempt, nothing made up', () => {
+  const p = tests.toTestPlayer({ id: 'p', name: 'A', sprint_20m_1: 3.1, sprint_30m_1: 4.35, sprint_20m_2: 3.05, sprint_30m_2: 4.25 })
+  assert.equal(tests.topSpeedKmh(p, 1), 28.8) // 36 / 1.25
+  assert.equal(tests.topSpeedKmh(p, 2), 30) // 36 / 1.2
+  assert.equal(tests.bestTopSpeed(p), 30)
+  const one = tests.toTestPlayer({ id: 'p', name: 'A', sprint_20m_1: 3.1, sprint_30m_1: 4.35, sprint_30m_2: 4.2 })
+  assert.equal(tests.topSpeedKmh(one, 2), null, 'needs both times of the attempt')
+  assert.equal(tests.bestTopSpeed(one), 28.8)
+  const slipped = tests.toTestPlayer({ id: 'p', name: 'A', sprint_20m_1: 3.1, sprint_30m_1: 3.2, sprint_20m_2: 4.4, sprint_30m_2: 4.3 })
+  assert.equal(tests.topSpeedKmh(slipped, 1), null, '360 km/h is a typo, not a speed')
+  assert.equal(tests.topSpeedKmh(slipped, 2), null, '30 m before 20 m')
+  assert.equal(tests.bestTopSpeed(slipped), null)
+  assert.equal(tests.bestTopSpeed(tests.toTestPlayer({ id: 'p', name: 'A' })), null)
 })
 
 test('best value: lowest time, longest jump, one attempt is enough', () => {
-  const p = tests.toTestPlayer({ id: 'p', name: 'A', sprint_10m_1: 1.9, sprint_10m_2: 1.82, broad_jump_1: 230, broad_jump_2: 241, agility_2: 4.7 })
-  assert.equal(tests.bestOf(p, 'sprint_10m'), 1.82)
+  const p = tests.toTestPlayer({ id: 'p', name: 'A', sprint_20m_1: 1.9, sprint_20m_2: 1.82, broad_jump_1: 230, broad_jump_2: 241, agility_2: 4.7 })
+  assert.equal(tests.bestOf(p, 'sprint_20m'), 1.82)
   assert.equal(tests.bestOf(p, 'broad_jump'), 241)
   assert.equal(tests.bestOf(p, 'agility'), 4.7)
   assert.equal(tests.bestOf(p, 'sprint_5m'), null)
@@ -110,8 +127,8 @@ test('saves of one field run one after another; the next expects what the previo
   const sent = []
   const answers = [deferred(), deferred()]
   const send = (i) => (expected) => { sent.push({ i, expected }); return answers[i].promise }
-  const first = q.run('p1:sprint_10m_1', 1.82, send(0))
-  const second = q.run('p1:sprint_10m_1', 1.82, send(1))
+  const first = q.run('p1:sprint_20m_1', 1.82, send(0))
+  const second = q.run('p1:sprint_20m_1', 1.82, send(1))
   await tick()
   assert.deepEqual(sent, [{ i: 0, expected: 1.82 }], 'the correction waits: it cannot overtake the first save')
   answers[0].resolve({ stored: 1.85, conflict: false })
@@ -121,7 +138,7 @@ test('saves of one field run one after another; the next expects what the previo
   assert.deepEqual(await first, { ok: true, result: { stored: 1.85, conflict: false }, latest: false })
   assert.deepEqual(await second, { ok: true, result: { stored: 1.86, conflict: false }, latest: true })
   // Queue drained: a later save goes back to what is on screen
-  const later = await q.run('p1:sprint_10m_1', 1.9, async (expected) => ({ stored: expected, conflict: false }))
+  const later = await q.run('p1:sprint_20m_1', 1.9, async (expected) => ({ stored: expected, conflict: false }))
   assert.equal(later.result.stored, 1.9)
 })
 
@@ -153,14 +170,14 @@ test('after a failed or conflicting save the next one keeps the older guard; oth
 test('a roster reload that started before a save keeps the saved field and takes the rest', async () => {
   const q = sync.createScoreQueue()
   const since = q.now()
-  await q.run('p1:sprint_10m_1', 1.82, async () => ({ stored: 1.79, conflict: false }))
-  const current = [{ id: 'p1', sprint_10m_1: 1.79, agility_1: null }]
-  const fresh = [{ id: 'p1', sprint_10m_1: 1.82, agility_1: 2.4 }, { id: 'p2', sprint_10m_1: 1.9, agility_1: null }]
-  const merged = sync.mergeFetched(fresh, current, ['sprint_10m_1', 'agility_1'], (id, f) => q.touchedSince(`${id}:${f}`, since))
-  assert.deepEqual(merged, [{ id: 'p1', sprint_10m_1: 1.79, agility_1: 2.4 }, { id: 'p2', sprint_10m_1: 1.9, agility_1: null }])
+  await q.run('p1:sprint_20m_1', 1.82, async () => ({ stored: 1.79, conflict: false }))
+  const current = [{ id: 'p1', sprint_20m_1: 1.79, agility_1: null }]
+  const fresh = [{ id: 'p1', sprint_20m_1: 1.82, agility_1: 2.4 }, { id: 'p2', sprint_20m_1: 1.9, agility_1: null }]
+  const merged = sync.mergeFetched(fresh, current, ['sprint_20m_1', 'agility_1'], (id, f) => q.touchedSince(`${id}:${f}`, since))
+  assert.deepEqual(merged, [{ id: 'p1', sprint_20m_1: 1.79, agility_1: 2.4 }, { id: 'p2', sprint_20m_1: 1.9, agility_1: null }])
   // A reload started after the save takes everything from the server
   const after = q.now()
-  assert.deepEqual(sync.mergeFetched(fresh, current, ['sprint_10m_1', 'agility_1'], (id, f) => q.touchedSince(`${id}:${f}`, after)), fresh)
+  assert.deepEqual(sync.mergeFetched(fresh, current, ['sprint_20m_1', 'agility_1'], (id, f) => q.touchedSince(`${id}:${f}`, after)), fresh)
   // A save still queued when the reload answers counts as well
   const pending = deferred()
   const t = q.now()
@@ -196,7 +213,7 @@ const OUTSIDER = '44444444-4444-4444-8444-444444444444'
 const fakeDb = ({ pending = false } = {}) => {
   const calls = []
   const players = {
-    [P1]: { id: P1, name: 'Testspieler Eins', position: 'ZM', jersey_number: 10, broad_jump_1: 230, sprint_10m_1: 1.82 },
+    [P1]: { id: P1, name: 'Testspieler Eins', position: 'ZM', jersey_number: 10, broad_jump_1: 230, sprint_20m_1: 1.82 },
     [P2]: { id: P2, name: 'Testspieler Zwei', position: 'TW', jersey_number: null },
     [P3]: { id: P3, name: 'Testspieler Drei', position: null, jersey_number: 4 },
   }
@@ -280,7 +297,7 @@ test('GET: the Kader with every test field, sorted, one card per sign-up', async
   assert.equal(body.migrationPending, false)
   assert.deepEqual(body.players.map((p) => p.name), ['Testspieler Drei', 'Testspieler Eins', 'Testspieler Zwei'])
   const one = body.players[1]
-  assert.equal(one.sprint_10m_1, 1.82)
+  assert.equal(one.sprint_20m_1, 1.82)
   assert.equal(one.broad_jump_1, 230)
   assert.equal(one.agility_2, null)
   assert.deepEqual(Object.keys(one).sort(), ['id', 'jersey_number', 'name', 'position', ...tests.TEST_FIELDS].sort())
@@ -301,7 +318,7 @@ test('PATCH: refuses foreign columns, bad numbers, other events and cross-site c
   const db = fakeDb()
   const route = routeWith(db)
   const base = { eventId: EVENT, playerId: P1 }
-  const ok = { ...base, values: { sprint_10m_1: 1.8 }, expected: { sprint_10m_1: 1.82 } }
+  const ok = { ...base, values: { sprint_20m_1: 1.8 }, expected: { sprint_20m_1: 1.82 } }
   assert.equal((await patch(route, ok, { origin: 'https://attacker.example' })).status, 403)
   assert.equal((await patch(route, ok, { authorization: '' })).status, 401)
   let res = await patch(route, { ...base, values: { jersey_number: 99 } })
@@ -325,32 +342,32 @@ test('PATCH: refuses foreign columns, bad numbers, other events and cross-site c
 
 test('PATCH: writes only the given test fields of that player and returns the row', async () => {
   const db = fakeDb()
-  const res = await patch(routeWith(db), { eventId: EVENT, playerId: P1, values: { sprint_10m_2: 1.79, broad_jump_1: null }, expected: { sprint_10m_2: null, broad_jump_1: 230 } })
+  const res = await patch(routeWith(db), { eventId: EVENT, playerId: P1, values: { sprint_20m_2: 1.79, broad_jump_1: null }, expected: { sprint_20m_2: null, broad_jump_1: 230 } })
   assert.equal(res.status, 200)
   const body = await res.json()
-  assert.equal(body.sprint_10m_2, 1.79)
+  assert.equal(body.sprint_20m_2, 1.79)
   assert.equal(body.broad_jump_1, null)
   const update = db.calls.find((q) => q.table === 'showcase_players')
   const values = update.ops.find((o) => o[0] === 'update')[1]
-  assert.deepEqual(Object.keys(values).sort(), ['broad_jump_1', 'sprint_10m_2', 'updated_at'])
+  assert.deepEqual(Object.keys(values).sort(), ['broad_jump_1', 'sprint_20m_2', 'updated_at'])
   assert.deepEqual(update.ops.filter((o) => o[0] === 'eq' || o[0] === 'is').map((o) => o.slice(0, 3)),
-    [['eq', 'id', P1], ['eq', 'event_id', EVENT], ['is', 'sprint_10m_2', null], ['eq', 'broad_jump_1', 230]], 'one update, guarded per field')
+    [['eq', 'id', P1], ['eq', 'event_id', EVENT], ['is', 'sprint_20m_2', null], ['eq', 'broad_jump_1', 230]], 'one update, guarded per field')
 })
 
 test('PATCH: a value changed by someone else in between is a 409 with the stored values, and nothing is written', async () => {
   const db = fakeDb()
   const route = routeWith(db)
   // Tester A saved 1.80 over the 1.82 both saw; tester B still sends 1.82 as the value seen
-  assert.equal((await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_10m_1: 1.8 }, expected: { sprint_10m_1: 1.82 } })).status, 200)
-  const res = await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_10m_1: 1.85 }, expected: { sprint_10m_1: 1.82 } })
+  assert.equal((await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_20m_1: 1.8 }, expected: { sprint_20m_1: 1.82 } })).status, 200)
+  const res = await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_20m_1: 1.85 }, expected: { sprint_20m_1: 1.82 } })
   assert.equal(res.status, 409)
   const body = await res.json()
   assert.equal(body.error, 'value_conflict')
-  assert.equal(body.current.sprint_10m_1, 1.8)
+  assert.equal(body.current.sprint_20m_1, 1.8)
   assert.equal(body.current.broad_jump_1, 230)
-  assert.equal(db.players[P1].sprint_10m_1, 1.8, 'B did not overwrite A')
+  assert.equal(db.players[P1].sprint_20m_1, 1.8, 'B did not overwrite A')
   // B saves again against the value now shown: accepted
-  assert.equal((await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_10m_1: 1.85 }, expected: { sprint_10m_1: 1.8 } })).status, 200)
+  assert.equal((await patch(route, { eventId: EVENT, playerId: P1, values: { sprint_20m_1: 1.85 }, expected: { sprint_20m_1: 1.8 } })).status, 200)
   // An empty field someone filled in between: same conflict
   await patch(route, { eventId: EVENT, playerId: P2, values: { agility_1: 2.4 }, expected: { agility_1: null } })
   assert.equal((await patch(route, { eventId: EVENT, playerId: P2, values: { agility_1: 2.5 }, expected: { agility_1: null } })).status, 409)
