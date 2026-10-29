@@ -1,10 +1,10 @@
-// Pitch-side tests of a selection game (Max, 29.10.2026): sprint splits at 5, 10, 20, 30 m and 40 yd, an agility
-// run and the broad jump, two attempts each, stored on the sign-up (showcase_players). Dependency-free so the
+// Pitch-side tests of a selection game (Max, 29.10.2026): sprint splits at 5, 20, 30 m and 40 yd, an agility run
+// and the broad jump, two attempts each, stored on the sign-up (showcase_players), plus the top speed computed from
+// the 20 to 30 m split. No 10 m split is taken: its columns stay in the table, unused. Dependency-free so the
 // route, the page and node --test share one list of fields and one set of limits.
 
 export const SPRINT_SPLITS = [
   { key: 'sprint_5m', label: '5 m' },
-  { key: 'sprint_10m', label: '10 m' },
   { key: 'sprint_20m', label: '20 m' },
   { key: 'sprint_30m', label: '30 m' },
   { key: 'sprint_40yd', label: '40 yd' },
@@ -29,7 +29,6 @@ const time = (label: string, max: number): TestSpec => ({ label, unit: 's', min:
 // the /players screen.
 export const TESTS: Record<TestKey, TestSpec> = {
   sprint_5m: time('Sprint 5 m', 15),
-  sprint_10m: time('Sprint 10 m', 15),
   sprint_20m: time('Sprint 20 m', 15),
   sprint_30m: time('Sprint 30 m', 15),
   sprint_40yd: time('Sprint 40 yd', 10),
@@ -114,6 +113,19 @@ export function getBest(val1: number | null, val2: number | null, lowerIsBetter 
 
 export const bestOf = (player: SelectionTestPlayer, key: TestKey): number | null =>
   getBest(player[`${key}_1`], player[`${key}_2`], TESTS[key].lowerIsBetter)
+
+// Top speed of one attempt, km/h, from the 20 to 30 m split (10 m in t30 - t20 seconds), one decimal. null unless
+// both times are there and the result is plausible (10 to 45 km/h), so a slipped digit never shows a made-up speed.
+export const topSpeedKmh = (player: SelectionTestPlayer, attempt: 1 | 2): number | null => {
+  const t20 = player[`sprint_20m_${attempt}`]
+  const t30 = player[`sprint_30m_${attempt}`]
+  if (t20 === null || t30 === null || t30 <= t20) return null
+  const kmh = 36 / (t30 - t20)
+  return kmh >= 10 && kmh <= 45 ? Math.round(kmh * 10) / 10 : null
+}
+
+export const bestTopSpeed = (player: SelectionTestPlayer): number | null =>
+  getBest(topSpeedKmh(player, 1), topSpeedKmh(player, 2))
 
 const toNumber = (v: unknown): number | null => {
   if (v === null || v === undefined || v === '') return null
