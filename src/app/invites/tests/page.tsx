@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { AppShell } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
@@ -54,6 +54,14 @@ export default function SelectionTestsPage() {
   }
   const visible = players.filter((p) => matchesSearch(p, query))
   const unsavedCount = players.filter((p) => unsaved[p.id]).length
+
+  // A reload or closing the tab with an unsaved evaluation asks first (where the browser supports it)
+  useEffect(() => {
+    if (unsavedCount === 0) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [unsavedCount])
 
   return (
     <AppShell>
