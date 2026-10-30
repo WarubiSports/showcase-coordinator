@@ -21,7 +21,8 @@
     "test:event-page": "node --test tests/event-page.test.mjs",
     "test:club-crest": "node --test tests/club-crest.test.mjs",
     "test:selection-tests": "node --test tests/selection-tests.test.mjs",
-    "test:selection-evaluation": "node --test tests/selection-evaluation.test.mjs"
+    "test:selection-evaluation": "node --test tests/selection-evaluation.test.mjs",
+    "test:stations": "node --test tests/test-stations.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

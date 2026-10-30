@@ -9,16 +9,17 @@ interface EvaluationPanelProps {
   scout: string | null
   entries: EvaluationEntry[]
   onSave: (playerId: string, note: EvaluationInput, expectedVersion: number) => Promise<void>
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 // One player's evaluations: the own one to edit (Staff App login), the colleagues' ones to read
-export const EvaluationPanel = ({ playerId, scout, entries, onSave }: EvaluationPanelProps) => {
+export const EvaluationPanel = ({ playerId, scout, entries, onSave, onDirtyChange }: EvaluationPanelProps) => {
   const own = scout ? entries.find((e) => e.scout === scout) : undefined
   const others = entries.filter((e) => e !== own)
   return (
     <div className="space-y-4">
       {scout ? (
-        <EvaluationForm scout={scout} own={own} onSave={(note, version) => onSave(playerId, note, version)} />
+        <EvaluationForm scout={scout} own={own} onSave={(note, version) => onSave(playerId, note, version)} onDirtyChange={onDirtyChange} />
       ) : (
         <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Eigene Bewertungen gehen nur mit dem Staff-App-Login. Hier nur lesen.
