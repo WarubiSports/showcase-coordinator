@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { AppShell } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,10 @@ export default function SelectionTestsPage() {
   const [picked, setPicked] = useState<Station | null>(null)
   const [query, setQuery] = useState('')
   const [openEvaluation, setOpenEvaluation] = useState<string | null>(null)
+  const [unsaved, setUnsaved] = useState<Record<string, boolean>>({})
+  const markUnsaved = useCallback((playerId: string, value: boolean) => {
+    setUnsaved((prev) => (!!prev[playerId] === value ? prev : { ...prev, [playerId]: value }))
+  }, [])
 
   // Each phone remembers its station, so a reload keeps the tester where they stand
   const stored = useSyncExternalStore(subscribeNothing, () => localStorage.getItem(STATION_KEY), () => null)
@@ -49,6 +53,7 @@ export default function SelectionTestsPage() {
     evaluation: players.filter((p) => entriesOf(p.id).some((e) => (scout ? e.scout === scout : true))).length,
   }
   const visible = players.filter((p) => matchesSearch(p, query))
+  const unsavedCount = players.filter((p) => unsaved[p.id]).length
 
   return (
     <AppShell>
@@ -81,7 +86,15 @@ export default function SelectionTestsPage() {
           !error && <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Noch keine Zusagen für dieses Event.</div>
         ) : (
           <>
-            <StationBar station={station} onStation={pickStation} counts={counts} total={players.length} query={query} onQuery={setQuery} />
+            <StationBar
+              station={station}
+              onStation={pickStation}
+              counts={counts}
+              total={players.length}
+              query={query}
+              onQuery={setQuery}
+              unsavedEvaluations={unsavedCount}
+            />
             {visible.length === 0 && (
               <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Kein Spieler zu „{query.trim()}“.</p>
             )}
@@ -105,6 +118,7 @@ export default function SelectionTestsPage() {
                       open={openEvaluation === p.id}
                       onToggle={() => setOpenEvaluation((id) => (id === p.id ? null : p.id))}
                       onSave={evaluations.saveEvaluation}
+                      onUnsavedChange={markUnsaved}
                     />
                   </div>
                 </li>

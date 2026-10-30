@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EvaluationPanel } from '@/components/invites/evaluation-panel'
@@ -15,12 +15,19 @@ interface EvaluationRowProps {
   open: boolean
   onToggle: () => void
   onSave: (playerId: string, note: EvaluationInput, expectedVersion: number) => Promise<void>
+  // Tells the page which players hold an unsaved evaluation, so the bar can warn from every station
+  onUnsavedChange: (playerId: string, unsaved: boolean) => void
 }
 
 // Bewertung station: one line per player with its state; tapping opens the evaluation below it. The panel stays
 // mounted while closed, so a typed but unsaved evaluation is kept, and the line then says "Nicht gespeichert".
-export const EvaluationRow = ({ player, scout, entries, open, onToggle, onSave }: EvaluationRowProps) => {
-  const [dirty, setDirty] = useState(false)
+export const EvaluationRow = ({ player, scout, entries, open, onToggle, onSave, onUnsavedChange }: EvaluationRowProps) => {
+  const [dirty, setDirtyState] = useState(false)
+  const setDirty = useCallback((d: boolean) => {
+    setDirtyState(d)
+    onUnsavedChange(player.id, d)
+  }, [player.id, onUnsavedChange])
+  useEffect(() => () => onUnsavedChange(player.id, false), [player.id, onUnsavedChange])
   const ref = useRef<HTMLDivElement>(null)
   const own = !!scout && entries.some((e) => e.scout === scout)
   const others = entries.filter((e) => e.scout !== scout).length

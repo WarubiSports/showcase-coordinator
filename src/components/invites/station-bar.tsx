@@ -14,6 +14,8 @@ interface StationBarProps {
   total: number
   query: string
   onQuery: (query: string) => void
+  // Evaluations typed but not saved, maybe in a closed line or behind another station
+  unsavedEvaluations: number
 }
 
 const HINTS: Record<Station, string> = {
@@ -24,7 +26,7 @@ const HINTS: Record<Station, string> = {
 }
 
 // Stays at the top while scrolling: the station tabs with progress, the shirt-number search, and the column labels
-export const StationBar = ({ station, onStation, counts, total, query, onQuery }: StationBarProps) => (
+export const StationBar = ({ station, onStation, counts, total, query, onQuery, unsavedEvaluations }: StationBarProps) => (
   <div className="sticky top-16 z-40 -mx-4 space-y-2 border-b bg-background/95 px-4 pb-2 pt-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
     <div role="tablist" className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
       {STATIONS.map((s) => (
@@ -65,6 +67,16 @@ export const StationBar = ({ station, onStation, counts, total, query, onQuery }
         </button>
       )}
     </div>
+
+    {unsavedEvaluations > 0 && (
+      <button
+        type="button"
+        onClick={() => onStation('evaluation')}
+        className="w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-left text-xs font-medium text-amber-900"
+      >
+        {unsavedEvaluations === 1 ? '1 Bewertung' : `${unsavedEvaluations} Bewertungen`} nicht gespeichert: unter „Bewertung“ öffnen und „Speichern“ drücken
+      </button>
+    )}
 
     <p className="text-xs text-muted-foreground">{HINTS[station]}</p>
 
