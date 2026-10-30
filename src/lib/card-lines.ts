@@ -25,3 +25,15 @@ export const careerLine = (c: StatCounts | null | undefined): string | null => {
   const counts = c ? countsLine(c) : null
   return counts ? `Karriere: ${counts}` : null
 }
+
+// The men's team of the same season, under the youth numbers: "Herren: 2 Spiele · 4 Tore"
+export const seniorLine = (c: StatCounts | null | undefined): string | null => {
+  const counts = c ? countsLine(c) : null
+  return counts ? `Herren: ${counts}` : null
+}
+
+// The same for the staff row, which abbreviates ("Herren 2 Sp. 4 T."); zero counts are left out here too
+export const seniorShortLine = (c: StatCounts | null | undefined): string | null => {
+  if (!c || !(c.games > 0)) return null
+  return ['Herren', `${c.games} Sp.`, c.goals > 0 ? `${c.goals} T.` : null, c.assists > 0 ? `${c.assists} V.` : null].filter(Boolean).join(' ')
+}

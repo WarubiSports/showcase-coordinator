@@ -13,6 +13,16 @@ export interface FupaCareer {
   seasons: number
 }
 
+// The men's team row of the same season, kept next to the youth row the card is built on
+export interface FupaSeniorLine {
+  team: string | null
+  league: string | null
+  season: string | null
+  games: number
+  goals: number
+  assists: number
+}
+
 export interface FupaStats {
   season: string | null
   games: number
@@ -21,6 +31,7 @@ export interface FupaStats {
   team: string | null
   league: string | null
   career: FupaCareer | null
+  senior?: FupaSeniorLine
 }
 
 export interface FupaProfile {
@@ -112,6 +123,31 @@ const teamFacts = (team: Obj | null) => {
   }
 }
 
+// FuPa tags every team with an age group: { slug: 'm', name: 'Herren' } for the men's teams, { slug: 'u19-', name:
+// 'A-Jugend (U19)' } for the youth sides. Youth is recognised by what it is, so a group nobody has seen yet
+// (Frauen, Alte Herren) is neither youth nor the men's line and the old newest-season logic applies to it.
+const ageGroup = (team: Obj | null): { slug: string; name: string } => {
+  const group = obj(team?.ageGroup)
+  return { slug: str(group?.slug)?.toLowerCase() ?? '', name: str(group?.name) ?? '' }
+}
+const isYouth = (team: Obj | null): boolean => {
+  const { slug, name } = ageGroup(team)
+  return /^u\d+/.test(slug) || /\(U\d+\)|jugend|junioren|juniorinnen/i.test(name)
+}
+const isMens = (team: Obj | null): boolean => {
+  const { slug, name } = ageGroup(team)
+  return slug === 'm' || /^herren$/i.test(name)
+}
+
+// The row with the most games; the first one wins a tie, and a row without a games number is no candidate.
+// FuPa lists a qualification round next to the real league season (0 games), which must not win.
+const mostGames = (rows: Obj[]): Obj | null =>
+  rows.reduce<Obj | null>((best, row) => {
+    const g = int(obj(row.statistics)?.matches)
+    if (g === null) return best
+    return !best || g > (int(obj(best.statistics)?.matches) ?? -1) ? row : best
+  }, null)
+
 // Every season with a games number counts; a season without numbers is skipped
 export const careerTotals = (seasons: Obj[]): FupaCareer | null => {
   const totals = { games: 0, goals: 0, assists: 0, seasons: 0 }
@@ -145,7 +181,16 @@ export const parseFupaHtml = (html: string): FupaProfile | null => {
   if (!data && !og) return null
 
   const seasons = (Array.isArray(obj(data?.playerRole)?.seasons) ? (obj(data?.playerRole)!.seasons as unknown[]) : []).map(obj).filter((s): s is Obj => !!s)
-  const newest = [...seasons].sort((a, b) => seasonYear(obj(b.team)) - seasonYear(obj(a.team)))[0] ?? null
+  const bySeasonDesc = [...seasons].sort((a, b) => seasonYear(obj(b.team)) - seasonYear(obj(a.team)))
+  const latest = bySeasonDesc[0] ?? null
+  // The card is built on the youth row of the newest season when there is one: a player of the U19 who also
+  // plays for the club's men's team gets the U19 league on the card, the men's numbers go on a second line.
+  // A newest season without a youth row (a player past youth football) keeps the old logic: the first row.
+  const newestYear = seasonYear(obj(latest?.team ?? null))
+  const newestRows = newestYear > 0 ? bySeasonDesc.filter((s) => seasonYear(obj(s.team)) === newestYear) : []
+  const youth = mostGames(newestRows.filter((s) => isYouth(obj(s.team))))
+  const newest = youth ?? latest
+  const mens = youth ? mostGames(newestRows.filter((s) => isMens(obj(s.team)))) : null
   const currentTeam = obj(data?.currentTeam) ?? obj(obj(data?.currentRole)?.team) ?? obj(newest?.team)
   const current = teamFacts(currentTeam)
   const newestTeam = obj(newest?.team)
@@ -156,6 +201,11 @@ export const parseFupaHtml = (html: string): FupaProfile | null => {
     newest && games !== null
       ? { season: played.season, games, goals: int(statistics?.goals) ?? 0, assists: int(statistics?.assists) ?? 0, team: played.club, league: played.league, career: careerTotals(seasons) }
       : null
+  if (stats && mens) {
+    const facts = teamFacts(obj(mens.team))
+    const st = obj(mens.statistics)
+    stats.senior = { team: facts.club, league: facts.league, season: facts.season, games: int(st?.matches) ?? 0, goals: int(st?.goals) ?? 0, assists: int(st?.assists) ?? 0 }
+  }
   // The club's first team (currentTeam) can sit in a higher league than the team the player actually plays
   // for (a reserve side, say). The newest season's team and league are what the card and the staff line show;
   // the club's competition is only the fallback when that season carries no league or is older than the current team.
