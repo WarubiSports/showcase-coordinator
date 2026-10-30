@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,11 +18,13 @@ interface EvaluationFormProps {
   scout: string
   own: EvaluationEntry | undefined
   onSave: (note: EvaluationInput, expectedVersion: number) => Promise<void>
+  // Told when the form gets or loses unsaved edits (the closed Bewertung line shows it)
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 // The signed-in staff member's own evaluation of one player, saved with "Speichern" against the version last seen.
 // When the stored note changes (save, reload, conflict) unsaved edits stay; an untouched form shows the new note.
-export const EvaluationForm = ({ scout, own, onSave }: EvaluationFormProps) => {
+export const EvaluationForm = ({ scout, own, onSave, onDirtyChange }: EvaluationFormProps) => {
   const [form, setForm] = useState<EvaluationInput>(() => inputOf(own?.note))
   const [seen, setSeen] = useState(own)
   if (seen !== own) {
@@ -31,6 +33,9 @@ export const EvaluationForm = ({ scout, own, onSave }: EvaluationFormProps) => {
   }
   const [saving, setSaving] = useState(false)
   const dirty = JSON.stringify(form) !== JSON.stringify(inputOf(own?.note))
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
   const set = <K extends keyof EvaluationInput>(key: K, value: EvaluationInput[K]) => setForm((f) => ({ ...f, [key]: value }))
   const setRating = (key: RatingKey, value: number | null) => setForm((f) => ({ ...f, ratings: { ...f.ratings, [key]: value } }))
 
